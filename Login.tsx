@@ -1,0 +1,152 @@
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, Image, TouchableOpacity, TextInput, Alert } from 'react-native';
+import request from './request';
+import JSEncrypt from 'jsencrypt';
+import { useEffect } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+type RootStackParamList = {
+  Login: undefined;
+  List: undefined;
+};
+
+const LOGIN_URL = 'http://192.168.10.70:4000/api/user/login';
+const PUBLIC_KEY_URL = 'http://192.168.10.70:4000/api/user/public_key';
+const encrypt = new JSEncrypt();
+
+const Login = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [account, setAccount] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const isAccountValid = account.trim().length > 0;
+  const isPasswordValid = password.length > 0;
+  const isFormValid = isAccountValid && isPasswordValid;
+
+  useEffect(() => {
+    const fetchPublicKey = async () => {
+      try {
+        const data = await request(PUBLIC_KEY_URL, { method: 'GET' });
+        if (data?.msg) {
+          console.log(data?.msg, 'xxxxx')
+          encrypt.setPublicKey(data.msg);
+        } else {
+          Alert.alert('获取公钥失败', data?.message || '未获取到公钥');
+        }
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : '网络错误';
+        Alert.alert('获取公钥失败', errorMsg);
+      }
+    };
+    fetchPublicKey();
+  }, []);
+
+  const handleLogin = async () => {
+    if (!isFormValid) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await request(LOGIN_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          userName: account,
+          password: encrypt.encrypt(password),
+        }),
+      });
+      if (data.token) {
+        Alert.alert('登录成功', `Token: ${data.token}`);
+        navigation.navigate('List');
+      } else {
+        Alert.alert('登录失败', data.message || '未获取到Token');
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : '网络错误';
+      Alert.alert('登录失败', errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <View style={styles.content}>
+      <Image source={require('./assets/login-title-icon.webp')} style={styles.logo} resizeMode="contain" />
+      <TextInput
+        style={styles.input}
+        placeholder="请输入账号"
+        value={account}
+        onChangeText={setAccount}
+        autoCapitalize="none"
+        autoCorrect={false}
+        editable={!loading}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="请输入密码"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        editable={!loading}
+      />
+      <TouchableOpacity
+        style={[styles.button, (!isFormValid || loading) && styles.buttonDisabled]}
+        onPress={handleLogin}
+        activeOpacity={isFormValid && !loading ? 0.7 : 1}
+        disabled={!isFormValid || loading}
+      >
+        <Text style={styles.buttonText}>{loading ? '登录中...' : '登录'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 60,
+  },
+  logo: {
+    width: 300,
+    height: 260,
+    marginBottom: 60,
+    borderRadius: 12,
+  },
+  input: {
+    width: '80%',
+    maxWidth: 400,
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#B0B0B0',
+    borderRadius: 6,
+    backgroundColor: '#fff',
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    fontSize: 16,
+  },
+  button: {
+    width: '80%',
+    maxWidth: 400,
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#3A4A4A',
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  buttonDisabled: {
+    opacity: 0.4,
+  },
+  buttonText: {
+    fontSize: 16,
+    color: '#3A4A4A',
+    letterSpacing: 4,
+  },
+});
+
+export default Login; 
