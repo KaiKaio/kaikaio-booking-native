@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity, TextInput, Alert } from 'react-native';
-import request from './request';
+import request from '../request';
 import JSEncrypt from 'jsencrypt';
 import { useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
@@ -57,7 +57,6 @@ const Login = () => {
         }),
       });
       if (data.token) {
-        Alert.alert('登录成功', `Token: ${data.token}`);
         navigation.navigate('List');
       } else {
         Alert.alert('登录失败', data.message || '未获取到Token');
@@ -72,7 +71,7 @@ const Login = () => {
 
   return (
     <View style={styles.content}>
-      <Image source={require('./assets/login-title-icon.webp')} style={styles.logo} resizeMode="contain" />
+      <Image source={require('../assets/login-title-icon.webp')} style={styles.logo} resizeMode="contain" />
       <TextInput
         style={styles.input}
         placeholder="请输入账号"
