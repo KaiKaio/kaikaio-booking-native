@@ -7,10 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type RootStackParamList = {
-  Login: undefined;
-  List: undefined;
-};
+import { RootStackParamList } from '../types/navigation';
 
 const LOGIN_URL = 'http://192.168.10.70:4000/api/user/login';
 const PUBLIC_KEY_URL = 'http://192.168.10.70:4000/api/user/public_key';

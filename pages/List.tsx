@@ -1,7 +1,25 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import TabBar from './TabBar';
 
-const bills = [
+// 定义 SubItem 类型
+type SubItem = {
+  id: number;
+  type: string;
+  icon: string;
+  remark: string;
+  amount: number;
+};
+
+// 定义 BillItem 类型
+type BillItem = {
+  date: string;
+  total: number;
+  income: number;
+  items: SubItem[];
+};
+
+const bills: BillItem[] = [
   {
     date: '2024-07-31',
     total: 67.94,
@@ -36,15 +54,53 @@ const bills = [
 ];
 
 const List = () => {
+  const [refreshing, setRefreshing] = useState(false);
+  const [data] = useState(bills);
+
+  const renderBillItem = ({ item }: { item: BillItem }) => (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionDate}>{item.date}</Text>
+        <Text style={styles.sectionStat}>支出: ￥{item.total.toFixed(2)} 收入: ￥{item.income.toFixed(2)}</Text>
+      </View>
+      {item.items.map((subItem: SubItem) => (
+        <View key={subItem.id} style={styles.item}>
+          <View style={styles.itemIconWrap}><Text style={styles.itemIcon}>{subItem.icon}</Text></View>
+          <View style={styles.itemInfo}>
+            <Text style={styles.itemType}>{subItem.type}</Text>
+            {subItem.remark ? <Text style={styles.itemRemark}>{subItem.remark}</Text> : null}
+          </View>
+          <Text style={styles.itemAmount}>{subItem.amount}</Text>
+        </View>
+      ))}
+    </View>
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // 模拟网络请求
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      // 这里可添加实际的加载新数据逻辑
+      // 例如：从 API 获取新数据
+      // const newData = await fetchNewBills();
+      // setData([...newData, ...data]);
+    } catch (error) {
+      console.error('刷新失败:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <View style={styles.root}>
       {/* 顶部统计栏 */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Text style={styles.headerLabel}>总支出：</Text>
-          <Text style={styles.headerValue}>￥6542.44</Text>
+          <Text style={styles.headerValue}>6542.44</Text>
           <Text style={styles.headerLabel}>总收入：</Text>
-          <Text style={styles.headerValue}>￥1.00</Text>
+          <Text style={styles.headerValue}>1.00</Text>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.headerBtn}><Text style={styles.headerBtnText}>倒序</Text></TouchableOpacity>
@@ -53,51 +109,43 @@ const List = () => {
         </View>
       </View>
       {/* 账单列表 */}
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        {bills.map((bill) => (
-          <View key={bill.date} style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionDate}>{bill.date}</Text>
-              <Text style={styles.sectionStat}>支出: ￥{bill.total.toFixed(2)} 收入: ￥{bill.income.toFixed(2)}</Text>
-            </View>
-            {bill.items.map((item) => (
-              <View key={item.id} style={styles.item}>
-                <View style={styles.itemIconWrap}><Text style={styles.itemIcon}>{item.icon}</Text></View>
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemType}>{item.type}</Text>
-                  {item.remark ? <Text style={styles.itemRemark}>{item.remark}</Text> : null}
-                </View>
-                <Text style={styles.itemAmount}>{item.amount}</Text>
-              </View>
-            ))}
+      <FlatList
+        style={styles.scroll}
+        data={data}
+        renderItem={renderBillItem}
+        keyExtractor={(item) => item.date}
+        showsVerticalScrollIndicator={false}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+        // 使用三元运算符，refreshing 为 true 时显示加载指示器，否则返回 null
+        ListFooterComponent={refreshing ? (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#0090FF" />
           </View>
-        ))}
-      </ScrollView>
+        ) : null}
+      />
       {/* 底部菜单栏 */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity style={styles.tabItem}>
-          <Text style={styles.tabIcon}>📋</Text>
-          <Text style={styles.tabLabel}>账单</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem}>
-          <Text style={styles.tabIcon}>📊</Text>
-          <Text style={styles.tabLabel}>统计</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem}>
-          <Text style={styles.tabIcon}>👤</Text>
-          <Text style={styles.tabLabel}>我的</Text>
-        </TouchableOpacity>
-      </View>
+      <TabBar />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#F6F8FA' },
-  header: { backgroundColor: '#0090FF', paddingTop: 24, paddingBottom: 16, paddingHorizontal: 16, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  headerLabel: { color: '#fff', fontSize: 14, marginHorizontal: 4 },
-  headerValue: { color: '#fff', fontSize: 28, fontWeight: 'bold', marginHorizontal: 8 },
+  header: {
+    backgroundColor: '#0090FF',
+    paddingTop: 24,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    marginBottom: 8
+  },
+  headerLabel: { color: '#fff', fontSize: 14, marginLeft: 12, lineHeight: 32 },
+  headerValue: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
   headerActions: { flexDirection: 'row', justifyContent: 'flex-end' },
   headerBtn: { backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4, marginLeft: 8 },
   headerBtnText: { color: '#0090FF', fontSize: 14 },
@@ -113,10 +161,9 @@ const styles = StyleSheet.create({
   itemType: { fontSize: 16, color: '#222', fontWeight: 'bold' },
   itemRemark: { fontSize: 12, color: '#888', marginTop: 2 },
   itemAmount: { fontSize: 16, color: '#1BC47D', fontWeight: 'bold', minWidth: 60, textAlign: 'right' },
-  tabBar: { flexDirection: 'row', height: 60, borderTopWidth: 1, borderTopColor: '#eee', backgroundColor: '#fff', alignItems: 'center', justifyContent: 'space-around' },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  tabIcon: { fontSize: 22 },
-  tabLabel: { fontSize: 12, color: '#222', marginTop: 2 },
+  loaderContainer: {
+    paddingVertical: 20
+  }
 });
 
-export default List; 
+export default List;

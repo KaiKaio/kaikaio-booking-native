@@ -1,12 +1,15 @@
 import React from 'react';
 import Login from './pages/Login';
 import List from './pages/List';
+import Account from './pages/Account';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+// 导入公共类型定义
+import { RootStackParamList } from './types/navigation';
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function AuthLoading({ navigation }: { navigation: NativeStackNavigationProp<any> }) {
   React.useEffect(() => {
@@ -30,6 +33,7 @@ function App() {
         <Stack.Screen name="AuthLoading" component={AuthLoading} />
         <Stack.Screen name="Login" component={Login} />
         <Stack.Screen name="List" component={List} />
+        <Stack.Screen name="Account" component={Account} />
       </Stack.Navigator>
     </NavigationContainer>
   );
