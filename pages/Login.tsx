@@ -5,6 +5,7 @@ import JSEncrypt from 'jsencrypt';
 import { useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type RootStackParamList = {
   Login: undefined;
@@ -57,6 +58,7 @@ const Login = () => {
         }),
       });
       if (data.token) {
+        await AsyncStorage.setItem('token', data.token); // 存储 token
         navigation.navigate('List');
       } else {
         Alert.alert('登录失败', data.message || '未获取到Token');
