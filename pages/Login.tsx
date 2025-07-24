@@ -56,7 +56,7 @@ const Login = () => {
       });
       if (data.token) {
         await AsyncStorage.setItem('token', data.token); // 存储 token
-        navigation.navigate('List');
+        navigation.replace('List');
       } else {
         Alert.alert('登录失败', data.message || '未获取到Token');
       }

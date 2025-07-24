@@ -11,7 +11,7 @@ const TabBar = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.tabBar}>
-        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('List')}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.replace('List')}>
           <Text style={styles.tabIcon}>📋</Text>
           <Text style={styles.tabLabel}>账单</Text>
         </TouchableOpacity>
@@ -19,7 +19,7 @@ const TabBar = () => {
           <Text style={styles.tabIcon}>📊</Text>
           <Text style={styles.tabLabel}>统计</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('Account')}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.replace('Account')}>
           <Text style={styles.tabIcon}>👤</Text>
           <Text style={styles.tabLabel}>我的</Text>
         </TouchableOpacity>
