@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { StyleSheet, Text, Image, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import request from '../request';
 import JSEncrypt from 'jsencrypt';
 import { useEffect } from 'react';
@@ -28,7 +28,6 @@ const Login = () => {
       try {
         const data = await request(PUBLIC_KEY_URL, { method: 'GET' });
         if (data?.msg) {
-          console.log(data?.msg, 'xxxxx')
           encrypt.setPublicKey(data.msg);
         } else {
           Alert.alert('获取公钥失败', data?.message || '未获取到公钥');
@@ -69,7 +68,12 @@ const Login = () => {
   };
 
   return (
-    <View style={styles.content}>
+    // 使用 KeyboardAvoidingView 包裹内容
+    <KeyboardAvoidingView
+      style={styles.content}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // 根据平台设置行为
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0} // iOS 导航栏高度
+    >
       <Image source={require('../assets/login-title-icon.webp')} style={styles.logo} resizeMode="contain" />
       <TextInput
         style={styles.input}
@@ -96,7 +100,7 @@ const Login = () => {
       >
         <Text style={styles.buttonText}>{loading ? '登录中...' : '登录'}</Text>
       </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
