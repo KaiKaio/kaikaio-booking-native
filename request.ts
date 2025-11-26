@@ -16,20 +16,24 @@ export default async function request(url: string, options: any = {}) {
     timeoutId = setTimeout(() => {
       controller.abort();
     }, timeout);
+    console.log('Request Start:', url, finalOptions);
     const response = await fetch(url, finalOptions);
     clearTimeout(timeoutId);
     if (!response.ok) {
       let msg = '服务器错误';
       try {
-        console.log(response, '=> errData')
+        console.log('Request Error Response:', url, response);
         const errData = await response.json();
+        console.log('Request Error Data:', url, errData);
         msg = errData.msg || msg;
       } catch (err: any) {
         console.error(err, '!response.ok')
       }
       throw new Error(msg);
     }
-    return await response.json();
+    const data = await response.json();
+    console.log('Request Success:', url, data);
+    return data;
   } catch (err: any) {
     console.error(err, 'Rquest Error')
     if (err.name === 'AbortError') {

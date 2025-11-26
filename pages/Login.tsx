@@ -9,8 +9,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { RootStackParamList } from '../types/navigation';
 
-const LOGIN_URL = 'http://192.168.10.70:4000/api/user/login';
-const PUBLIC_KEY_URL = 'http://192.168.10.70:4000/api/user/public_key';
+const LOGIN_URL = 'http://10.242.78.83:4000/api/user/login';
+const PUBLIC_KEY_URL = 'http://10.242.78.83:4000/api/user/public_key';
 const encrypt = new JSEncrypt();
 
 const Login = () => {
