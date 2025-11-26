@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import TabBar from './TabBar';
+import MonthYearPicker from '../components/MonthYearPicker';
 
 // 定义 SubItem 类型
 type SubItem = {
@@ -56,6 +57,16 @@ const bills: BillItem[] = [
 const List = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [data] = useState(bills);
+  const [currentDate, setCurrentDate] = useState('2024-07');
+  const [showPicker, setShowPicker] = useState(false);
+
+  const filteredData = data.filter(item => item.date.startsWith(currentDate));
+
+  const handleDateConfirm = (year: number, month: number) => {
+    const formattedMonth = month.toString().padStart(2, '0');
+    setCurrentDate(`${year}-${formattedMonth}`);
+    setShowPicker(false);
+  };
 
   const renderBillItem = ({ item }: { item: BillItem }) => (
     <View style={styles.section}>
@@ -105,13 +116,15 @@ const List = () => {
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.headerBtn}><Text style={styles.headerBtnText}>倒序</Text></TouchableOpacity>
           <TouchableOpacity style={styles.headerBtn}><Text style={styles.headerBtnText}>全部类型</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.headerBtn}><Text style={styles.headerBtnText}>2024-07</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.headerBtn} onPress={() => setShowPicker(true)}>
+            <Text style={styles.headerBtnText}>{currentDate}</Text>
+          </TouchableOpacity>
         </View>
       </View>
       {/* 账单列表 */}
       <FlatList
         style={styles.scroll}
-        data={data}
+        data={filteredData}
         renderItem={renderBillItem}
         keyExtractor={(item) => item.date}
         showsVerticalScrollIndicator={false}
@@ -126,6 +139,13 @@ const List = () => {
       />
       {/* 底部菜单栏 */}
       <TabBar />
+
+      <MonthYearPicker
+        visible={showPicker}
+        currentDate={currentDate}
+        onClose={() => setShowPicker(false)}
+        onConfirm={handleDateConfirm}
+      />
     </View>
   );
 };
