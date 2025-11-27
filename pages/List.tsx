@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import TabBar from './TabBar';
 import MonthYearPicker from '../components/MonthYearPicker';
+import { getBillList } from '../services/bill';
+import { BillDetail, DailyBill } from '../types/bill';
 
 // 定义 SubItem 类型
 type SubItem = {
@@ -20,47 +22,108 @@ type BillItem = {
   items: SubItem[];
 };
 
-const bills: BillItem[] = [
-  {
-    date: '2024-07-31',
-    total: 67.94,
-    income: 0,
-    items: [
-      { id: 1, type: '用餐', icon: '🍽️', remark: '晚饭', amount: -16.66 },
-      { id: 2, type: '买烟', icon: '🚬', remark: '', amount: -14 },
-      { id: 3, type: '娱乐', icon: '🎳', remark: '打保龄球', amount: -27.28 },
-      { id: 4, type: '用餐', icon: '🍽️', remark: '早餐', amount: -10 },
-    ],
-  },
-  {
-    date: '2024-07-30',
-    total: 134,
-    income: 0,
-    items: [
-      { id: 5, type: '用餐', icon: '🍽️', remark: '晚饭', amount: -17 },
-      { id: 6, type: '用餐', icon: '🍽️', remark: '打车买鸡腿堡贴子', amount: -9 },
-      { id: 7, type: '用餐', icon: '🍽️', remark: '', amount: -50 },
-      { id: 8, type: '买烟', icon: '🚬', remark: '', amount: -13 },
-      { id: 9, type: '娱乐', icon: '🎳', remark: '小央美由喜', amount: -45 },
-    ],
-  },
-  {
-    date: '2024-07-29',
-    total: 402.89,
-    income: 0,
-    items: [
-      { id: 10, type: '家居', icon: '🛋️', remark: '京东蓝控', amount: -332.11 },
-    ],
-  },
-];
+const iconMap: { [key: string]: string } = {
+  '用餐': '🍽️',
+  '买烟': '🚬',
+  '娱乐': '🎳',
+  '交通': '🚗',
+  '日用品': '🧴',
+  '家居': '🛋️',
+  '医疗': '💊',
+  '学习': '📚',
+  '其他': '❓',
+};
+
+const getIcon = (typeName: string) => {
+  return iconMap[typeName] || '💰';
+};
 
 const List = () => {
   const [refreshing, setRefreshing] = useState(false);
-  const [data] = useState(bills);
-  const [currentDate, setCurrentDate] = useState('2024-07');
+  const [data, setData] = useState<BillItem[]>([]);
+  const [currentDate, setCurrentDate] = useState('2025-11'); // Default to current month or based on today
   const [showPicker, setShowPicker] = useState(false);
+  const loadingRef = useRef(false);
+  const [summary, setSummary] = useState({ totalExpense: 0, totalIncome: 0 });
 
-  const filteredData = data.filter(item => item.date.startsWith(currentDate));
+  const fetchBills = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+    try {
+      const [year, month] = currentDate.split('-');
+      const lastDay = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
+      
+      const start = `${currentDate}-01 00:00:00`;
+      const end = `${currentDate}-${lastDay} 23:59:59`;
+
+      const res = await getBillList({ start, end, page: 1, page_size: 1000, orderBy: 'DESC' });
+      
+      if (res.code === 200) {
+        setSummary({
+          totalExpense: res.data.totalExpense,
+          totalIncome: res.data.totalIncome,
+        });
+
+        const transformedData: BillItem[] = res.data.list.map((daily: DailyBill) => {
+          let dailyTotal = 0;
+          let dailyIncome = 0;
+          
+          const items: SubItem[] = daily.bills.map((bill: BillDetail) => {
+            const amount = parseFloat(bill.amount);
+            // Assuming pay_type "1" is expense (negative in UI?), "2" is income
+            // The mock data had negative amounts for expenses. 
+            // The API returns positive numbers.
+            // Let's check the API example. 
+            // "pay_type": "1", "amount": "6.19", "type_name": "娱乐" -> This is likely expense.
+            // "pay_type": "2" -> Income?
+            
+            // Current UI expects negative numbers for expenses to display properly?
+            // Wait, looking at renderBillItem: 
+            // <Text style={styles.itemAmount}>{subItem.amount}</Text>
+            // It just displays the number. Mock data has -16.66.
+            // If I pass positive numbers, it will display positive.
+            // I should probably follow the mock data convention or update UI logic.
+            // Let's assume pay_type 1 is expense, 2 is income.
+            
+            const isExpense = bill.pay_type === '1';
+            const displayAmount = isExpense ? -amount : amount;
+            
+            if (isExpense) {
+              dailyTotal += amount;
+            } else {
+              dailyIncome += amount;
+            }
+
+            return {
+              id: bill.id,
+              type: bill.type_name,
+              icon: getIcon(bill.type_name),
+              remark: bill.remark,
+              amount: displayAmount
+            };
+          });
+
+          return {
+            date: daily.date,
+            total: dailyTotal,
+            income: dailyIncome,
+            items: items
+          };
+        });
+        
+        setData(transformedData);
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+    } finally {
+      loadingRef.current = false;
+      setRefreshing(false);
+    }
+  }, [currentDate]);
+
+  useEffect(() => {
+    fetchBills();
+  }, [fetchBills]);
 
   const handleDateConfirm = (year: number, month: number) => {
     const formattedMonth = month.toString().padStart(2, '0');
@@ -81,7 +144,7 @@ const List = () => {
             <Text style={styles.itemType}>{subItem.type}</Text>
             {subItem.remark ? <Text style={styles.itemRemark}>{subItem.remark}</Text> : null}
           </View>
-          <Text style={styles.itemAmount}>{subItem.amount}</Text>
+          <Text style={styles.itemAmount}>{subItem.amount.toFixed(2)}</Text>
         </View>
       ))}
     </View>
@@ -89,18 +152,7 @@ const List = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    try {
-      // 模拟网络请求
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      // 这里可添加实际的加载新数据逻辑
-      // 例如：从 API 获取新数据
-      // const newData = await fetchNewBills();
-      // setData([...newData, ...data]);
-    } catch (error) {
-      console.error('刷新失败:', error);
-    } finally {
-      setRefreshing(false);
-    }
+    await fetchBills();
   };
 
   return (
@@ -109,9 +161,9 @@ const List = () => {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Text style={styles.headerLabel}>总支出：</Text>
-          <Text style={styles.headerValue}>6542.44</Text>
+          <Text style={styles.headerValue}>{summary.totalExpense.toFixed(2)}</Text>
           <Text style={styles.headerLabel}>总收入：</Text>
-          <Text style={styles.headerValue}>1.00</Text>
+          <Text style={styles.headerValue}>{summary.totalIncome.toFixed(2)}</Text>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.headerBtn}><Text style={styles.headerBtnText}>倒序</Text></TouchableOpacity>
@@ -124,7 +176,7 @@ const List = () => {
       {/* 账单列表 */}
       <FlatList
         style={styles.scroll}
-        data={filteredData}
+        data={data}
         renderItem={renderBillItem}
         keyExtractor={(item) => item.date}
         showsVerticalScrollIndicator={false}
