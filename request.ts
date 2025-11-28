@@ -1,6 +1,7 @@
 // request.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from './config';
+import { navigate } from './utils/navigationRef';
 
 export default async function request(url: string, options: any = {}) {
   const token = await AsyncStorage.getItem('token');
@@ -28,6 +29,19 @@ export default async function request(url: string, options: any = {}) {
     console.log('Request Start:', fullUrl, finalOptions);
     const response = await fetch(fullUrl, finalOptions);
     clearTimeout(timeoutId);
+
+    if (response.status === 401) {
+      console.log('Request Error Response:', fullUrl, {
+        type: response.type,
+        status: response.status,
+        ok: response.ok,
+        statusText: response.statusText,
+      });
+      await AsyncStorage.removeItem('token');
+      navigate('Login');
+      throw new Error('登录过期，请重新登录');
+    }
+
     if (!response.ok) {
       let msg = '服务器错误';
       try {

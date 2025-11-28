@@ -26,9 +26,11 @@ function AuthLoading({ navigation }: { navigation: NativeStackNavigationProp<any
   return null;
 }
 
+import { navigationRef } from './utils/navigationRef';
+
 function App() {
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator initialRouteName="AuthLoading" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="AuthLoading" component={AuthLoading} />
         <Stack.Screen name="Login" component={Login} />
