@@ -1,5 +1,5 @@
 import request from '../request';
-import { BillListResponse, BillParams } from '../types/bill';
+import { BillListResponse, BillParams, AddBillParams, AddBillResponse } from '../types/bill';
 
 export const getBillList = async (params: BillParams): Promise<BillListResponse> => {
   // TODO: Replace with actual API base URL if needed
@@ -13,5 +13,13 @@ export const getBillList = async (params: BillParams): Promise<BillListResponse>
 
   return request(`/api/bill/list?${queryString}`, {
     method: 'GET',
+  });
+};
+
+export const addBill = async (params: AddBillParams): Promise<AddBillResponse> => {
+  return request('/api/bill/add', {
+    method: 'POST',
+    body: JSON.stringify(params),
+    timeout: 10000, // 10 seconds timeout as requested
   });
 };

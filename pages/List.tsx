@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import TabBar from './TabBar';
 import MonthYearPicker from '../components/MonthYearPicker';
-import { getBillList } from '../services/bill';
+import BillItem, { BillData } from '../components/BillItem';
+import { getBillList, addBill } from '../services/bill';
 import { BillDetail, DailyBill } from '../types/bill';
 
 // 定义 SubItem 类型
@@ -45,6 +46,7 @@ const List = () => {
   const [showPicker, setShowPicker] = useState(false);
   const loadingRef = useRef(false);
   const [summary, setSummary] = useState({ totalExpense: 0, totalIncome: 0 });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchBills = useCallback(async () => {
     if (loadingRef.current) return;
@@ -131,6 +133,28 @@ const List = () => {
     setShowPicker(false);
   };
 
+  const handleBillSubmit = async (billData: BillData) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const timestamp = new Date(billData.date).getTime();
+      await addBill({
+        amount: billData.amount.toFixed(2),
+        type_id: parseInt(billData.category, 10),
+        type_name: billData.categoryName,
+        date: timestamp,
+        pay_type: billData.type,
+        remark: billData.remark || ''
+      });
+      Alert.alert('提示', '记账成功');
+      fetchBills(); // Refresh list
+    } catch (error: any) {
+      Alert.alert('错误', error.message || '记账失败');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const renderBillItem = ({ item }: { item: BillItem }) => (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
@@ -198,12 +222,31 @@ const List = () => {
         onClose={() => setShowPicker(false)}
         onConfirm={handleDateConfirm}
       />
+
+      <View style={styles.fabContainer}>
+        <BillItem onSubmit={handleBillSubmit} />
+      </View>
+
+      {isSubmitting && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color="#0090FF" />
+            <Text style={styles.loadingText}>正在提交...</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#F6F8FA' },
+  fabContainer: {
+    position: 'absolute',
+    bottom: 80,
+    right: 20,
+    zIndex: 100,
+  },
   header: {
     backgroundColor: '#0090FF',
     paddingTop: 24,
@@ -235,6 +278,29 @@ const styles = StyleSheet.create({
   itemAmount: { fontSize: 16, color: '#1BC47D', fontWeight: 'bold', minWidth: 60, textAlign: 'right' },
   loaderContainer: {
     paddingVertical: 20
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  loadingBox: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    elevation: 5,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#333',
+    fontSize: 14,
   }
 });
 

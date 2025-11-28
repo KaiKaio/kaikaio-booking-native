@@ -33,3 +33,18 @@ export interface BillListResponse {
   msg: string;
   data: BillListResponseData;
 }
+
+export interface AddBillParams {
+  amount: string;
+  type_id: number;
+  type_name: string;
+  date: number;
+  pay_type: number;
+  remark?: string;
+}
+
+export interface AddBillResponse {
+  code: number;
+  msg: string;
+  data: null;
+}
