@@ -5,6 +5,7 @@ import MonthYearPicker from '../components/MonthYearPicker';
 import BillItem, { BillData } from '../components/BillItem';
 import { getBillList, addBill } from '../services/bill';
 import { BillDetail, DailyBill } from '../types/bill';
+import { useCategory } from '../context/CategoryContext';
 
 // 定义 SubItem 类型
 type SubItem = {
@@ -23,23 +24,8 @@ type BillItem = {
   items: SubItem[];
 };
 
-const iconMap: { [key: string]: string } = {
-  '用餐': '🍽️',
-  '买烟': '🚬',
-  '娱乐': '🎳',
-  '交通': '🚗',
-  '日用品': '🧴',
-  '家居': '🛋️',
-  '医疗': '💊',
-  '学习': '📚',
-  '其他': '❓',
-};
-
-const getIcon = (typeName: string) => {
-  return iconMap[typeName] || '💰';
-};
-
 const List = () => {
+  const { getCategoryIcon } = useCategory();
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<BillItem[]>([]);
   const [currentDate, setCurrentDate] = useState('2025-11'); // Default to current month or based on today
@@ -99,7 +85,7 @@ const List = () => {
             return {
               id: bill.id,
               type: bill.type_name,
-              icon: getIcon(bill.type_name),
+              icon: getCategoryIcon(bill.type_name),
               remark: bill.remark,
               amount: displayAmount
             };
@@ -121,7 +107,7 @@ const List = () => {
       loadingRef.current = false;
       setRefreshing(false);
     }
-  }, [currentDate]);
+  }, [currentDate, getCategoryIcon]);
 
   useEffect(() => {
     fetchBills();

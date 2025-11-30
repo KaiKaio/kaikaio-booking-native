@@ -27,17 +27,20 @@ function AuthLoading({ navigation }: { navigation: NativeStackNavigationProp<any
 }
 
 import { navigationRef } from './utils/navigationRef';
+import { CategoryProvider } from './context/CategoryContext';
 
 function App() {
   return (
-    <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator initialRouteName="AuthLoading" screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="AuthLoading" component={AuthLoading} />
-        <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="List" component={List} />
-        <Stack.Screen name="Account" component={Account} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <CategoryProvider>
+      <NavigationContainer ref={navigationRef}>
+        <Stack.Navigator initialRouteName="AuthLoading" screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="AuthLoading" component={AuthLoading} />
+          <Stack.Screen name="Login" component={Login} />
+          <Stack.Screen name="List" component={List} />
+          <Stack.Screen name="Account" component={Account} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </CategoryProvider>
   );
 }
 

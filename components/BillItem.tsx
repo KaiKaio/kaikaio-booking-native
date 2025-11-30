@@ -9,20 +9,7 @@ import {
   ScrollView,
   Keyboard
 } from 'react-native';
-
-// Categories from List.tsx
-const CATEGORIES = [
-  { id: '1', name: '用餐', icon: '🍽️', type: 1 },
-  { id: '2', name: '交通', icon: '🚬', type: 1 },
-  { id: '3', name: '丽人', icon: '🎳', type: 1 },
-  { id: '4', name: '服饰', icon: '🚗', type: 1 },
-  { id: '5', name: '日用品', icon: '🧴', type: 1 },
-  { id: '6', name: '娱乐', icon: '🛋️', type: 1 },
-  { id: '7', name: '买烟', icon: '💊', type: 1 },
-  { id: '9', name: '医疗', icon: '📚', type: 1 },
-  { id: '10', name: '物业水电', icon: '💰', type: 1 },
-  { id: '11', name: '酒水', icon: '💰', type: 1 },
-];
+import { useCategory } from '../context/CategoryContext';
 
 interface BillItemProps {
   onSubmit?: (data: BillData) => void;
@@ -39,11 +26,12 @@ export interface BillData {
 }
 
 const BillItem: React.FC<BillItemProps> = ({ onSubmit, initialData }) => {
+  const { categories } = useCategory();
   const [visible, setVisible] = useState(false);
   
   // Form State
   const [amountStr, setAmountStr] = useState('0');
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [category, setCategory] = useState(categories[0]);
   const [date, setDate] = useState(new Date());
   const [remark, setRemark] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -55,19 +43,19 @@ const BillItem: React.FC<BillItemProps> = ({ onSubmit, initialData }) => {
     if (visible) {
       if (initialData) {
         setAmountStr(initialData.amount.toString());
-        const cat = CATEGORIES.find(c => c.name === initialData.category) || CATEGORIES[0];
+        const cat = categories.find(c => c.name === initialData.category) || categories[0];
         setCategory(cat);
         setDate(new Date(initialData.date));
         setRemark(initialData.remark);
       } else {
         setAmountStr('0');
-        setCategory(CATEGORIES[0]);
+        setCategory(categories[0]);
         setDate(new Date());
         setRemark('');
       }
       setShowDatePicker(false);
     }
-  }, [visible, initialData]);
+  }, [visible, initialData, categories]);
 
   const handlePressKey = (key: string) => {
     Keyboard.dismiss();
@@ -218,7 +206,7 @@ const BillItem: React.FC<BillItemProps> = ({ onSubmit, initialData }) => {
           {/* Category Selection */}
           <View style={styles.categoryContainer}>
              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {CATEGORIES.map(cat => (
+                {categories.map(cat => (
                   <TouchableOpacity 
                     key={cat.id} 
                     style={[styles.catItem, category.id === cat.id && styles.selectedCat]}
