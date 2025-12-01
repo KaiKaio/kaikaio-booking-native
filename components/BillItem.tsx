@@ -10,6 +10,7 @@ import {
   Keyboard
 } from 'react-native';
 import { useCategory } from '../context/CategoryContext';
+import IconFont from '../components/IconFont'; // 根据实际路径引入
 
 interface BillItemProps {
   onSubmit?: (data: BillData) => void;
@@ -118,7 +119,7 @@ const BillItem: React.FC<BillItemProps> = ({ onSubmit, initialData }) => {
             style={styles.key}
             onPress={() => handlePressKey(key)}
           >
-            <Text style={styles.keyText}>{key === 'delete' ? '⌫' : key}</Text>
+            <Text style={styles.keyText}>{key === 'delete' ?  <IconFont name="qianming" size={30} color="#000" /> : key}</Text>
           </TouchableOpacity>
         ))}
       </View>
