@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import IconFont from '@/components/IconFont'; // 请根据实际路径调整引入
 // 导入公共类型定义
 import { RootStackParamList } from '../types/navigation';
 
@@ -12,15 +13,15 @@ const TabBar = () => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.tabBar}>
         <TouchableOpacity style={styles.tabItem} onPress={() => navigation.replace('List')}>
-          <Text style={styles.tabIcon}>📋</Text>
+          <IconFont style={styles.tabIcon} name="wj-zd" size={30} color="#000" />
           <Text style={styles.tabLabel}>账单</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem}>
-          <Text style={styles.tabIcon}>📊</Text>
+          <IconFont style={styles.tabIcon} name="tongji" size={30} color="#000" />
           <Text style={styles.tabLabel}>统计</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={() => navigation.replace('Account')}>
-          <Text style={styles.tabIcon}>👤</Text>
+          <IconFont style={styles.tabIcon} name="wode" size={30} color="#000" />
           <Text style={styles.tabLabel}>我的</Text>
         </TouchableOpacity>
       </View>
