@@ -1,7 +1,6 @@
 import React from 'react';
 import Login from './pages/Login';
-import List from './pages/List';
-import Account from './pages/Account';
+import Main from './pages/Main';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,7 +15,7 @@ function AuthLoading({ navigation }: { navigation: NativeStackNavigationProp<any
     const checkToken = async () => {
       const token = await AsyncStorage.getItem('token');
       if (token) {
-        navigation.replace('List');
+        navigation.replace('Main');
       } else {
         navigation.replace('Login');
       }
@@ -36,8 +35,7 @@ function App() {
         <Stack.Navigator initialRouteName="AuthLoading" screenOptions={{ headerShown: false }}>
           <Stack.Screen name="AuthLoading" component={AuthLoading} />
           <Stack.Screen name="Login" component={Login} />
-          <Stack.Screen name="List" component={List} />
-          <Stack.Screen name="Account" component={Account} />
+          <Stack.Screen name="Main" component={Main} />
         </Stack.Navigator>
       </NavigationContainer>
     </CategoryProvider>

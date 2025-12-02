@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import TabBar from './TabBar';
 import MonthYearPicker from '../components/MonthYearPicker';
 import CategoryIcon from '../components/CategoryIcon';
 import BillItem, { BillData } from '../components/BillItem';
@@ -202,9 +201,8 @@ const List = () => {
           </View>
         ) : null}
       />
-      {/* 底部菜单栏 */}
-      <TabBar />
-
+      {/* 底部菜单栏 - 已移动到 Main 组件 */}
+      
       <MonthYearPicker
         visible={showPicker}
         currentDate={currentDate}

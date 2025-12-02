@@ -12,10 +12,15 @@ interface TabItem {
   route: keyof RootStackParamList | 'Statistics';
 }
 
-const TabBar = () => {
+interface TabBarProps {
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
+}
+
+const TabBar = ({ activeTab, onTabChange }: TabBarProps) => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute();
-  const currentRouteName = route.name;
+  const currentRouteName = activeTab || route.name;
 
   const tabs: TabItem[] = [
     { name: 'List', label: '账单', icon: 'wj-zd', route: 'List' },
@@ -27,18 +32,20 @@ const TabBar = () => {
   const inactiveColor = '#000';
 
   const handlePress = (tab: TabItem) => {
-    // 2. 点击行为控制：阻止默认的路由切换行为
     if (currentRouteName === tab.route) {
       return;
     }
 
-    // TODO: Remove this check once Statistics page is implemented
     if (tab.route === 'Statistics') {
       console.warn('Statistics page not implemented');
       return;
     }
 
-    navigation.replace(tab.route as keyof RootStackParamList);
+    if (onTabChange) {
+      onTabChange(tab.route);
+    } else {
+      navigation.replace(tab.route as keyof RootStackParamList);
+    }
   };
 
   return (

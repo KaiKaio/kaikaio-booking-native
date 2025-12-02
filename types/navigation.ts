@@ -2,6 +2,7 @@
 export type RootStackParamList = {
   AuthLoading: undefined;
   Login: undefined;
+  Main: undefined;
   List: undefined;
   Account: undefined;
   // 若有其他路由，可在此添加
