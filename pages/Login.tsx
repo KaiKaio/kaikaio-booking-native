@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCategory } from '../context/CategoryContext';
 
 import { RootStackParamList } from '../types/navigation';
 
@@ -15,6 +16,7 @@ const encrypt = new JSEncrypt();
 
 const Login = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { refreshCategories } = useCategory();
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -55,6 +57,7 @@ const Login = () => {
       });
       if (data.token) {
         await AsyncStorage.setItem('token', data.token); // 存储 token
+        await refreshCategories();
         navigation.replace('List');
       } else {
         Alert.alert('登录失败', data.message || '未获取到Token');

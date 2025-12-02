@@ -1,10 +1,12 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Category } from '../types/category';
+import request from '../request';
 
 interface CategoryContextType {
   categories: Category[];
   getCategoryIcon: (name: string) => string;
   getCategoryName: (id: string) => string;
+  refreshCategories: () => Promise<void>;
 }
 
 const DEFAULT_CATEGORIES: Category[] = [
@@ -26,7 +28,28 @@ const DEFAULT_CATEGORIES: Category[] = [
 const CategoryContext = createContext<CategoryContextType | undefined>(undefined);
 
 export const CategoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [categories] = useState<Category[]>(DEFAULT_CATEGORIES);
+  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+
+  const refreshCategories = async () => {
+    try {
+      const res = await request('/api/type/list', { method: 'GET' });
+      if (res.code === 200 && res.data && res.data.list) {
+        const mappedList = res.data.list.map((item: any) => ({
+          id: String(item.id),
+          name: item.name,
+          type: Number(item.type),
+          icon: item.icon
+        }));
+        setCategories(mappedList);
+      }
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    }
+  };
+
+  useEffect(() => {
+    refreshCategories();
+  }, []);
 
   const getCategoryIcon = (name: string) => {
     const category = categories.find(c => c.name === name);
@@ -39,7 +62,7 @@ export const CategoryProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   return (
-    <CategoryContext.Provider value={{ categories, getCategoryIcon, getCategoryName }}>
+    <CategoryContext.Provider value={{ categories, getCategoryIcon, getCategoryName, refreshCategories }}>
       {children}
     </CategoryContext.Provider>
   );

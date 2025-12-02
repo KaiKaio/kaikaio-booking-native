@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useCategory } from '../context/CategoryContext';
 import IconFont from '../components/IconFont'; // 根据实际路径引入
+import CategoryIcon from './CategoryIcon';
 
 interface BillItemProps {
   onSubmit?: (data: BillData) => void;
@@ -217,8 +218,8 @@ const BillItem: React.FC<BillItemProps> = ({ onSubmit, initialData }) => {
                     }}
                   >
                     <View style={[styles.catIconWrap, category.id === cat.id && styles.selectedCatIconWrap]}>
-                      <Text style={styles.catIcon}>{cat.icon}</Text>
-                    </View>
+                    <CategoryIcon icon={cat.icon} size={24} />
+                  </View>
                     <Text style={[styles.catName, category.id === cat.id && styles.selectedCatName]}>{cat.name}</Text>
                   </TouchableOpacity>
                 ))}

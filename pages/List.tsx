@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import TabBar from './TabBar';
 import MonthYearPicker from '../components/MonthYearPicker';
+import CategoryIcon from '../components/CategoryIcon';
 import BillItem, { BillData } from '../components/BillItem';
 import { getBillList, addBill } from '../services/bill';
 import { BillDetail, DailyBill } from '../types/bill';
@@ -149,7 +150,9 @@ const List = () => {
       </View>
       {item.items.map((subItem: SubItem) => (
         <View key={subItem.id} style={styles.item}>
-          <View style={styles.itemIconWrap}><Text style={styles.itemIcon}>{subItem.icon}</Text></View>
+          <View style={styles.itemIconWrap}>
+            <CategoryIcon icon={subItem.icon} size={22} />
+          </View>
           <View style={styles.itemInfo}>
             <Text style={styles.itemType}>{subItem.type}</Text>
             {subItem.remark ? <Text style={styles.itemRemark}>{subItem.remark}</Text> : null}
