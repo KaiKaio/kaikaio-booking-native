@@ -21,9 +21,10 @@ export interface BillItemProps {
   amount: number;
   onDeleteSuccess?: () => void;
   onEdit?: (id: number) => void;
+  isLast?: boolean;
 }
 
-const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, onDeleteSuccess, onEdit }) => {
+const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, onDeleteSuccess, onEdit, isLast }) => {
   const [deleting, setDeleting] = useState(false);
   const swipeableRef = React.useRef<Swipeable>(null);
 
@@ -111,7 +112,7 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, onD
       renderRightActions={renderRightActions}
       overshootRight={false}
     >
-      <View style={styles.item}>
+      <View style={[styles.item, isLast && styles.lastItem]}>
         <View style={styles.itemIconWrap}>
           <CategoryIcon icon={icon} size={22} />
         </View>
@@ -134,6 +135,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#F6F8FA'
+  },
+  lastItem: {
+    borderBottomWidth: 0,
+    paddingBottom: 4,
   },
   itemIconWrap: {
     width: 36,

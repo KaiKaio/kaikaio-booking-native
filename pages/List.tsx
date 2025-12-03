@@ -197,12 +197,13 @@ const List = () => {
         <Text style={styles.sectionDate}>{item.date}</Text>
         <Text style={styles.sectionStat}>支出: ￥{item.total.toFixed(2)} 收入: ￥{item.income.toFixed(2)}</Text>
       </View>
-      {item.items.map((subItem: SubItem) => (
+      {item.items.map((subItem: SubItem, index: number) => (
         <BillItem
           key={subItem.id}
           {...subItem}
           onDeleteSuccess={onRefresh}
           onEdit={handleEdit}
+          isLast={index === item.items.length - 1}
         />
       ))}
     </View>
@@ -234,6 +235,7 @@ const List = () => {
       {/* 账单列表 */}
       <FlatList
         style={styles.scroll}
+        contentContainerStyle={styles.flatListContent}
         data={data}
         renderItem={renderBillItem}
         keyExtractor={(item) => item.date}
@@ -317,6 +319,7 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', justifyContent: 'flex-end' },
   headerBtn: { backgroundColor: '#0072e5', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4, marginLeft: 8 },
   headerBtnText: { color: '#fff', fontSize: 14, lineHeight: 16 },
+  flatListContent: { paddingBottom: 80 },
   scroll: { flex: 1, marginTop: 8 },
   section: { backgroundColor: '#fff', borderRadius: 12, marginHorizontal: 12, marginTop: 16, paddingBottom: 8, elevation: 2 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
