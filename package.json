@@ -1,6 +1,6 @@
 {
   "name": "kaikaio",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
+    "sync-version": "node scripts/sync-version.js",
     "link-fonts": "node scripts/link-fonts.js"
   },
   "dependencies": {
