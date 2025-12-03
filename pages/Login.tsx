@@ -60,11 +60,11 @@ const Login = () => {
         await refreshCategories();
         navigation.replace('Main');
       } else {
-        Alert.alert('登录失败', data.message || '未获取到Token');
+        Alert.alert('登录', data.message || '未获取到Token');
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : '网络错误';
-      Alert.alert('登录失败', errorMsg);
+      Alert.alert('登录', errorMsg);
     } finally {
       setLoading(false);
     }

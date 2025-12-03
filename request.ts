@@ -31,15 +31,22 @@ export default async function request(url: string, options: any = {}) {
     clearTimeout(timeoutId);
 
     if (response.status === 401) {
-      console.log('Request Error Response:', fullUrl, {
-        type: response.type,
-        status: response.status,
-        ok: response.ok,
-        statusText: response.statusText,
-      });
+      let msg = '登录过期，请重新登录';
+      try {
+        const errData = await response.json();
+        console.log('Request Error Response 401:', fullUrl, errData);
+        if (errData?.msg) {
+          msg = errData.msg;
+        }
+      } catch (e) {
+        console.log('Request Error Response 401 (Parse Error):', fullUrl, {
+          status: response.status,
+          statusText: response.statusText,
+        });
+      }
       await AsyncStorage.removeItem('token');
       navigate('Login');
-      throw new Error('登录过期，请重新登录');
+      throw new Error(msg);
     }
 
     if (!response.ok) {
