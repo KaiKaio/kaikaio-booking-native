@@ -1,4 +1,6 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Login from './pages/Login';
 import Main from './pages/Main';
 import { NavigationContainer } from '@react-navigation/native';
@@ -7,6 +9,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 // 导入公共类型定义
 import { RootStackParamList } from './types/navigation';
+import { navigationRef } from './utils/navigationRef';
+import { CategoryProvider } from './context/CategoryContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -25,21 +29,26 @@ function AuthLoading({ navigation }: { navigation: NativeStackNavigationProp<any
   return null;
 }
 
-import { navigationRef } from './utils/navigationRef';
-import { CategoryProvider } from './context/CategoryContext';
-
 function App() {
   return (
-    <CategoryProvider>
-      <NavigationContainer ref={navigationRef}>
-        <Stack.Navigator initialRouteName="AuthLoading" screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="AuthLoading" component={AuthLoading} />
-          <Stack.Screen name="Login" component={Login} />
-          <Stack.Screen name="Main" component={Main} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </CategoryProvider>
+    <GestureHandlerRootView style={styles.container}>
+      <CategoryProvider>
+        <NavigationContainer ref={navigationRef}>
+          <Stack.Navigator initialRouteName="AuthLoading" screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="AuthLoading" component={AuthLoading} />
+            <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="Main" component={Main} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </CategoryProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
 
 export default App;

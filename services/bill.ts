@@ -23,3 +23,10 @@ export const addBill = async (params: AddBillParams): Promise<AddBillResponse> =
     timeout: 10000, // 10 seconds timeout as requested
   });
 };
+
+export const deleteBill = async (id: number): Promise<any> => {
+  return request(`/api/bill/delete`, {
+    method: 'POST',
+    body: JSON.stringify({ id }),
+  });
+};

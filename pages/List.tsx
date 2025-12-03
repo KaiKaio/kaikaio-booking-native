@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import MonthYearPicker from '../components/MonthYearPicker';
-import CategoryIcon from '../components/CategoryIcon';
-import BillItem, { BillData } from '../components/BillItem';
+import BillForm, { BillData } from '../components/BillForm';
+import BillItem from '../components/BillItem';
 import { getBillList, addBill } from '../services/bill';
 import { BillDetail, DailyBill } from '../types/bill';
 import { useCategory } from '../context/CategoryContext';
@@ -17,7 +17,7 @@ type SubItem = {
 };
 
 // 定义 BillItem 类型
-type BillItem = {
+type DailyBillGroup = {
   date: string;
   total: number;
   income: number;
@@ -27,7 +27,7 @@ type BillItem = {
 const List = () => {
   const { getCategoryIcon } = useCategory();
   const [refreshing, setRefreshing] = useState(false);
-  const [data, setData] = useState<BillItem[]>([]);
+  const [data, setData] = useState<DailyBillGroup[]>([]);
   const [currentDate, setCurrentDate] = useState('2025-11'); // Default to current month or based on today
   const [showPicker, setShowPicker] = useState(false);
   const loadingRef = useRef(false);
@@ -52,7 +52,7 @@ const List = () => {
           totalIncome: res.data.totalIncome,
         });
 
-        const transformedData: BillItem[] = res.data.list.map((daily: DailyBill) => {
+        const transformedData: DailyBillGroup[] = res.data.list.map((daily: DailyBill) => {
           let dailyTotal = 0;
           let dailyIncome = 0;
           
@@ -141,23 +141,18 @@ const List = () => {
     }
   };
 
-  const renderBillItem = ({ item }: { item: BillItem }) => (
+  const renderBillItem = ({ item }: { item: DailyBillGroup }) => (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionDate}>{item.date}</Text>
         <Text style={styles.sectionStat}>支出: ￥{item.total.toFixed(2)} 收入: ￥{item.income.toFixed(2)}</Text>
       </View>
       {item.items.map((subItem: SubItem) => (
-        <View key={subItem.id} style={styles.item}>
-          <View style={styles.itemIconWrap}>
-            <CategoryIcon icon={subItem.icon} size={22} />
-          </View>
-          <View style={styles.itemInfo}>
-            <Text style={styles.itemType}>{subItem.type}</Text>
-            {subItem.remark ? <Text style={styles.itemRemark}>{subItem.remark}</Text> : null}
-          </View>
-          <Text style={styles.itemAmount}>{subItem.amount.toFixed(2)}</Text>
-        </View>
+        <BillItem
+          key={subItem.id}
+          {...subItem}
+          onDeleteSuccess={onRefresh}
+        />
       ))}
     </View>
   );
@@ -211,7 +206,7 @@ const List = () => {
       />
 
       <View style={styles.fabContainer}>
-        <BillItem onSubmit={handleBillSubmit} />
+        <BillForm onSubmit={handleBillSubmit} />
       </View>
 
       {isSubmitting && (
@@ -256,13 +251,6 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   sectionDate: { fontWeight: 'bold', fontSize: 16, color: '#222' },
   sectionStat: { fontSize: 12, color: '#888' },
-  item: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F6F8FA' },
-  itemIconWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F0F6FF', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  itemIcon: { fontSize: 22 },
-  itemInfo: { flex: 1 },
-  itemType: { fontSize: 16, color: '#222', fontWeight: 'bold' },
-  itemRemark: { fontSize: 12, color: '#888', marginTop: 2 },
-  itemAmount: { fontSize: 16, color: '#1BC47D', fontWeight: 'bold', minWidth: 60, textAlign: 'right' },
   loaderContainer: {
     paddingVertical: 20
   },
