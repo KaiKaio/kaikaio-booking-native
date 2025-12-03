@@ -20,9 +20,10 @@ export interface BillItemProps {
   remark: string;
   amount: number;
   onDeleteSuccess?: () => void;
+  onEdit?: (id: number) => void;
 }
 
-const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, onDeleteSuccess }) => {
+const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, onDeleteSuccess, onEdit }) => {
   const [deleting, setDeleting] = useState(false);
   const swipeableRef = React.useRef<Swipeable>(null);
 
@@ -75,19 +76,32 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, onD
     );
   };
 
+  const handleEdit = () => {
+    swipeableRef.current?.close();
+    onEdit?.(id);
+  };
+
   const renderRightActions = () => {
     return (
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={confirmDelete}
-        disabled={deleting}
-      >
-        {deleting ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.deleteText}>删除</Text>
-        )}
-      </TouchableOpacity>
+      <View style={styles.rightActions}>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={handleEdit}
+        >
+          <Text style={styles.editText}>编辑</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={confirmDelete}
+          disabled={deleting}
+        >
+          {deleting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.deleteText}>删除</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -149,6 +163,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     minWidth: 60,
     textAlign: 'right'
+  },
+  rightActions: {
+    flexDirection: 'row',
+    height: '100%'
+  },
+  editButton: {
+    backgroundColor: '#1890ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    height: '100%'
+  },
+  editText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14
   },
   deleteButton: {
     backgroundColor: '#FF4D4F',

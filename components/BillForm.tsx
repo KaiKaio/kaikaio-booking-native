@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,12 @@ import { useCategory } from '../context/CategoryContext';
 import IconFont from '../components/IconFont'; // 根据实际路径引入
 import CategoryIcon from './CategoryIcon';
 
+export interface BillFormRef {
+  open: (data?: BillData) => void;
+}
+
 interface BillFormProps {
   onSubmit?: (data: BillData) => void;
-  initialData?: BillData;
 }
 
 export interface BillData {
@@ -27,9 +30,10 @@ export interface BillData {
   type: number; // 1: expense, 2: income
 }
 
-const BillForm: React.FC<BillFormProps> = ({ onSubmit, initialData }) => {
+const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   const { categories } = useCategory();
   const [visible, setVisible] = useState(false);
+  const [editData, setEditData] = useState<BillData | undefined>(undefined);
   
   // Form State
   const [amountStr, setAmountStr] = useState('0');
@@ -40,15 +44,23 @@ const BillForm: React.FC<BillFormProps> = ({ onSubmit, initialData }) => {
 
   const [isRemarkInputFocused, setIsRemarkInputFocused] = useState(false);
 
+  useImperativeHandle(ref, () => ({
+    open: (data?: BillData) => {
+      setEditData(data);
+      setVisible(true);
+    }
+  }));
+
   // Reset form when opening
   useEffect(() => {
     if (visible) {
-      if (initialData) {
-        setAmountStr(initialData.amount.toString());
-        const cat = categories.find(c => c.name === initialData.category) || categories[0];
+      if (editData) {
+        setAmountStr(editData.amount.toString());
+        // Find category by ID if possible, otherwise name
+        const cat = categories.find(c => c.id === editData.category || c.name === editData.categoryName) || categories[0];
         setCategory(cat);
-        setDate(new Date(initialData.date));
-        setRemark(initialData.remark);
+        setDate(new Date(editData.date));
+        setRemark(editData.remark);
       } else {
         setAmountStr('0');
         setCategory(categories[0]);
@@ -57,7 +69,7 @@ const BillForm: React.FC<BillFormProps> = ({ onSubmit, initialData }) => {
       }
       setShowDatePicker(false);
     }
-  }, [visible, initialData, categories]);
+  }, [visible, editData, categories]);
 
   const handlePressKey = (key: string) => {
     Keyboard.dismiss();
@@ -167,121 +179,95 @@ const BillForm: React.FC<BillFormProps> = ({ onSubmit, initialData }) => {
   };
 
   return (
-    <>
-      <TouchableOpacity style={styles.triggerBtn} onPress={() => setVisible(true)}>
-        <Text style={styles.triggerIcon}>✏️</Text>
-        {/* <Text style={styles.triggerText}>记一笔</Text> */}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setVisible(false)}
+    >
+      <TouchableOpacity 
+          style={styles.overlay} 
+          activeOpacity={1} 
+          onPress={() => setVisible(false)}
+      >
+          {/* Close on overlay tap */}
       </TouchableOpacity>
 
-      <Modal
-        visible={visible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setVisible(false)}
-      >
-        <TouchableOpacity 
-            style={styles.overlay} 
-            activeOpacity={1} 
-            onPress={() => setVisible(false)}
-        >
-           {/* Close on overlay tap */}
-        </TouchableOpacity>
-
-        <View style={styles.panel}>
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => setVisible(false)}>
-              <Text style={styles.cancelBtn}>取消</Text>
-            </TouchableOpacity>
-            <Text style={styles.title}>记一笔</Text>
-            <TouchableOpacity onPress={handleSubmit}>
-              <Text style={styles.submitBtn}>完成</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Amount Display */}
-          <View style={styles.amountContainer}>
-            <Text style={styles.currency}>￥</Text>
-            <Text style={styles.amount}>{amountStr}</Text>
-          </View>
-
-          {/* Category Selection */}
-          <View style={styles.categoryContainer}>
-             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {categories.map(cat => (
-                  <TouchableOpacity 
-                    key={cat.id} 
-                    style={[styles.catItem, category.id === cat.id && styles.selectedCat]}
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      setCategory(cat);
-                    }}
-                  >
-                    <View style={[styles.catIconWrap, category.id === cat.id && styles.selectedCatIconWrap]}>
-                    <CategoryIcon icon={cat.icon} size={24} />
-                  </View>
-                    <Text style={[styles.catName, category.id === cat.id && styles.selectedCatName]}>{cat.name}</Text>
-                  </TouchableOpacity>
-                ))}
-             </ScrollView>
-          </View>
-
-          {/* Inputs Row */}
-          <View style={styles.inputsRow}>
-             <TouchableOpacity 
-                style={styles.dateInput} 
-                onPress={() => setShowDatePicker(!showDatePicker)}
-             >
-                <Text style={styles.label}>日期</Text>
-                <Text style={styles.value}>{date.getFullYear()}-{String(date.getMonth() + 1).padStart(2, '0')}-{String(date.getDate()).padStart(2, '0')}</Text>
-             </TouchableOpacity>
-             
-             <View style={styles.remarkInputContainer}>
-                <Text style={styles.label}>备注</Text>
-                <TextInput
-                  style={styles.remarkInput}
-                  placeholder="写点什么..."
-                  value={remark}
-                  onChangeText={setRemark}
-                  onFocus={() => setIsRemarkInputFocused(true)}
-                  onBlur={() => setIsRemarkInputFocused(false)}
-                  maxLength={50}
-                />
-             </View>
-          </View>
-
-          {/* Bottom Area: Keypad or DatePicker */}
-          <View style={[styles.bottomArea, isRemarkInputFocused && styles.bottomAreaFocused]}>
-            {showDatePicker ? renderDatePicker() : renderKeypad()}
-          </View>
-
+      <View style={styles.panel}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => setVisible(false)}>
+            <Text style={styles.cancelBtn}>取消</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>{editData ? '编辑账单' : '记一笔'}</Text>
+          <TouchableOpacity onPress={handleSubmit}>
+            <Text style={styles.submitBtn}>完成</Text>
+          </TouchableOpacity>
         </View>
-      </Modal>
-    </>
+
+        {/* Amount Display */}
+        <View style={styles.amountContainer}>
+          <Text style={styles.currency}>￥</Text>
+          <Text style={styles.amount}>{amountStr}</Text>
+        </View>
+
+        {/* Category Selection */}
+        <View style={styles.categoryContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {categories.map(cat => (
+                <TouchableOpacity 
+                  key={cat.id} 
+                  style={[styles.catItem, category.id === cat.id && styles.selectedCat]}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setCategory(cat);
+                  }}
+                >
+                  <View style={[styles.catIconWrap, category.id === cat.id && styles.selectedCatIconWrap]}>
+                  <CategoryIcon icon={cat.icon} size={24} />
+                </View>
+                  <Text style={[styles.catName, category.id === cat.id && styles.selectedCatName]}>{cat.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+        </View>
+
+        {/* Inputs Row */}
+        <View style={styles.inputsRow}>
+            <TouchableOpacity 
+              style={styles.dateInput} 
+              onPress={() => setShowDatePicker(!showDatePicker)}
+            >
+              <Text style={styles.label}>日期</Text>
+              <Text style={styles.value}>{date.getFullYear()}-{String(date.getMonth() + 1).padStart(2, '0')}-{String(date.getDate()).padStart(2, '0')}</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.remarkInputContainer}>
+              <Text style={styles.label}>备注</Text>
+              <TextInput
+                style={styles.remarkInput}
+                placeholder="写点什么..."
+                value={remark}
+                onChangeText={setRemark}
+                onFocus={() => setIsRemarkInputFocused(true)}
+                onBlur={() => setIsRemarkInputFocused(false)}
+                maxLength={50}
+              />
+            </View>
+        </View>
+
+        {/* Bottom Area: Keypad or DatePicker */}
+        <View style={[styles.bottomArea, isRemarkInputFocused && styles.bottomAreaFocused]}>
+          {showDatePicker ? renderDatePicker() : renderKeypad()}
+        </View>
+
+      </View>
+    </Modal>
   );
-};
+});
 
 const styles = StyleSheet.create({
-  triggerBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#0090FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    // Position handled by parent or absolute here?
-    // The requirement says "Display as a button".
-    // I'll make it a self-contained button, but styling might need adjustment based on placement.
-  },
-  triggerIcon: {
-    fontSize: 24,
-    color: '#fff',
-  },
+  // Removed triggerBtn styles
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.3)',

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import MonthYearPicker from '../components/MonthYearPicker';
-import BillForm, { BillData } from '../components/BillForm';
+import BillForm, { BillData, BillFormRef } from '../components/BillForm';
 import BillItem from '../components/BillItem';
-import { getBillList, addBill } from '../services/bill';
+import { getBillList, addBill, updateBill } from '../services/bill';
 import { BillDetail, DailyBill } from '../types/bill';
 import { useCategory } from '../context/CategoryContext';
 
@@ -14,6 +14,11 @@ type SubItem = {
   icon: string;
   remark: string;
   amount: number;
+  // Extended fields for editing
+  typeId: string;
+  date: string;
+  payType: number;
+  rawAmount: number;
 };
 
 // 定义 BillItem 类型
@@ -33,6 +38,9 @@ const List = () => {
   const loadingRef = useRef(false);
   const [summary, setSummary] = useState({ totalExpense: 0, totalIncome: 0 });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const billFormRef = useRef<BillFormRef>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const fetchBills = useCallback(async () => {
     if (loadingRef.current) return;
@@ -58,20 +66,6 @@ const List = () => {
           
           const items: SubItem[] = daily.bills.map((bill: BillDetail) => {
             const amount = parseFloat(bill.amount);
-            // Assuming pay_type "1" is expense (negative in UI?), "2" is income
-            // The mock data had negative amounts for expenses. 
-            // The API returns positive numbers.
-            // Let's check the API example. 
-            // "pay_type": "1", "amount": "6.19", "type_name": "娱乐" -> This is likely expense.
-            // "pay_type": "2" -> Income?
-            
-            // Current UI expects negative numbers for expenses to display properly?
-            // Wait, looking at renderBillItem: 
-            // <Text style={styles.itemAmount}>{subItem.amount}</Text>
-            // It just displays the number. Mock data has -16.66.
-            // If I pass positive numbers, it will display positive.
-            // I should probably follow the mock data convention or update UI logic.
-            // Let's assume pay_type 1 is expense, 2 is income.
             
             const isExpense = bill.pay_type === '1';
             const displayAmount = isExpense ? -amount : amount;
@@ -87,7 +81,11 @@ const List = () => {
               type: bill.type_name,
               icon: getCategoryIcon(bill.type_name),
               remark: bill.remark,
-              amount: displayAmount
+              amount: displayAmount,
+              typeId: bill.type_id,
+              payType: parseInt(bill.pay_type, 10),
+              date: bill.date,
+              rawAmount: amount
             };
           });
 
@@ -119,25 +117,77 @@ const List = () => {
     setShowPicker(false);
   };
 
+  const handleAdd = () => {
+    setEditingId(null);
+    billFormRef.current?.open();
+  };
+
+  const handleEdit = (id: number) => {
+    let targetItem: SubItem | undefined;
+    for (const group of data) {
+      const item = group.items.find(i => i.id === id);
+      if (item) {
+        targetItem = item;
+        break;
+      }
+    }
+    
+    if (targetItem) {
+      setEditingId(id);
+      // Handle date parsing (supports timestamp string or date string)
+      let dateObj: Date;
+      const dateVal = String(targetItem.date);
+      // If it's a timestamp (all digits)
+      if (/^\d+$/.test(dateVal)) {
+        dateObj = new Date(parseInt(dateVal, 10));
+      } else {
+        dateObj = new Date(dateVal);
+      }
+      
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+
+      billFormRef.current?.open({
+        amount: targetItem.rawAmount,
+        category: targetItem.typeId,
+        categoryName: targetItem.type,
+        date: dateStr,
+        remark: targetItem.remark,
+        type: targetItem.payType
+      });
+    }
+  };
+
   const handleBillSubmit = async (billData: BillData) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
       const timestamp = new Date(billData.date).getTime();
-      await addBill({
+      const params = {
         amount: billData.amount.toFixed(2),
         type_id: parseInt(billData.category, 10),
         type_name: billData.categoryName,
         date: timestamp,
         pay_type: billData.type,
         remark: billData.remark || ''
-      });
-      Alert.alert('提示', '记账成功');
+      };
+
+      if (editingId) {
+        await updateBill({ ...params, id: editingId });
+        Alert.alert('提示', '修改成功');
+      } else {
+        await addBill(params);
+        Alert.alert('提示', '记账成功');
+      }
+      
       fetchBills(); // Refresh list
     } catch (error: any) {
-      Alert.alert('错误', error.message || '记账失败');
+      Alert.alert('错误', error.message || (editingId ? '修改失败' : '记账失败'));
     } finally {
       setIsSubmitting(false);
+      setEditingId(null);
     }
   };
 
@@ -152,6 +202,7 @@ const List = () => {
           key={subItem.id}
           {...subItem}
           onDeleteSuccess={onRefresh}
+          onEdit={handleEdit}
         />
       ))}
     </View>
@@ -206,7 +257,10 @@ const List = () => {
       />
 
       <View style={styles.fabContainer}>
-        <BillForm onSubmit={handleBillSubmit} />
+        <TouchableOpacity style={styles.fab} onPress={handleAdd}>
+          <Text style={styles.fabIcon}>✏️</Text>
+        </TouchableOpacity>
+        <BillForm ref={billFormRef} onSubmit={handleBillSubmit} />
       </View>
 
       {isSubmitting && (
@@ -228,6 +282,23 @@ const styles = StyleSheet.create({
     bottom: 80,
     right: 20,
     zIndex: 100,
+  },
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#0090FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  fabIcon: {
+    fontSize: 24,
+    color: '#fff',
   },
   header: {
     backgroundColor: '#0090FF',

@@ -30,3 +30,10 @@ export const deleteBill = async (id: number): Promise<any> => {
     body: JSON.stringify({ id }),
   });
 };
+
+export const updateBill = async (params: AddBillParams & { id: number }): Promise<any> => {
+  return request('/api/bill/update', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+};
