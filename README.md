@@ -37,11 +37,7 @@
 
 ## 📸 应用截图 (Screenshots)
 
-| 首页列表 | 记账页面 | 账户中心 |
-|:---:|:---:|:---:|
-| ![List](https://via.placeholder.com/300x600?text=List+Page) | ![Booking](https://via.placeholder.com/300x600?text=Booking+Page) | ![Account](https://via.placeholder.com/300x600?text=Account+Page) |
-
-> *注：请替换上述图片链接为实际的应用截图*
+> *注：v1.0.0 后进行补充*
 
 ## 🚀 安装指南 (Installation)
 
