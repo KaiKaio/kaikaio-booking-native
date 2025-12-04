@@ -58,7 +58,7 @@
 
 1. **克隆仓库**
    ```bash
-   git clone https://github.com/your-username/kaikaio-booking-native.git
+   git clone https://github.com/KaiKaio/kaikaio-booking-native.git
    cd kaikaio-booking-native
    ```
 
