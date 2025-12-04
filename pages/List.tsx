@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MonthYearPicker from '../components/MonthYearPicker';
 import BillForm, { BillData, BillFormRef } from '../components/BillForm';
 import BillItem from '../components/BillItem';
@@ -30,6 +31,7 @@ type DailyBillGroup = {
 };
 
 const List = () => {
+  const insets = useSafeAreaInsets();
   const { getCategoryIcon } = useCategory();
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<DailyBillGroup[]>([]);
@@ -217,7 +219,7 @@ const List = () => {
   return (
     <View style={styles.root}>
       {/* 顶部统计栏 */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerRow}>
           <Text style={styles.headerLabel}>总支出：</Text>
           <Text style={styles.headerValue}>{summary.totalExpense.toFixed(2)}</Text>
@@ -304,9 +306,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#0090FF',
-    paddingTop: 24,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
+    paddingBottom: 14,
   },
   headerRow: {
     flexDirection: 'row',

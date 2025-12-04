@@ -216,18 +216,21 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
 
   return (
     <Modal
+      backdropColor="rgba(0, 0, 0, 0.2)"
       visible={visible}
-      transparent
+      statusBarTranslucent
       animationType="slide"
       onRequestClose={() => setVisible(false)}
     >
       <TouchableOpacity 
-          style={styles.overlay} 
-          activeOpacity={1} 
-          onPress={() => setVisible(false)}
+        style={styles.overlay} 
+        activeOpacity={0} 
+        onPress={() => setVisible(false)}
       >
+        <Text>111</Text>
           {/* Close on overlay tap */}
       </TouchableOpacity>
+
 
       <View style={styles.panel}>
         {/* Header */}
@@ -303,10 +306,8 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
 });
 
 const styles = StyleSheet.create({
-  // Removed triggerBtn styles
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   panel: {
     backgroundColor: '#fff',
