@@ -1,97 +1,140 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Kaikaio (Kaikaio Booking Native)
 
-# Getting Started
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![React Native](https://img.shields.io/badge/React%20Native-0.80.1-61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+> ⚠️ **Note**: 本项目处于开发阶段 (Current Version: 0.1.0).
 
-## Step 1: Start Metro
+## 📖 项目简介 (Introduction)
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+**Kaikaio** 是一款基于 React Native 开发的现代化移动端记账应用。旨在为用户提供简洁、高效的个人财务管理体验。通过直观的界面和流畅的交互，帮助用户轻松记录每日收支，掌握财务状况。
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+无论是日常消费、固定支出还是收入记录，Kaikaio 都能帮您清晰梳理，让每一笔账目都有迹可循。
 
-```sh
-# Using npm
+## ✨ 功能特性 (Features)
+
+- **📝 极速记账**: 快速记录支出与收入，支持自定义金额、日期、分类及备注。
+- **📊 账单明细**: 按月/日展示账单列表，清晰直观的收支流水。
+- **📈 统计概览**: 自动计算每月总支出与总收入，财务状况一目了然。
+- **🏷️ 多样分类**: 内置丰富的消费分类图标，支持支出/收入分类切换。
+- **📅 日期选择**: 灵活的日期选择器，支持补录历史账单。
+- **🔐 账户系统**: 安全的用户登录与账户管理功能。
+- **🎨 现代化 UI**: 基于 React Native 的原生级流畅体验，适配深色/浅色模式（规划中）。
+
+## 🛠 技术栈 (Tech Stack)
+
+本项目采用最新的 React Native 技术栈构建：
+
+- **Core**: [React Native](https://reactnative.dev/) (v0.80.1), [React](https://react.dev/) (v19)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Navigation**: [React Navigation v7](https://reactnavigation.org/) (Native Stack)
+- **Storage**: [AsyncStorage](https://github.com/react-native-async-storage/async-storage)
+- **Icons**: [React Native Vector Icons](https://github.com/oblador/react-native-vector-icons)
+- **Security**: JSEncrypt (数据加密)
+
+## 📸 应用截图 (Screenshots)
+
+| 首页列表 | 记账页面 | 账户中心 |
+|:---:|:---:|:---:|
+| ![List](https://via.placeholder.com/300x600?text=List+Page) | ![Booking](https://via.placeholder.com/300x600?text=Booking+Page) | ![Account](https://via.placeholder.com/300x600?text=Account+Page) |
+
+> *注：请替换上述图片链接为实际的应用截图*
+
+## 🚀 安装指南 (Installation)
+
+### 环境要求 (Prerequisites)
+
+在开始之前，请确保您的开发环境已安装以下工具：
+
+- **Node.js**: >= 18.0.0
+- **npm** 或 **yarn**
+- **iOS 开发环境**: macOS, Xcode, CocoaPods (仅限 iOS 构建)
+- **Android 开发环境**: Android Studio, JDK 17, Android SDK
+
+### 安装步骤 (Steps)
+
+1. **克隆仓库**
+   ```bash
+   git clone https://github.com/your-username/kaikaio-booking-native.git
+   cd kaikaio-booking-native
+   ```
+
+2. **安装依赖**
+   ```bash
+   npm install
+   # 或者
+   yarn install
+   ```
+
+3. **安装 iOS 依赖 (仅 macOS)**
+   ```bash
+   cd ios
+   pod install
+   cd ..
+   ```
+
+4. **字体链接 (可选)**
+   如果遇到图标不显示问题，请运行：
+   ```bash
+   npm run link-fonts
+   ```
+
+## 📖 使用说明 (Usage)
+
+### 启动开发服务器
+
+启动 Metro Bundler：
+
+```bash
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Build and run your app
+### 运行应用
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+**Android:**
 
-### Android
-
-```sh
-# Using npm
+```bash
 npm run android
-
-# OR using Yarn
-yarn android
 ```
 
-### iOS
+**iOS:**
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
+```bash
 npm run ios
-
-# OR using Yarn
-yarn ios
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+### 构建发布版
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+**Android APK:**
 
-## Step 3: Modify your app
+```bash
+npm run build:android
+# 生成的 APK 位于: android/app/build/outputs/apk/release/
+```
 
-Now that you have successfully run the app, let's make changes!
+## 🤝 贡献指南 (Contributing)
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+非常欢迎您参与项目贡献！请遵循以下步骤：
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+1. Fork 本仓库
+2. 创建您的特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交您的修改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 提交 Pull Request
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+## 📄 许可证 (License)
 
-## Congratulations! :tada:
+本项目基于 MIT 许可证开源。详情请参阅 [LICENSE](LICENSE) 文件。
 
-You've successfully run and modified your React Native App. :partying_face:
+## 📮 联系方式 (Contact)
 
-### Now what?
+- **维护者**: Kaikaio
+- **Email**: kaikaiano4@gmail.com
+- **GitHub**: [@KaiKaio](https://github.com/KaiKaio)
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+---
 
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Made with ❤️ by Kaikaio Team
