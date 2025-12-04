@@ -9,6 +9,7 @@ import {
   ScrollView,
   Keyboard
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCategory } from '../context/CategoryContext';
 import IconFont from '../components/IconFont'; // 根据实际路径引入
 import CategoryIcon from './CategoryIcon';
@@ -64,8 +65,31 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
       } else {
         setAmountStr('0');
         setCategory(categories[0]);
-        setDate(new Date());
         setRemark('');
+        
+        // Try to load last used date
+         AsyncStorage.getItem('LAST_BILL_DATE').then(lastDate => {
+           if (lastDate) {
+             // Parse YYYY-MM-DD to local date to avoid timezone issues
+             const parts = lastDate.split('-');
+             if (parts.length === 3) {
+               const year = parseInt(parts[0], 10);
+               const month = parseInt(parts[1], 10);
+               const day = parseInt(parts[2], 10);
+               setDate(new Date(year, month - 1, day));
+               return;
+             }
+             
+             const d = new Date(lastDate);
+             if (!isNaN(d.getTime())) {
+               setDate(d);
+               return;
+             }
+           }
+           setDate(new Date());
+         }).catch(() => {
+          setDate(new Date());
+        });
       }
       setShowDatePicker(false);
     }
@@ -109,6 +133,9 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
+
+    // Save last used date
+    AsyncStorage.setItem('LAST_BILL_DATE', dateStr).catch(err => console.warn('Failed to save date', err));
 
     const data: BillData = {
       amount,
@@ -157,6 +184,15 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
           <Text style={styles.dateTitle}>{year}年 {month}月</Text>
           <TouchableOpacity onPress={() => setDate(new Date(year, month, day))}>
             <Text style={styles.arrow}>▶️</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.todayBtn}
+            onPress={() => {
+              setDate(new Date());
+              setShowDatePicker(false);
+            }}
+          >
+            <Text style={styles.todayText}>今日</Text>
           </TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={styles.daysGrid}>
@@ -392,6 +428,19 @@ const styles = StyleSheet.create({
     padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    position: 'relative',
+  },
+  todayBtn: {
+    position: 'absolute',
+    right: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 14,
+  },
+  todayText: {
+    fontSize: 12,
+    color: '#333',
   },
   arrow: { fontSize: 20, paddingHorizontal: 20 },
   dateTitle: { fontSize: 16, fontWeight: 'bold' },
