@@ -7,7 +7,9 @@ import {
   Modal,
   TextInput,
   ScrollView,
-  Keyboard
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCategory } from '../context/CategoryContext';
@@ -216,23 +218,26 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
 
   return (
     <Modal
-      backdropColor="rgba(0, 0, 0, 0.2)"
+      transparent
       visible={visible}
       statusBarTranslucent
       animationType="slide"
       onRequestClose={() => setVisible(false)}
     >
-      <TouchableOpacity 
-        style={styles.overlay} 
-        activeOpacity={0} 
-        onPress={() => setVisible(false)}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.avoidView}
       >
-        <Text>111</Text>
+        <TouchableOpacity 
+          style={styles.overlay} 
+          activeOpacity={1} 
+          onPress={() => setVisible(false)}
+        >
           {/* Close on overlay tap */}
-      </TouchableOpacity>
+        </TouchableOpacity>
 
 
-      <View style={styles.panel}>
+        <View style={styles.panel}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setVisible(false)}>
@@ -291,6 +296,8 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
                 onFocus={() => setIsRemarkInputFocused(true)}
                 onBlur={() => setIsRemarkInputFocused(false)}
                 maxLength={50}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
               />
             </View>
         </View>
@@ -300,14 +307,19 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
           {showDatePicker ? renderDatePicker() : renderKeypad()}
         </View>
 
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 });
 
 const styles = StyleSheet.create({
+  avoidView: {
+    flex: 1,
+  },
   overlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   panel: {
     backgroundColor: '#fff',
