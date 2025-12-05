@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MonthYearPicker from '../components/MonthYearPicker';
 import BillForm, { BillData, BillFormRef } from '../components/BillForm';
@@ -35,7 +36,10 @@ const List = () => {
   const { getCategoryIcon } = useCategory();
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<DailyBillGroup[]>([]);
-  const [currentDate, setCurrentDate] = useState('2025-11'); // Default to current month or based on today
+  const [currentDate, setCurrentDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [showPicker, setShowPicker] = useState(false);
   const loadingRef = useRef(false);
   const [summary, setSummary] = useState({ totalExpense: 0, totalIncome: 0 });
@@ -43,6 +47,20 @@ const List = () => {
   
   const billFormRef = useRef<BillFormRef>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const loadLastDate = async () => {
+      try {
+        const savedDate = await AsyncStorage.getItem('lastSelectedDate');
+        if (savedDate) {
+          setCurrentDate(savedDate);
+        }
+      } catch (e) {
+        console.error('Failed to load date', e);
+      }
+    };
+    loadLastDate();
+  }, []);
 
   const fetchBills = useCallback(async () => {
     if (loadingRef.current) return;
@@ -115,7 +133,9 @@ const List = () => {
 
   const handleDateConfirm = (year: number, month: number) => {
     const formattedMonth = month.toString().padStart(2, '0');
-    setCurrentDate(`${year}-${formattedMonth}`);
+    const newDate = `${year}-${formattedMonth}`;
+    setCurrentDate(newDate);
+    AsyncStorage.setItem('lastSelectedDate', newDate).catch(e => console.error('Failed to save date', e));
     setShowPicker(false);
   };
 
@@ -307,6 +327,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#0090FF',
     paddingBottom: 14,
+    paddingHorizontal: 12,
   },
   headerRow: {
     flexDirection: 'row',
@@ -314,7 +335,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     marginBottom: 8
   },
-  headerLabel: { color: '#fff', fontSize: 14, marginLeft: 12, lineHeight: 32 },
+  headerLabel: { color: '#fff', fontSize: 14, marginRight: 12, lineHeight: 32 },
   headerValue: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
   headerActions: { flexDirection: 'row', justifyContent: 'flex-end' },
   headerBtn: { backgroundColor: '#0072e5', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4, marginLeft: 8 },
