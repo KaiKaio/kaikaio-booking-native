@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCategory } from '../context/CategoryContext';
 import IconFont from '../components/IconFont'; // 根据实际路径引入
@@ -34,6 +35,7 @@ export interface BillData {
 }
 
 const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
+  const insets = useSafeAreaInsets();
   const { categories } = useCategory();
   const [visible, setVisible] = useState(false);
   const [editData, setEditData] = useState<BillData | undefined>(undefined);
@@ -220,12 +222,11 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
     <Modal
       transparent
       visible={visible}
-      statusBarTranslucent
       animationType="slide"
       onRequestClose={() => setVisible(false)}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.avoidView}
       >
         <TouchableOpacity 
@@ -237,7 +238,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
         </TouchableOpacity>
 
 
-        <View style={styles.panel}>
+        <View style={[styles.panel, { paddingBottom: Math.max(20, insets.bottom) }]}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setVisible(false)}>
