@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Login from './pages/Login';
 import Main from './pages/Main';
 import { NavigationContainer } from '@react-navigation/native';
@@ -32,15 +33,17 @@ function AuthLoading({ navigation }: { navigation: NativeStackNavigationProp<any
 function App() {
   return (
     <GestureHandlerRootView style={styles.container}>
-      <CategoryProvider>
-        <NavigationContainer ref={navigationRef}>
-          <Stack.Navigator initialRouteName="AuthLoading" screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="AuthLoading" component={AuthLoading} />
-            <Stack.Screen name="Login" component={Login} />
-            <Stack.Screen name="Main" component={Main} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </CategoryProvider>
+      <SafeAreaProvider>
+        <CategoryProvider>
+          <NavigationContainer ref={navigationRef}>
+            <Stack.Navigator initialRouteName="AuthLoading" screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="AuthLoading" component={AuthLoading} />
+              <Stack.Screen name="Login" component={Login} />
+              <Stack.Screen name="Main" component={Main} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </CategoryProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

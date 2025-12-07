@@ -257,7 +257,7 @@ const List = () => {
       {/* 账单列表 */}
       <FlatList
         style={styles.scroll}
-        contentContainerStyle={styles.flatListContent}
+        contentContainerStyle={[styles.flatListContent, { paddingBottom: 80 + insets.bottom }]}
         data={data}
         renderItem={renderBillItem}
         keyExtractor={(item) => item.date}
@@ -280,7 +280,7 @@ const List = () => {
         onConfirm={handleDateConfirm}
       />
 
-      <View style={styles.fabContainer}>
+      <View style={[styles.fabContainer, { bottom: 80 + insets.bottom }]}>
         <TouchableOpacity style={styles.fab} onPress={handleAdd}>
           <Text style={styles.fabIcon}>✏️</Text>
         </TouchableOpacity>
@@ -335,8 +335,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     marginBottom: 8
   },
-  headerLabel: { color: '#fff', fontSize: 14, marginRight: 12, lineHeight: 32 },
-  headerValue: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
+  headerLabel: { color: '#fff', fontSize: 14, lineHeight: 32 },
+  headerValue: { color: '#fff', fontSize: 28, fontWeight: 'bold', marginRight: 24 },
   headerActions: { flexDirection: 'row', justifyContent: 'flex-end' },
   headerBtn: { backgroundColor: '#0072e5', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4, marginLeft: 8 },
   headerBtnText: { color: '#fff', fontSize: 14, lineHeight: 16 },

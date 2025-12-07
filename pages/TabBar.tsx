@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import IconFont from '@/components/IconFont';
 import { RootStackParamList } from '../types/navigation';
 
@@ -20,6 +21,7 @@ interface TabBarProps {
 const TabBar = ({ activeTab, onTabChange }: TabBarProps) => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute();
+  const insets = useSafeAreaInsets();
   const currentRouteName = activeTab || route.name;
 
   const tabs: TabItem[] = [
@@ -49,7 +51,7 @@ const TabBar = ({ activeTab, onTabChange }: TabBarProps) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.safeArea, { paddingBottom: insets.bottom }]}>
       <View style={styles.tabBar}>
         {tabs.map((tab) => {
           // 1. 路由高亮功能：将对应路由的 TabBar 项高亮显示
@@ -74,12 +76,13 @@ const TabBar = ({ activeTab, onTabChange }: TabBarProps) => {
           );
         })}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   safeArea: {
+    backgroundColor: '#fff',
     position: 'absolute',
     bottom: 0,
     left: 0,
