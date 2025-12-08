@@ -10,7 +10,7 @@ interface TabItem {
   name: string;
   label: string;
   icon: string;
-  route: keyof RootStackParamList | 'Statistics';
+  route: keyof RootStackParamList;
 }
 
 interface TabBarProps {
@@ -26,7 +26,7 @@ const TabBar = ({ activeTab, onTabChange }: TabBarProps) => {
 
   const tabs: TabItem[] = [
     { name: 'List', label: '账单', icon: 'wj-zd', route: 'List' },
-    { name: 'Statistics', label: '统计', icon: 'tongji', route: 'Statistics' as any },
+    { name: 'Statistics', label: '统计', icon: 'tongji', route: 'Statistics' },
     { name: 'Account', label: '我的', icon: 'wode', route: 'Account' },
   ];
 
@@ -35,11 +35,6 @@ const TabBar = ({ activeTab, onTabChange }: TabBarProps) => {
 
   const handlePress = (tab: TabItem) => {
     if (currentRouteName === tab.route) {
-      return;
-    }
-
-    if (tab.route === 'Statistics') {
-      console.warn('Statistics page not implemented');
       return;
     }
 

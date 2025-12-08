@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import TabBar from './TabBar';
 import List from './List';
 import Account from './Account';
+import Statistics from './Statistics';
 
 const Main = () => {
   const [activeTab, setActiveTab] = useState('List');
@@ -11,6 +12,10 @@ const Main = () => {
     <View style={styles.container}>
       <View style={[styles.content, activeTab === 'List' ? styles.active : styles.hidden]}>
         <List />
+      </View>
+      
+      <View style={[styles.content, activeTab === 'Statistics' ? styles.active : styles.hidden]}>
+        <Statistics />
       </View>
       
       <View style={[styles.content, activeTab === 'Account' ? styles.active : styles.hidden]}>

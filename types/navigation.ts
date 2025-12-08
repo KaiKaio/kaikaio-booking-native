@@ -4,6 +4,7 @@ export type RootStackParamList = {
   Login: undefined;
   Main: undefined;
   List: undefined;
+  Statistics: undefined;
   Account: undefined;
   // 若有其他路由，可在此添加
 };
