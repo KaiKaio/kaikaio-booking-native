@@ -48,3 +48,22 @@ export interface AddBillResponse {
   msg: string;
   data: null;
 }
+
+export interface StatisticsData {
+  type_id: string;
+  type_name: string;
+  pay_type: string;
+  number: number;
+}
+
+export interface StatisticsResponseData {
+  total_expense: string;
+  total_income: string;
+  total_data: StatisticsData[];
+}
+
+export interface StatisticsResponse {
+  code: number;
+  msg: string;
+  data: StatisticsResponseData;
+}

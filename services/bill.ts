@@ -1,5 +1,5 @@
 import request from '../request';
-import { BillListResponse, BillParams, AddBillParams, AddBillResponse } from '../types/bill';
+import { BillListResponse, BillParams, AddBillParams, AddBillResponse, StatisticsResponse } from '../types/bill';
 
 export const getBillList = async (params: BillParams): Promise<BillListResponse> => {
   // TODO: Replace with actual API base URL if needed
@@ -35,5 +35,12 @@ export const updateBill = async (params: AddBillParams & { id: number }): Promis
   return request('/api/bill/update', {
     method: 'POST',
     body: JSON.stringify(params),
+  });
+};
+
+export const getBillStatistics = async (start: string, end: string): Promise<StatisticsResponse> => {
+  const queryString = new URLSearchParams({ start, end }).toString();
+  return request(`/api/bill/data?${queryString}`, {
+    method: 'GET',
   });
 };
