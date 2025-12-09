@@ -30,7 +30,7 @@ const TabBar = ({ activeTab, onTabChange }: TabBarProps) => {
     { name: 'Account', label: '我的', icon: 'wode', route: 'Account' },
   ];
 
-  const activeColor = '#1BC47D';
+  const activeColor = '#0090FF';
   const inactiveColor = '#000';
 
   const handlePress = (tab: TabItem) => {
