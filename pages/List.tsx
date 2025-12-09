@@ -198,10 +198,8 @@ const List = () => {
 
       if (editingId) {
         await updateBill({ ...params, id: editingId });
-        Alert.alert('提示', '修改成功');
       } else {
         await addBill(params);
-        Alert.alert('提示', '记账成功');
       }
       
       fetchBills(); // Refresh list
