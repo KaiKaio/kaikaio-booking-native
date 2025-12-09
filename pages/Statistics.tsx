@@ -84,22 +84,21 @@ const Statistics = () => {
         >
           {months.map((m) => {
             const isSelected = m === currentMonth;
-            // const [y, mo] = m.split('-');
-            // Format to match prototype "2025-10" vs "2025-11"
-            // Prototype shows full YYYY-MM
             return (
               <TouchableOpacity 
                 key={m} 
-                style={styles.monthItem} 
+                style={[
+                  styles.monthItem, 
+                  isSelected && styles.monthItemSelected
+                ]} 
                 onPress={() => setCurrentMonth(m)}
               >
                 <Text style={[
                   styles.monthText, 
-                  isSelected && styles.selectedMonthText
+                  isSelected && styles.monthTextSelected
                 ]}>
                   {m}
                 </Text>
-                {isSelected && <View style={styles.indicator} />}
               </TouchableOpacity>
             );
           })}
@@ -117,7 +116,10 @@ const Statistics = () => {
         {loading ? (
           <ActivityIndicator size="large" color="#0090FF" style={styles.loader} />
         ) : (
-          <ScrollView style={styles.detailsScroll}>
+          <ScrollView 
+            style={styles.detailsScroll}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+          >
             <Composition data={data?.total_data || []} />
             <View style={styles.spacer} />
           </ScrollView>
@@ -130,12 +132,23 @@ const Statistics = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5',
   },
   header: {
     alignItems: 'center',
     paddingVertical: 20,
     backgroundColor: '#fff',
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   headerTitle: {
     fontSize: 14,
@@ -154,41 +167,42 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   monthSelectorContainer: {
-    height: 60,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
+    paddingVertical: 10,
+    marginTop: 6,
+    backgroundColor: '#f5f5f5',
   },
   monthList: {
-    paddingHorizontal: 16,
     alignItems: 'center',
   },
   monthItem: {
-    marginRight: 24,
+    marginRight: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#fff',
     justifyContent: 'center',
-    height: '100%',
-    position: 'relative',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  monthItemSelected: {
+    backgroundColor: '#0090FF',
+    borderColor: '#0090FF',
+    shadowColor: '#0090FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   monthText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 14,
+    color: '#666',
     fontWeight: '500',
   },
-  selectedMonthText: {
-    color: '#0090FF',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  indicator: {
-    position: 'absolute',
-    bottom: 10,
-    left: 0,
-    right: 0,
-    height: 0, 
-    // The prototype doesn't show an underline, just bold blue text. 
-    // But usually there might be one. I'll hide it for now to match the text-only focus style more closely or keep it subtle.
-    // Let's remove it to match the "clean text" look of the prototype if implied, but typically "selected" implies some state.
-    // The prototype shows "2025-10" in blue and larger.
+  monthTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
   content: {
     flex: 1,

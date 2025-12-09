@@ -56,11 +56,11 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
           return (
             <View key={`${item.pay_type}-${item.type_id}`} style={styles.item}>
               <View style={styles.iconWrapper}>
-                 <CategoryIcon icon={icon} size={20} color="#fff" />
+                 <CategoryIcon icon={icon} size={20} />
               </View>
               
               <Text style={styles.categoryName}>{item.type_name}</Text>
-              <Text style={styles.amountText}>¥{amount.toFixed(2)}</Text>
+              <Text style={styles.amountText}>¥ {amount.toFixed(2)}</Text>
               
               <View style={[styles.bar, { width: barWidth }]} />
               
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#0090FF', // Prototype has blue background for icons? 
+    backgroundColor: '#F0F6FF', // Prototype has blue background for icons? 
     // Wait, prototype icons are blue on white/light-blue bg? 
     // Actually the prototype icons are white on blue circle.
     // But `CategoryIcon` might handle color?
@@ -150,12 +150,14 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   categoryName: {
+    width: 60,
     fontSize: 14,
     color: '#333',
     fontWeight: '500',
-    marginRight: 8,
+    marginRight: 8
   },
   amountText: {
+    width: 80,
     fontSize: 14,
     color: '#333',
     marginRight: 12,
