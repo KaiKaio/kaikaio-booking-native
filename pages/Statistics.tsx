@@ -169,7 +169,6 @@ const styles = StyleSheet.create({
   monthSelectorContainer: {
     paddingVertical: 10,
     marginTop: 6,
-    backgroundColor: '#f5f5f5',
   },
   monthList: {
     alignItems: 'center',

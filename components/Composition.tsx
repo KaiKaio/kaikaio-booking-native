@@ -56,11 +56,13 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
           return (
             <View key={`${item.pay_type}-${item.type_id}`} style={styles.item}>
               <View style={styles.iconWrapper}>
-                 <CategoryIcon icon={icon} size={20} />
+                 <CategoryIcon icon={icon} size={22} />
               </View>
               
-              <Text style={styles.categoryName}>{item.type_name}</Text>
-              <Text style={styles.amountText}>¥ {amount.toFixed(2)}</Text>
+              <View style={styles.info}>
+                <Text style={styles.categoryName}>{item.type_name}</Text>
+                <Text style={styles.amountText}>{amount.toFixed(2)}</Text>
+              </View>
               
               <View style={[styles.bar, { width: barWidth }]} />
               
@@ -83,6 +85,11 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
 
 const styles = StyleSheet.create({
   container: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
@@ -135,8 +142,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconWrapper: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     borderRadius: 16,
     backgroundColor: '#F0F6FF', // Prototype has blue background for icons? 
     // Wait, prototype icons are blue on white/light-blue bg? 
@@ -149,18 +156,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
+  info: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
   categoryName: {
     width: 60,
     fontSize: 14,
-    color: '#333',
     fontWeight: '500',
-    marginRight: 8
   },
   amountText: {
+    marginTop: 4,
     width: 80,
     fontSize: 14,
     color: '#333',
-    marginRight: 12,
   },
   bar: {
     height: 6,
