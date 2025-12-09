@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, Image, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import request from '../request';
 import JSEncrypt from 'jsencrypt';
 import { useEffect } from 'react';
@@ -77,7 +78,12 @@ const Login = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // 根据平台设置行为
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0} // iOS 导航栏高度
     >
-      <Image source={require('../assets/login-title-icon.webp')} style={styles.logo} resizeMode="contain" />
+      <Image
+        source={require('../assets/login-title-icon.webp')}
+        style={styles.logo}
+        contentFit="contain"
+        transition={1000}
+      />
       <TextInput
         style={styles.input}
         placeholder="请输入账号"
