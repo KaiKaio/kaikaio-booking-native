@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getBillStatistics } from '../services/bill';
 import { StatisticsResponseData } from '../types/bill';
+import Composition from '../components/Composition';
 
 const Statistics = () => {
   const insets = useSafeAreaInsets();
@@ -117,9 +118,7 @@ const Statistics = () => {
           <ActivityIndicator size="large" color="#0090FF" style={styles.loader} />
         ) : (
           <ScrollView style={styles.detailsScroll}>
-            {/* Placeholder for future detailed list */}
-            {/* The user didn't ask for the list UI yet, but we have the data in `data.total_data` */}
-            {/* We can iterate and show them if needed, but keeping it clean for now based on request */}
+            <Composition data={data?.total_data || []} />
             <View style={styles.spacer} />
           </ScrollView>
         )}
