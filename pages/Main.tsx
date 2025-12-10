@@ -1,46 +1,25 @@
-import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import TabBar from './TabBar';
 import List from './List';
 import Account from './Account';
 import Statistics from './Statistics';
+import { MainTabParamList } from '../types/navigation';
+
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const Main = () => {
-  const [activeTab, setActiveTab] = useState('List');
-
   return (
-    <View style={styles.container}>
-      <View style={[styles.content, activeTab === 'List' ? styles.active : styles.hidden]}>
-        <List />
-      </View>
-      
-      <View style={[styles.content, activeTab === 'Statistics' ? styles.active : styles.hidden]}>
-        <Statistics />
-      </View>
-      
-      <View style={[styles.content, activeTab === 'Account' ? styles.active : styles.hidden]}>
-        <Account />
-      </View>
-
-      <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
-    </View>
+    <Tab.Navigator
+      tabBar={TabBar}
+      screenOptions={{ headerShown: false }}
+      initialRouteName="List"
+    >
+      <Tab.Screen name="List" component={List} />
+      <Tab.Screen name="Statistics" component={Statistics} />
+      <Tab.Screen name="Account" component={Account} />
+    </Tab.Navigator>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F6F8FA',
-  },
-  content: {
-    flex: 1,
-  },
-  active: {
-    display: 'flex',
-  },
-  hidden: {
-    display: 'none',
-  },
-});
 
 export default Main;

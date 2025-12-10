@@ -1,72 +1,80 @@
 import React from 'react';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { CommonActions } from '@react-navigation/native';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import IconFont from '@/components/IconFont';
-import { RootStackParamList } from '../types/navigation';
 
-interface TabItem {
-  name: string;
+interface TabConfig {
   label: string;
   icon: string;
-  route: keyof RootStackParamList;
 }
 
-interface TabBarProps {
-  activeTab?: string;
-  onTabChange?: (tab: string) => void;
-}
+const TAB_CONFIG: Record<string, TabConfig> = {
+  List: { label: '账单', icon: 'wj-zd' },
+  Statistics: { label: '统计', icon: 'tongji' },
+  Account: { label: '我的', icon: 'wode' },
+};
 
-const TabBar = ({ activeTab, onTabChange }: TabBarProps) => {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const route = useRoute();
+const TabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
   const insets = useSafeAreaInsets();
-  const currentRouteName = activeTab || route.name;
-
-  const tabs: TabItem[] = [
-    { name: 'List', label: '账单', icon: 'wj-zd', route: 'List' },
-    { name: 'Statistics', label: '统计', icon: 'tongji', route: 'Statistics' },
-    { name: 'Account', label: '我的', icon: 'wode', route: 'Account' },
-  ];
-
   const activeColor = '#0090FF';
   const inactiveColor = '#000';
-
-  const handlePress = (tab: TabItem) => {
-    if (currentRouteName === tab.route) {
-      return;
-    }
-
-    if (onTabChange) {
-      onTabChange(tab.route);
-    } else {
-      navigation.replace(tab.route as keyof RootStackParamList);
-    }
-  };
 
   return (
     <View style={[styles.safeArea, { paddingBottom: insets.bottom }]}>
       <View style={styles.tabBar}>
-        {tabs.map((tab) => {
-          // 1. 路由高亮功能：将对应路由的 TabBar 项高亮显示
-          const isFocused = currentRouteName === tab.route;
+        {state.routes.map((route, index) => {
+          const { options } = descriptors[route.key];
+          const config = TAB_CONFIG[route.name];
+          
+          // 如果没有配置（比如未知的路由），则跳过
+          if (!config) return null;
+
+          const label = config.label;
+          const isFocused = state.index === index;
           const color = isFocused ? activeColor : inactiveColor;
 
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+
+            if (!isFocused && !event.defaultPrevented) {
+              // The `merge: true` option makes sure that the params inside the tab screen are preserved
+              navigation.dispatch(CommonActions.navigate({ name: route.name, merge: true }));
+            }
+          };
+
+          const onLongPress = () => {
+            navigation.emit({
+              type: 'tabLongPress',
+              target: route.key,
+            });
+          };
+
           return (
-            <TouchableOpacity 
-              key={tab.name} 
-              style={styles.tabItem} 
-              onPress={() => handlePress(tab)}
+            <TouchableOpacity
+              key={route.key}
+              accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : {}}
+              accessibilityLabel={options.tabBarAccessibilityLabel}
+              onPress={onPress}
+              onLongPress={onLongPress}
+              style={styles.tabItem}
               activeOpacity={0.8}
             >
-              <IconFont 
-                style={styles.tabIcon} 
-                name={tab.icon} 
-                size={30} 
-                color={color} 
+              <IconFont
+                style={styles.tabIcon}
+                name={config.icon}
+                size={30}
+                color={color}
               />
-              <Text style={[styles.tabLabel, { color }]}>{tab.label}</Text>
+              <Text style={[styles.tabLabel, { color }]}>
+                {label}
+              </Text>
             </TouchableOpacity>
           );
         })}
@@ -78,16 +86,12 @@ const TabBar = ({ activeTab, onTabChange }: TabBarProps) => {
 const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: '#fff',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
   },
   tabBar: { 
     flexDirection: 'row', 
     height: 70, 
-    borderTopWidth: 1, 
-    borderTopColor: '#eee', 
     backgroundColor: '#fff', 
     alignItems: 'center', 
     justifyContent: 'space-around' 
