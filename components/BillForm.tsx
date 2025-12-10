@@ -9,7 +9,9 @@ import {
   ScrollView,
   Keyboard,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Animated,
+  Dimensions
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -39,6 +41,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   const { categories } = useCategory();
   const [visible, setVisible] = useState(false);
   const [editData, setEditData] = useState<BillData | undefined>(undefined);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   
   // Form State
   const [amountStr, setAmountStr] = useState('0');
@@ -55,6 +58,62 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
       setVisible(true);
     }
   }));
+
+  // Animation Logic
+  const [modalVisible, setModalVisible] = useState(visible);
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = React.useRef(new Animated.Value(Dimensions.get('window').height)).current;
+
+  useEffect(() => {
+    if (visible) {
+      setModalVisible(true);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: Dimensions.get('window').height,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start(() => setModalVisible(false));
+    }
+  }, [visible, fadeAnim, slideAnim]);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+      }
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Reset form when opening
   useEffect(() => {
@@ -100,7 +159,6 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   }, [visible, editData, categories]);
 
   const handlePressKey = (key: string) => {
-    Keyboard.dismiss();
     if (key === 'delete') {
       setAmountStr(prev => {
         if (prev.length <= 1) return '0';
@@ -205,7 +263,6 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
               key={d}
               style={[styles.dayItem, d === day && styles.selectedDay]}
               onPress={() => {
-                Keyboard.dismiss();
                 setDate(new Date(year, month - 1, d));
                 setShowDatePicker(false);
               }}
@@ -221,24 +278,38 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   return (
     <Modal
       transparent
-      visible={visible}
-      animationType="slide"
+      visible={modalVisible}
+      animationType="none"
+      statusBarTranslucent
       onRequestClose={() => setVisible(false)}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.avoidView}
+        // https://github.com/facebook/react-native/issues/47140
+        keyboardVerticalOffset={keyboardVisible ? 0 : -80}
       >
-        <TouchableOpacity 
-          style={styles.overlay} 
-          activeOpacity={1} 
-          onPress={() => setVisible(false)}
+        <Animated.View 
+          style={[styles.overlay, { opacity: fadeAnim }]}
         >
-          {/* Close on overlay tap */}
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.avoidView}
+            activeOpacity={1} 
+            onPress={() => {
+              setVisible(false);
+              Keyboard.dismiss();
+            }}
+          />
+        </Animated.View>
 
 
-        <View style={[styles.panel, { paddingBottom: Math.max(20, insets.bottom) }]}>
+        <Animated.View onTouchStart={() => Keyboard.dismiss()} style={[
+          styles.panel, 
+          { 
+            paddingBottom: Math.max(20, insets.bottom),
+            transform: [{ translateY: slideAnim }]
+          }
+        ]}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setVisible(false)}>
@@ -264,7 +335,6 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
                   key={cat.id} 
                   style={[styles.catItem, category.id === cat.id && styles.selectedCat]}
                   onPress={() => {
-                    Keyboard.dismiss();
                     setCategory(cat);
                   }}
                 >
@@ -308,7 +378,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
           {showDatePicker ? renderDatePicker() : renderKeypad()}
         </View>
 
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
