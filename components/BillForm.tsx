@@ -284,11 +284,11 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
       onRequestClose={() => setVisible(false)}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={keyboardVisible ? (Platform.OS === 'ios' ? 'padding' : 'height') : undefined}
         style={styles.avoidView}
-        // 可以尝试结合 StatusBar.currentHeight (Android) 来动态设置这个值
-        // https://github.com/facebook/react-native/issues/47140
-        keyboardVerticalOffset={keyboardVisible ? 0 : -80}
+        // // 可以尝试结合 StatusBar.currentHeight (Android) 来动态设置这个值
+        // // https://github.com/facebook/react-native/issues/47140
+        // keyboardVerticalOffset={keyboardVisible ? 0 : -80}
       >
         <Animated.View 
           style={[styles.overlay, { opacity: fadeAnim }]}
