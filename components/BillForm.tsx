@@ -340,8 +340,8 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
                   }}
                 >
                   <View style={[styles.catIconWrap, category.id === cat.id && styles.selectedCatIconWrap]}>
-                  <CategoryIcon icon={cat.icon} size={24} />
-                </View>
+                    <CategoryIcon icon={cat.icon} size={22} />
+                  </View>
                   <Text style={[styles.catName, category.id === cat.id && styles.selectedCatName]}>{cat.name}</Text>
                 </TouchableOpacity>
               ))}
@@ -440,9 +440,9 @@ const styles = StyleSheet.create({
     // Highlight style
   },
   catIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',

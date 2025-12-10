@@ -12,6 +12,7 @@ import {
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import CategoryIcon from './CategoryIcon';
 import { deleteBill } from '../services/bill';
+import { theme } from '@/theme';
 
 export interface BillItemProps {
   id: number;
@@ -153,9 +154,8 @@ const styles = StyleSheet.create({
     flex: 1
   },
   itemType: {
-    fontSize: 16,
-    color: '#222',
-    fontWeight: 'bold'
+    fontSize: theme.typography.size.md,
+    fontWeight: theme.typography.weight.bold,
   },
   itemRemark: {
     fontSize: 12,

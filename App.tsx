@@ -39,7 +39,13 @@ function App() {
       <SafeAreaProvider>
         <CategoryProvider>
           <NavigationContainer ref={navigationRef}>
-            <Stack.Navigator initialRouteName="AuthLoading" screenOptions={{ headerShown: false }}>
+            <Stack.Navigator 
+              initialRouteName="AuthLoading" 
+              screenOptions={{ 
+                headerShown: false,
+                animation: 'flip'
+              }}
+            >
               <Stack.Screen name="AuthLoading" component={AuthLoading} />
               <Stack.Screen name="Login" component={Login} />
               <Stack.Screen name="Main" component={Main} />

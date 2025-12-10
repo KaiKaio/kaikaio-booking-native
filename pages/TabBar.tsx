@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { CommonActions } from '@react-navigation/native';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import IconFont from '@/components/IconFont';
@@ -14,6 +14,64 @@ const TAB_CONFIG: Record<string, TabConfig> = {
   List: { label: '账单', icon: 'wj-zd' },
   Statistics: { label: '统计', icon: 'tongji' },
   Account: { label: '我的', icon: 'wode' },
+};
+
+// Subcomponent for individual tab items to handle animation
+const TabItem = ({
+  isFocused,
+  options,
+  onPress,
+  onLongPress,
+  config,
+  activeColor,
+  inactiveColor,
+}: {
+  route: any;
+  isFocused: boolean;
+  options: any;
+  onPress: () => void;
+  onLongPress: () => void;
+  config: TabConfig;
+  activeColor: string;
+  inactiveColor: string;
+}) => {
+  // Initialize scale based on focus state
+  const scaleAnim = useRef(new Animated.Value(isFocused ? 1.1 : 1)).current;
+
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: isFocused ? 1.1 : 1,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 40,
+    }).start();
+  }, [isFocused, scaleAnim]);
+
+  const color = isFocused ? activeColor : inactiveColor;
+
+  return (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityState={isFocused ? { selected: true } : {}}
+      accessibilityLabel={options.tabBarAccessibilityLabel}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      style={styles.tabItem}
+      activeOpacity={0.8}
+    >
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <IconFont
+          style={styles.tabIcon}
+          name={config.icon}
+          size={30}
+          color={color}
+        />
+      </Animated.View>
+      <Text style={[styles.tabLabel, { color }]}>
+        {config.label}
+      </Text>
+    </TouchableOpacity>
+  );
 };
 
 const TabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
@@ -31,9 +89,7 @@ const TabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
           // 如果没有配置（比如未知的路由），则跳过
           if (!config) return null;
 
-          const label = config.label;
           const isFocused = state.index === index;
-          const color = isFocused ? activeColor : inactiveColor;
 
           const onPress = () => {
             const event = navigation.emit({
@@ -56,26 +112,17 @@ const TabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
           };
 
           return (
-            <TouchableOpacity
+            <TabItem
               key={route.key}
-              accessibilityRole="button"
-              accessibilityState={isFocused ? { selected: true } : {}}
-              accessibilityLabel={options.tabBarAccessibilityLabel}
+              route={route}
+              isFocused={isFocused}
+              options={options}
               onPress={onPress}
               onLongPress={onLongPress}
-              style={styles.tabItem}
-              activeOpacity={0.8}
-            >
-              <IconFont
-                style={styles.tabIcon}
-                name={config.icon}
-                size={30}
-                color={color}
-              />
-              <Text style={[styles.tabLabel, { color }]}>
-                {label}
-              </Text>
-            </TouchableOpacity>
+              config={config}
+              activeColor={activeColor}
+              inactiveColor={inactiveColor}
+            />
           );
         })}
       </View>

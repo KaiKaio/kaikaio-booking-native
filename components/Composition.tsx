@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background.paper,
     borderRadius: theme.spacing.radius.md,
     padding: theme.spacing.lg,
-    marginHorizontal: theme.spacing.lg,
+    marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.lg,
   },
   header: {
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   iconWrapper: {
     width: 36,
     height: 36,
-    borderRadius: theme.spacing.radius.lg,
+    borderRadius: 18,
     backgroundColor: '#F0F6FF', // Keep specific color
     justifyContent: 'center',
     alignItems: 'center',
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   categoryName: {
     width: 60,
     fontSize: theme.typography.size.md,
-    fontWeight: theme.typography.weight.medium,
+    fontWeight: theme.typography.weight.bold,
   },
   amountText: {
     marginTop: theme.spacing.xs,

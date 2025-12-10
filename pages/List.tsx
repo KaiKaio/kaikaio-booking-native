@@ -363,8 +363,8 @@ const styles = StyleSheet.create({
   headerBtnText: { color: '#fff', fontSize: theme.typography.size.md },
 
   flatListContent: { paddingBottom: 80 },
-  scroll: { flex: 1, marginTop: 8 },
-  section: { backgroundColor: '#fff', borderRadius: 12, marginHorizontal: 12, marginTop: 16, paddingBottom: 8, elevation: 2 },
+  scroll: { flex: 1, marginTop: 0 },
+  section: { backgroundColor: '#fff', borderRadius: 12, marginHorizontal: theme.spacing.md, marginTop: 16, paddingBottom: 8, elevation: 2 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   sectionDate: { fontWeight: 'bold', fontSize: 16, color: '#222' },
   sectionStat: { fontSize: 12, color: '#888' },
