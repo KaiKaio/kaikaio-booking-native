@@ -48,6 +48,16 @@ const List = () => {
   const billFormRef = useRef<BillFormRef>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
 
+  const [orderBy, setOrderBy] = useState<'ASC' | 'DESC'>('ASC');
+  const [debouncedOrderBy, setDebouncedOrderBy] = useState<'ASC' | 'DESC'>('ASC');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedOrderBy(orderBy);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [orderBy]);
+
   useEffect(() => {
     const loadLastDate = async () => {
       try {
@@ -72,7 +82,7 @@ const List = () => {
       const start = `${currentDate}-01 00:00:00`;
       const end = `${currentDate}-${lastDay} 23:59:59`;
 
-      const res = await getBillList({ start, end, page: 1, page_size: 1000, orderBy: 'DESC' });
+      const res = await getBillList({ start, end, page: 1, page_size: 1000, orderBy: debouncedOrderBy });
       
       if (res.code === 200) {
         setSummary({
@@ -125,7 +135,7 @@ const List = () => {
       loadingRef.current = false;
       setRefreshing(false);
     }
-  }, [currentDate, getCategoryIcon]);
+  }, [currentDate, getCategoryIcon, debouncedOrderBy]);
 
   useEffect(() => {
     fetchBills();
@@ -245,7 +255,12 @@ const List = () => {
           <Text style={styles.headerValue}>{summary.totalIncome.toFixed(2)}</Text>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerBtn}><Text style={styles.headerBtnText}>倒序</Text></TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.headerBtn} 
+            onPress={() => setOrderBy(prev => prev === 'ASC' ? 'DESC' : 'ASC')}
+          >
+            <Text style={styles.headerBtnText}>{orderBy === 'ASC' ? '倒序' : '正序'}</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.headerBtn}><Text style={styles.headerBtnText}>全部类型</Text></TouchableOpacity>
           <TouchableOpacity style={styles.headerBtn} onPress={() => setShowPicker(true)}>
             <Text style={styles.headerBtnText}>{currentDate}</Text>
