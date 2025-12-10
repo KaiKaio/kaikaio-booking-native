@@ -8,6 +8,7 @@ import BillItem from '../components/BillItem';
 import { getBillList, addBill, updateBill } from '../services/bill';
 import { BillDetail, DailyBill } from '../types/bill';
 import { useCategory } from '../context/CategoryContext';
+import { theme } from '@/theme';
 
 // 定义 SubItem 类型
 type SubItem = {
@@ -344,15 +345,23 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'flex-start',
     marginBottom: 8
   },
-  headerLabel: { color: '#fff', fontSize: 14, lineHeight: 32 },
-  headerValue: { color: '#fff', fontSize: 28, fontWeight: 'bold', marginRight: 24 },
+  headerLabel: { color: '#fff', fontSize: theme.typography.size.md },
+  headerValue: { color: '#fff', fontSize: theme.typography.size.xl, fontWeight: 'bold', marginRight: 24 },
+
   headerActions: { flexDirection: 'row', justifyContent: 'flex-end' },
-  headerBtn: { backgroundColor: '#0072e5', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4, marginLeft: 8 },
-  headerBtnText: { color: '#fff', fontSize: 14, lineHeight: 16 },
+  headerBtn: {
+    backgroundColor: '#0072e5',
+    borderRadius: 8,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    marginLeft: 8
+  },
+  headerBtnText: { color: '#fff', fontSize: theme.typography.size.md },
+
   flatListContent: { paddingBottom: 80 },
   scroll: { flex: 1, marginTop: 8 },
   section: { backgroundColor: '#fff', borderRadius: 12, marginHorizontal: 12, marginTop: 16, paddingBottom: 8, elevation: 2 },

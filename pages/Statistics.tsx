@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getBillStatistics } from '../services/bill';
 import { StatisticsResponseData } from '../types/bill';
 import Composition from '../components/Composition';
+import { theme } from '../theme';
 
 const Statistics = () => {
   const insets = useSafeAreaInsets();
@@ -114,7 +115,7 @@ const Statistics = () => {
       
       <View style={styles.content}>
         {loading ? (
-          <ActivityIndicator size="large" color="#0090FF" style={styles.loader} />
+          <ActivityIndicator size="large" color={theme.colors.primary} style={styles.loader} />
         ) : (
           <ScrollView 
             style={styles.detailsScroll}
@@ -132,15 +133,15 @@ const Statistics = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background.default,
   },
   header: {
     alignItems: 'center',
-    paddingVertical: 20,
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 12,
+    paddingVertical: theme.spacing.lg,
+    backgroundColor: theme.colors.background.paper,
+    marginHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing.lg,
+    borderRadius: theme.spacing.radius.md,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -151,70 +152,71 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   headerTitle: {
-    fontSize: 14,
-    color: '#0090FF',
-    marginBottom: 10,
-    fontWeight: '500',
+    fontSize: theme.typography.size.md,
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.sm,
+    fontWeight: theme.typography.weight.medium,
   },
   totalExpense: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#0090FF',
-    marginBottom: 10,
+    fontSize: theme.typography.size.display,
+    fontWeight: theme.typography.weight.bold,
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.sm,
   },
   totalIncome: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: theme.typography.size.md,
+    color: theme.colors.text.placeholder,
   },
   monthSelectorContainer: {
-    paddingVertical: 10,
-    marginTop: 6,
+    paddingVertical: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
   },
   monthList: {
     alignItems: 'center',
+    paddingHorizontal: theme.spacing.md,
   },
   monthItem: {
-    marginRight: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#fff',
+    marginRight: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.spacing.radius.xl,
+    backgroundColor: theme.colors.background.paper,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
   },
   monthItemSelected: {
-    backgroundColor: '#0090FF',
-    borderColor: '#0090FF',
-    shadowColor: '#0090FF',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 4,
   },
   monthText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
+    fontSize: theme.typography.size.md,
+    color: theme.colors.text.secondary,
+    fontWeight: theme.typography.weight.medium,
   },
   monthTextSelected: {
-    color: '#fff',
+    color: theme.colors.text.inverse,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: theme.typography.size.md,
   },
   content: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background.default,
   },
   detailsScroll: {
     flex: 1,
   },
   loader: {
-    marginTop: 20,
+    marginTop: theme.spacing.xl,
   },
   spacer: {
-    height: 20,
+    height: theme.spacing.xl,
   },
 });
 

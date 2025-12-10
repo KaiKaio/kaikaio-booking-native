@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { StatisticsData } from '../types/bill';
 import CategoryIcon from './CategoryIcon';
 import { useCategory } from '../context/CategoryContext';
+import { theme } from '../theme';
 
 interface CompositionProps {
   data: StatisticsData[];
@@ -90,36 +91,36 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 1,
     elevation: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 16,
+    backgroundColor: theme.colors.background.paper,
+    borderRadius: theme.spacing.radius.md,
+    padding: theme.spacing.lg,
+    marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: theme.spacing.lg, // 16 (was 20)
   },
   title: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: theme.typography.size.lg,
+    fontWeight: theme.typography.weight.bold,
+    color: theme.colors.text.primary,
   },
   tabs: {
     flexDirection: 'row',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 6,
+    backgroundColor: theme.colors.background.default,
+    borderRadius: theme.spacing.radius.md,
     padding: 2,
   },
   tab: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 4,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: 4, // inner radius can be smaller
   },
   activeTab: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background.paper,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -127,15 +128,15 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   tabText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: theme.typography.size.sm,
+    color: theme.colors.text.secondary,
   },
   activeTabText: {
-    color: '#0090FF',
-    fontWeight: '500',
+    color: theme.colors.primary,
+    fontWeight: theme.typography.weight.medium,
   },
   list: {
-    gap: 20,
+    gap: theme.spacing.lg,
   },
   item: {
     flexDirection: 'row',
@@ -144,17 +145,11 @@ const styles = StyleSheet.create({
   iconWrapper: {
     width: 36,
     height: 36,
-    borderRadius: 16,
-    backgroundColor: '#F0F6FF', // Prototype has blue background for icons? 
-    // Wait, prototype icons are blue on white/light-blue bg? 
-    // Actually the prototype icons are white on blue circle.
-    // But `CategoryIcon` might handle color?
-    // Let's assume CategoryIcon handles it or we wrap it.
-    // Existing code uses `CategoryIcon` which returns IconFont or Text.
-    // I'll stick to a simple wrapper.
+    borderRadius: theme.spacing.radius.lg,
+    backgroundColor: '#F0F6FF', // Keep specific color
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: theme.spacing.md,
   },
   info: {
     display: 'flex',
@@ -162,35 +157,35 @@ const styles = StyleSheet.create({
   },
   categoryName: {
     width: 60,
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: theme.typography.size.md,
+    fontWeight: theme.typography.weight.medium,
   },
   amountText: {
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
     width: 80,
-    fontSize: 14,
-    color: '#333',
+    fontSize: theme.typography.size.md,
+    color: theme.colors.text.primary,
   },
   bar: {
     height: 6,
-    backgroundColor: '#0090FF',
+    backgroundColor: theme.colors.primary,
     borderRadius: 3,
   },
   spacer: {
     flex: 1,
   },
   percentageText: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
+    fontSize: theme.typography.size.md,
+    color: theme.colors.text.primary,
+    fontWeight: theme.typography.weight.medium,
   },
   emptyContainer: {
-    paddingVertical: 20,
+    paddingVertical: theme.spacing.xl,
     alignItems: 'center',
   },
   emptyText: {
-    color: '#999',
-    fontSize: 14,
+    color: theme.colors.text.placeholder,
+    fontSize: theme.typography.size.md,
   }
 });
 
