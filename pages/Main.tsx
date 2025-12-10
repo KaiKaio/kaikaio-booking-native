@@ -1,5 +1,5 @@
 import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import TabBar from './TabBar';
 import List from './List';
 import Account from './Account';
@@ -8,10 +8,12 @@ import { MainTabParamList } from '../types/navigation';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
+const renderTabBar = (props: BottomTabBarProps) => <TabBar {...props} />;
+
 const Main = () => {
   return (
     <Tab.Navigator
-      tabBar={TabBar}
+      tabBar={renderTabBar}
       screenOptions={{ headerShown: false }}
       initialRouteName="List"
     >
