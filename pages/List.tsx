@@ -49,8 +49,8 @@ const List = () => {
   const billFormRef = useRef<BillFormRef>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const [orderBy, setOrderBy] = useState<'ASC' | 'DESC'>('ASC');
-  const [debouncedOrderBy, setDebouncedOrderBy] = useState<'ASC' | 'DESC'>('ASC');
+  const [orderBy, setOrderBy] = useState<'ASC' | 'DESC'>('DESC');
+  const [debouncedOrderBy, setDebouncedOrderBy] = useState<'ASC' | 'DESC'>('DESC');
 
   useEffect(() => {
     const timer = setTimeout(() => {
