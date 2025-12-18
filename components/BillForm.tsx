@@ -330,7 +330,10 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
 
         {/* Category Selection */}
         <View style={styles.categoryContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <ScrollView 
+              showsVerticalScrollIndicator={true}
+              contentContainerStyle={styles.categoryScrollContent}
+            >
               {categories.map(cat => (
                 <TouchableOpacity 
                   key={cat.id} 
@@ -398,7 +401,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingBottom: 20, // safe area
-    height: '70%', // Occupy significant space
+    height: '85%', // Occupy significant space
     position: 'absolute',
     bottom: 0,
     width: '100%',
@@ -426,15 +429,20 @@ const styles = StyleSheet.create({
   amount: { fontSize: 36, fontWeight: 'bold', color: '#333' },
 
   categoryContainer: {
-    height: 90,
+    height: 240,
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#f5f5f5',
   },
+  categoryScrollContent: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingBottom: 20,
+  },
   catItem: {
     alignItems: 'center',
-    marginHorizontal: 12,
-    width: 60,
+    width: '16.66%',
+    marginBottom: 16,
   },
   selectedCat: {
     // Highlight style
