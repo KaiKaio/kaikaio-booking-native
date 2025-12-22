@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRoute, RouteProp } from '@react-navigation/native';
 import MonthYearPicker from '../components/MonthYearPicker';
 import BillForm, { BillData, BillFormRef } from '../components/BillForm';
 import BillItem from '../components/BillItem';
@@ -9,6 +10,7 @@ import { getBillList, addBill, updateBill } from '../services/bill';
 import { BillDetail, DailyBill } from '../types/bill';
 import { useCategory } from '../context/CategoryContext';
 import { theme } from '@/theme';
+import { MainTabParamList } from '../types/navigation';
 
 // 定义 SubItem 类型
 type SubItem = {
@@ -35,6 +37,7 @@ type DailyBillGroup = {
 const List = () => {
   const insets = useSafeAreaInsets();
   const { getCategoryIcon } = useCategory();
+  const route = useRoute<RouteProp<MainTabParamList, 'List'>>();
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<DailyBillGroup[]>([]);
   const [currentDate, setCurrentDate] = useState(() => {
@@ -141,6 +144,27 @@ const List = () => {
   useEffect(() => {
     fetchBills();
   }, [fetchBills]);
+
+  // 处理自动记账参数
+  useEffect(() => {
+    if (route.params?.autoBill) {
+      const { autoBill } = route.params;
+      // 延迟一点以确保组件已渲染，或者直接打开
+      setTimeout(() => {
+        billFormRef.current?.open({
+          amount: autoBill.amount,
+          // 暂时使用默认分类，或者你可以根据 autoBill.category 尝试匹配
+          category: '1', // 默认分类ID，需根据实际情况调整
+          categoryName: '餐饮', // 默认分类名
+          date: new Date().toISOString().split('T')[0],
+          remark: `[自动识别] ${autoBill.merchant || ''} - ${autoBill.rawText.substring(0, 10)}...`,
+          type: autoBill.type === 'expense' ? 1 : 2
+        });
+      }, 500);
+      
+      // 清除参数防止重复触发（实际上 React Navigation 的 params 会保留，建议配合 setParams 清除，但这里简单处理）
+    }
+  }, [route.params]);
 
   const handleDateConfirm = (year: number, month: number) => {
     const formattedMonth = month.toString().padStart(2, '0');

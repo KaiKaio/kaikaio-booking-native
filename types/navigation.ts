@@ -1,7 +1,8 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
+import { ParsedBill } from '../services/parser/types';
 
 export type MainTabParamList = {
-  List: undefined;
+  List: { autoBill?: ParsedBill } | undefined;
   Statistics: undefined;
   Account: undefined;
 };
