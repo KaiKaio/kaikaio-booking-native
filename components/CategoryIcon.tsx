@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text } from 'react-native';
 import IconFont from './IconFont';
+import { theme } from '@/theme';
 
 interface CategoryIconProps {
   icon: string;
@@ -9,7 +10,7 @@ interface CategoryIconProps {
   style?: any;
 }
 
-const CategoryIcon: React.FC<CategoryIconProps> = ({ icon, size = 24, color = '#333', style }) => {
+const CategoryIcon: React.FC<CategoryIconProps> = ({ icon, size = 24, color = theme.colors.text.primary, style }) => {
   if (icon && icon.startsWith('icon-')) {
     const iconName = icon.replace('icon-', '');
     return <IconFont name={iconName} size={size} color={color} style={style} />;

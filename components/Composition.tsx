@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F0F6FF', // Keep specific color
+    backgroundColor: theme.colors.background.primaryLight, // Keep specific color
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing.md,

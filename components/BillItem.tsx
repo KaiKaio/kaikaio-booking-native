@@ -98,7 +98,7 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, onD
           disabled={deleting}
         >
           {deleting ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={theme.colors.text.inverse} />
           ) : (
             <Text style={styles.deleteText}>删除</Text>
           )}
@@ -133,9 +133,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background.paper,
     borderBottomWidth: 1,
-    borderBottomColor: '#F6F8FA'
+    borderBottomColor: theme.colors.background.neutral
   },
   lastItem: {
     borderBottomWidth: 0,
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F0F6FF',
+    backgroundColor: theme.colors.background.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12
@@ -159,12 +159,12 @@ const styles = StyleSheet.create({
   },
   itemRemark: {
     fontSize: 12,
-    color: '#888',
+    color: theme.colors.text.secondary,
     marginTop: 2
   },
   itemAmount: {
     fontSize: 16,
-    color: '#1BC47D',
+    color: theme.colors.status.success,
     fontWeight: 'bold',
     minWidth: 60,
     textAlign: 'right'
@@ -174,26 +174,26 @@ const styles = StyleSheet.create({
     height: '100%'
   },
   editButton: {
-    backgroundColor: '#1890ff',
+    backgroundColor: theme.colors.status.info,
     justifyContent: 'center',
     alignItems: 'center',
     width: 80,
     height: '100%'
   },
   editText: {
-    color: '#fff',
+    color: theme.colors.text.inverse,
     fontWeight: 'bold',
     fontSize: 14
   },
   deleteButton: {
-    backgroundColor: '#FF4D4F',
+    backgroundColor: theme.colors.status.error,
     justifyContent: 'center',
     alignItems: 'center',
     width: 80,
     height: '100%'
   },
   deleteText: {
-    color: '#fff',
+    color: theme.colors.text.inverse,
     fontWeight: 'bold',
     fontSize: 14
   }

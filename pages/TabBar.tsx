@@ -74,10 +74,12 @@ const TabItem = ({
   );
 };
 
+import { theme } from '@/theme';
+
 const TabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
   const insets = useSafeAreaInsets();
-  const activeColor = '#0090FF';
-  const inactiveColor = '#000';
+  const activeColor = theme.colors.primary;
+  const inactiveColor = theme.colors.text.disabled;
 
   return (
     <View style={[styles.safeArea, { paddingBottom: insets.bottom }]}>

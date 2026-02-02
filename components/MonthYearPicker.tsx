@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import { theme } from '@/theme';
 
 interface MonthYearPickerProps {
   visible: boolean;
@@ -88,7 +89,7 @@ const styles = StyleSheet.create({
   },
   container: {
     width: 300,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.background.paper,
     borderRadius: 12,
     padding: 16,
     elevation: 5,
@@ -105,12 +106,12 @@ const styles = StyleSheet.create({
   },
   arrowText: {
     fontSize: 20,
-    color: '#0090FF',
+    color: theme.colors.primary,
   },
   yearText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.text.primary,
   },
   monthGrid: {
     flexDirection: 'row',
@@ -124,17 +125,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
     borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background.neutral,
   },
   selectedMonthItem: {
-    backgroundColor: '#0090FF',
+    backgroundColor: theme.colors.primary,
   },
   monthText: {
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.text.primary,
   },
   selectedMonthText: {
-    color: '#fff',
+    color: theme.colors.text.inverse,
     fontWeight: 'bold',
   },
 });

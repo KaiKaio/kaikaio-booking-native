@@ -328,7 +328,7 @@ const List = () => {
       {isSubmitting && (
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color="#0090FF" />
+            <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={styles.loadingText}>正在提交...</Text>
           </View>
         </View>
@@ -338,7 +338,7 @@ const List = () => {
 };
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F6F8FA' },
+  root: { flex: 1, backgroundColor: theme.colors.background.neutral },
   fabContainer: {
     position: 'absolute',
     bottom: 80,
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#0090FF',
+    backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
@@ -360,10 +360,10 @@ const styles = StyleSheet.create({
   },
   fabIcon: {
     fontSize: 24,
-    color: '#fff',
+    color: theme.colors.text.inverse,
   },
   header: {
-    backgroundColor: '#0090FF',
+    backgroundColor: theme.colors.primary,
     paddingBottom: 14,
     paddingHorizontal: 12,
   },
@@ -373,25 +373,25 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     marginBottom: 8
   },
-  headerLabel: { color: '#fff', fontSize: theme.typography.size.md },
-  headerValue: { color: '#fff', fontSize: theme.typography.size.xl, fontWeight: 'bold', marginRight: 24 },
+  headerLabel: { color: theme.colors.text.inverse, fontSize: theme.typography.size.md },
+  headerValue: { color: theme.colors.text.inverse, fontSize: theme.typography.size.xl, fontWeight: 'bold', marginRight: 24 },
 
   headerActions: { flexDirection: 'row', justifyContent: 'flex-end' },
   headerBtn: {
-    backgroundColor: '#0072e5',
+    backgroundColor: theme.colors.primaryDark,
     borderRadius: 8,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
     marginLeft: 8
   },
-  headerBtnText: { color: '#fff', fontSize: theme.typography.size.md },
+  headerBtnText: { color: theme.colors.text.inverse, fontSize: theme.typography.size.md },
 
   flatListContent: { paddingBottom: 80 },
   scroll: { flex: 1, marginTop: 0 },
-  section: { backgroundColor: '#fff', borderRadius: 12, marginHorizontal: theme.spacing.md, marginTop: 16, paddingBottom: 8, elevation: 2 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  sectionDate: { fontWeight: 'bold', fontSize: 16, color: '#222' },
-  sectionStat: { fontSize: 12, color: '#888' },
+  section: { backgroundColor: theme.colors.background.paper, borderRadius: 12, marginHorizontal: theme.spacing.md, marginTop: 16, paddingBottom: 8, elevation: 2 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  sectionDate: { fontWeight: 'bold', fontSize: 16, color: theme.colors.text.primary },
+  sectionStat: { fontSize: 12, color: theme.colors.text.secondary },
   loaderContainer: {
     paddingVertical: 20
   },
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   loadingBox: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.background.paper,
     padding: 20,
     borderRadius: 10,
     alignItems: 'center',
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 10,
-    color: '#333',
+    color: theme.colors.text.primary,
     fontSize: 14,
   }
 });

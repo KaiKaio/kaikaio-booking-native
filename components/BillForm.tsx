@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCategory } from '../context/CategoryContext';
 import IconFont from '../components/IconFont'; // 根据实际路径引入
 import CategoryIcon from './CategoryIcon';
+import { theme } from '@/theme';
 
 export interface BillFormRef {
   open: (data?: BillData) => void;
@@ -397,7 +398,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   panel: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background.paper,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingBottom: 20, // safe area
@@ -413,11 +414,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.colors.border,
   },
-  cancelBtn: { color: '#888', fontSize: 16 },
-  submitBtn: { color: '#0090FF', fontSize: 16, fontWeight: 'bold' },
-  title: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+  cancelBtn: { color: theme.colors.text.secondary, fontSize: 16 },
+  submitBtn: { color: theme.colors.primary, fontSize: 16, fontWeight: 'bold' },
+  title: { fontSize: 18, fontWeight: 'bold', color: theme.colors.text.primary },
   
   amountContainer: {
     flexDirection: 'row',
@@ -425,14 +426,14 @@ const styles = StyleSheet.create({
     padding: 20,
     justifyContent: 'center',
   },
-  currency: { fontSize: 24, fontWeight: 'bold', color: '#333', marginRight: 4 },
-  amount: { fontSize: 36, fontWeight: 'bold', color: '#333' },
+  currency: { fontSize: 24, fontWeight: 'bold', color: theme.colors.text.primary, marginRight: 4 },
+  amount: { fontSize: 36, fontWeight: 'bold', color: theme.colors.text.primary },
 
   categoryContainer: {
     height: 240,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
+    borderBottomColor: theme.colors.border,
   },
   categoryScrollContent: {
     flexDirection: 'row',
@@ -451,23 +452,23 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background.default,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 4,
   },
   selectedCatIconWrap: {
-    backgroundColor: '#e6f4ff',
+    backgroundColor: theme.colors.background.primaryLight,
   },
   catIcon: { fontSize: 24 },
-  catName: { fontSize: 12, color: '#666' },
-  selectedCatName: { color: '#0090FF', fontWeight: 'bold' },
+  catName: { fontSize: 12, color: theme.colors.text.secondary },
+  selectedCatName: { color: theme.colors.primary, fontWeight: 'bold' },
 
   inputsRow: {
     flexDirection: 'row',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
+    borderBottomColor: theme.colors.border,
   },
   dateInput: {
     marginRight: 16,
@@ -477,18 +478,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  label: { fontSize: 12, color: '#999', marginBottom: 4 },
-  value: { fontSize: 14, color: '#333' },
+  label: { fontSize: 12, color: theme.colors.text.placeholder, marginBottom: 4 },
+  value: { fontSize: 14, color: theme.colors.text.primary },
   remarkInput: {
     fontSize: 14,
-    color: '#333',
+    color: theme.colors.text.primary,
     padding: 0,
     height: 20, // Single line height visually, but logic handles text
   },
 
   bottomArea: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme.colors.background.neutral,
   },
   bottomAreaFocused: {
     display: 'none',
@@ -504,15 +505,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 0.5,
-    borderColor: '#eee',
-    backgroundColor: '#fff',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.background.paper,
   },
-  keyText: { fontSize: 24, color: '#333' },
+  keyText: { fontSize: 24, color: theme.colors.text.primary },
 
   // Date Picker Styles
   datePickerContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background.paper,
   },
   dateHeader: {
     flexDirection: 'row',
@@ -520,7 +521,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: theme.colors.border,
     position: 'relative',
   },
   todayBtn: {
@@ -528,12 +529,12 @@ const styles = StyleSheet.create({
     right: 16,
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.colors.background.neutral,
     borderRadius: 14,
   },
   todayText: {
     fontSize: 12,
-    color: '#333',
+    color: theme.colors.text.primary,
   },
   arrow: { fontSize: 20, paddingHorizontal: 20 },
   dateTitle: { fontSize: 16, fontWeight: 'bold' },
@@ -550,11 +551,11 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   selectedDay: {
-    backgroundColor: '#0090FF',
+    backgroundColor: theme.colors.primary,
     borderRadius: 20,
   },
-  dayText: { fontSize: 14, color: '#333' },
-  selectedDayText: { color: '#fff' },
+  dayText: { fontSize: 14, color: theme.colors.text.primary },
+  selectedDayText: { color: theme.colors.text.inverse },
 });
 
 export default BillForm;

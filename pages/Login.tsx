@@ -8,6 +8,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCategory } from '../context/CategoryContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { theme } from '@/theme';
 
 import { RootStackParamList } from '../types/navigation';
 
@@ -85,7 +86,7 @@ const Login = () => {
         }
 
         await refreshCategories();
-        navigation.replace('Main');
+        navigation.replace('Main', { screen: 'List' });
       } else {
         Alert.alert('登录', data.message || '未获取到Token');
       }
@@ -118,7 +119,7 @@ const Login = () => {
             focusedInput === 'account' && styles.inputFocused
           ]}
           placeholder="请输入账号"
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.colors.text.placeholder}
           value={account}
           onChangeText={setAccount}
           autoCapitalize="none"
@@ -135,7 +136,7 @@ const Login = () => {
             focusedInput === 'password' && styles.inputFocused
           ]}
           placeholder="请输入密码"
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.colors.text.placeholder}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -152,7 +153,7 @@ const Login = () => {
             <Icon 
               name={rememberPassword ? 'check-box' : 'check-box-outline-blank'} 
               size={24} 
-              color="#00695C" 
+              color={theme.colors.primary} 
             />
             <Text style={styles.checkboxLabel}>记住密码</Text>
         </TouchableOpacity>
@@ -175,7 +176,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center', // Changed to center for better vertical alignment
-    backgroundColor: '#F5F7FA', // Added light background color
+    backgroundColor: theme.colors.background.default, // Added light background color
     paddingHorizontal: 20,
   },
   logo: {
@@ -187,10 +188,10 @@ const styles = StyleSheet.create({
   formContainer: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background.paper,
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -202,7 +203,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.text.primary,
     marginBottom: 8,
     marginLeft: 4,
   },
@@ -210,17 +211,17 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 50,
     borderWidth: 1.5,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
     borderRadius: 8,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: theme.colors.background.neutral,
     marginBottom: 20,
     paddingHorizontal: 16,
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.text.primary,
   },
   inputFocused: {
-    borderColor: '#00695C', // Highlight color
-    backgroundColor: '#fff',
+    borderColor: theme.colors.primary, // Highlight color
+    backgroundColor: theme.colors.background.paper,
   },
   checkboxContainer: {
     flexDirection: 'row',
@@ -231,16 +232,16 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     marginLeft: 8,
     fontSize: 15,
-    color: '#555',
+    color: theme.colors.text.secondary,
   },
   button: {
     width: '100%',
     height: 54,
     borderRadius: 8,
-    backgroundColor: '#00695C', // Solid primary color
+    backgroundColor: theme.colors.primary, // Solid primary color
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#00695C',
+    shadowColor: theme.colors.primary,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -251,13 +252,13 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
-    backgroundColor: '#A0A0A0',
+    backgroundColor: theme.colors.text.disabled,
     shadowOpacity: 0,
   },
   buttonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: theme.colors.text.inverse,
     letterSpacing: 1,
   },
 });
