@@ -1,12 +1,12 @@
 # Kaikaio (Kaikaio Booking Native)
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-0.3.0-blue)
 ![React Native](https://img.shields.io/badge/React%20Native-0.80.1-61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> ⚠️ **Note**: 本项目处于开发阶段 (Current Version: 0.1.0).
+> ⚠️ **Note**: 本项目处于开发阶段 (Current Version: 0.3.0).
 
 ## 📖 项目简介 (Introduction)
 
@@ -30,7 +30,8 @@
 
 - **Core**: [React Native](https://reactnative.dev/) (v0.80.1), [React](https://react.dev/) (v19)
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Navigation**: [React Navigation v7](https://reactnavigation.org/) (Native Stack)
+- **Navigation**: [React Navigation v7](https://reactnavigation.org/) (Native Stack + Bottom Tabs)
+- **State Management**: [Zustand](https://zustand-demo.pmnd.rs/) (v5.0.11)
 - **Storage**: [AsyncStorage](https://github.com/react-native-async-storage/async-storage)
 - **Icons**: [React Native Vector Icons](https://github.com/oblador/react-native-vector-icons)
 - **Security**: JSEncrypt (数据加密)
