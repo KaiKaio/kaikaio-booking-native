@@ -1,0 +1,423 @@
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRoute, RouteProp } from '@react-navigation/native';
+import MonthYearPicker from '../components/MonthYearPicker';
+import BillForm, { BillData, BillFormRef } from '../components/BillForm';
+import BillItem from '../components/BillItem';
+import { getBillList, addBill, updateBill } from '../services/bill';
+import { BillDetail, DailyBill } from '../types/bill';
+import { useCategory } from '../context/CategoryContext';
+import { theme } from '@/theme';
+import { MainTabParamList } from '../types/navigation';
+
+// 定义 SubItem 类型
+type SubItem = {
+  id: number;
+  type: string;
+  icon: string;
+  remark: string;
+  amount: number;
+  // Extended fields for editing
+  typeId: string;
+  date: string;
+  payType: number;
+  rawAmount: number;
+};
+
+// 定义 BillItem 类型
+type DailyBillGroup = {
+  date: string;
+  total: number;
+  income: number;
+  items: SubItem[];
+};
+
+const List = () => {
+  const insets = useSafeAreaInsets();
+  const { getCategoryIcon } = useCategory();
+  const route = useRoute<RouteProp<MainTabParamList, 'List'>>();
+  const [refreshing, setRefreshing] = useState(false);
+  const [data, setData] = useState<DailyBillGroup[]>([]);
+  const [currentDate, setCurrentDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [showPicker, setShowPicker] = useState(false);
+  const loadingRef = useRef(false);
+  const [summary, setSummary] = useState({ totalExpense: 0, totalIncome: 0 });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const billFormRef = useRef<BillFormRef>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+
+  const [orderBy, setOrderBy] = useState<'ASC' | 'DESC'>('DESC');
+  const [debouncedOrderBy, setDebouncedOrderBy] = useState<'ASC' | 'DESC'>('DESC');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedOrderBy(orderBy);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [orderBy]);
+
+  useEffect(() => {
+    const loadLastDate = async () => {
+      try {
+        const savedDate = await AsyncStorage.getItem('lastSelectedDate');
+        if (savedDate) {
+          setCurrentDate(savedDate);
+        }
+      } catch (e) {
+        console.error('Failed to load date', e);
+      }
+    };
+    loadLastDate();
+  }, []);
+
+  const fetchBills = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+    try {
+      const [year, month] = currentDate.split('-');
+      const lastDay = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
+      
+      const start = `${currentDate}-01 00:00:00`;
+      const end = `${currentDate}-${lastDay} 23:59:59`;
+
+      const res = await getBillList({ start, end, page: 1, page_size: 1000, orderBy: debouncedOrderBy });
+      
+      if (res.code === 200) {
+        setSummary({
+          totalExpense: res.data.totalExpense,
+          totalIncome: res.data.totalIncome,
+        });
+
+        const transformedData: DailyBillGroup[] = res.data.list.map((daily: DailyBill) => {
+          let dailyTotal = 0;
+          let dailyIncome = 0;
+          
+          const items: SubItem[] = daily.bills.map((bill: BillDetail) => {
+            const amount = parseFloat(bill.amount);
+            
+            const isExpense = bill.pay_type === '1';
+            const displayAmount = isExpense ? -amount : amount;
+            
+            if (isExpense) {
+              dailyTotal += amount;
+            } else {
+              dailyIncome += amount;
+            }
+
+            return {
+              id: bill.id,
+              type: bill.type_name,
+              icon: getCategoryIcon(bill.type_name),
+              remark: bill.remark,
+              amount: displayAmount,
+              typeId: bill.type_id,
+              payType: parseInt(bill.pay_type, 10),
+              date: bill.date,
+              rawAmount: amount
+            };
+          });
+
+          return {
+            date: daily.date,
+            total: dailyTotal,
+            income: dailyIncome,
+            items: items
+          };
+        });
+        
+        setData(transformedData);
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+    } finally {
+      loadingRef.current = false;
+      setRefreshing(false);
+    }
+  }, [currentDate, getCategoryIcon, debouncedOrderBy]);
+
+  useEffect(() => {
+    fetchBills();
+  }, [fetchBills]);
+
+  // 处理自动记账参数
+  useEffect(() => {
+    if (route.params?.autoBill) {
+      const { autoBill } = route.params;
+      // 延迟一点以确保组件已渲染，或者直接打开
+      setTimeout(() => {
+        billFormRef.current?.open({
+          amount: autoBill.amount,
+          // 暂时使用默认分类，或者你可以根据 autoBill.category 尝试匹配
+          category: '1', // 默认分类ID，需根据实际情况调整
+          categoryName: '餐饮', // 默认分类名
+          date: new Date().toISOString().split('T')[0],
+          remark: `[自动识别] ${autoBill.merchant || ''} - ${autoBill.rawText.substring(0, 10)}...`,
+          type: autoBill.type === 'expense' ? 1 : 2
+        });
+      }, 500);
+      
+      // 清除参数防止重复触发（实际上 React Navigation 的 params 会保留，建议配合 setParams 清除，但这里简单处理）
+    }
+  }, [route.params]);
+
+  const handleDateConfirm = (year: number, month: number) => {
+    const formattedMonth = month.toString().padStart(2, '0');
+    const newDate = `${year}-${formattedMonth}`;
+    setCurrentDate(newDate);
+    AsyncStorage.setItem('lastSelectedDate', newDate).catch(e => console.error('Failed to save date', e));
+    setShowPicker(false);
+  };
+
+  const handleAdd = () => {
+    setEditingId(null);
+    billFormRef.current?.open();
+  };
+
+  const handleEdit = (id: number) => {
+    let targetItem: SubItem | undefined;
+    for (const group of data) {
+      const item = group.items.find(i => i.id === id);
+      if (item) {
+        targetItem = item;
+        break;
+      }
+    }
+    
+    if (targetItem) {
+      setEditingId(id);
+      // Handle date parsing (supports timestamp string or date string)
+      let dateObj: Date;
+      const dateVal = String(targetItem.date);
+      // If it's a timestamp (all digits)
+      if (/^\d+$/.test(dateVal)) {
+        dateObj = new Date(parseInt(dateVal, 10));
+      } else {
+        dateObj = new Date(dateVal);
+      }
+      
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+
+      billFormRef.current?.open({
+        amount: targetItem.rawAmount,
+        category: targetItem.typeId,
+        categoryName: targetItem.type,
+        date: dateStr,
+        remark: targetItem.remark,
+        type: targetItem.payType
+      });
+    }
+  };
+
+  const handleBillSubmit = async (billData: BillData) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const timestamp = new Date(billData.date).getTime();
+      const params = {
+        amount: billData.amount.toFixed(2),
+        type_id: parseInt(billData.category, 10),
+        type_name: billData.categoryName,
+        date: timestamp,
+        pay_type: billData.type,
+        remark: billData.remark || ''
+      };
+
+      if (editingId) {
+        await updateBill({ ...params, id: editingId });
+      } else {
+        await addBill(params);
+      }
+      
+      fetchBills(); // Refresh list
+    } catch (error: any) {
+      Alert.alert('错误', error.message || (editingId ? '修改失败' : '记账失败'));
+    } finally {
+      setIsSubmitting(false);
+      setEditingId(null);
+    }
+  };
+
+  const renderBillItem = ({ item }: { item: DailyBillGroup }) => (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionDate}>{item.date}</Text>
+        <Text style={styles.sectionStat}>支出: ￥{item.total.toFixed(2)} 收入: ￥{item.income.toFixed(2)}</Text>
+      </View>
+      {item.items.map((subItem: SubItem, index: number) => (
+        <BillItem
+          key={subItem.id}
+          {...subItem}
+          onDeleteSuccess={onRefresh}
+          onEdit={handleEdit}
+          isLast={index === item.items.length - 1}
+        />
+      ))}
+    </View>
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchBills();
+  };
+
+  return (
+    <View style={styles.root}>
+      {/* 顶部统计栏 */}
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <View style={styles.headerRow}>
+          <Text style={styles.headerLabel}>总支出：</Text>
+          <Text style={styles.headerValue}>{summary.totalExpense.toFixed(2)}</Text>
+          <Text style={styles.headerLabel}>总收入：</Text>
+          <Text style={styles.headerValue}>{summary.totalIncome.toFixed(2)}</Text>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={styles.headerBtn} 
+            onPress={() => setOrderBy(prev => prev === 'ASC' ? 'DESC' : 'ASC')}
+          >
+            <Text style={styles.headerBtnText}>{orderBy === 'ASC' ? '倒序' : '正序'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerBtn}><Text style={styles.headerBtnText}>全部类型</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.headerBtn} onPress={() => setShowPicker(true)}>
+            <Text style={styles.headerBtnText}>{currentDate}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      {/* 账单列表 */}
+      <FlatList
+        style={styles.scroll}
+        contentContainerStyle={[styles.flatListContent, { paddingBottom: 80 + insets.bottom }]}
+        data={data}
+        renderItem={renderBillItem}
+        keyExtractor={(item) => item.date}
+        showsVerticalScrollIndicator={false}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+        // 使用三元运算符，refreshing 为 true 时显示加载指示器，否则返回 null
+        ListFooterComponent={refreshing ? (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#0090FF" />
+          </View>
+        ) : null}
+      />
+      {/* 底部菜单栏 - 已移动到 Main 组件 */}
+      
+      <MonthYearPicker
+        visible={showPicker}
+        currentDate={currentDate}
+        onClose={() => setShowPicker(false)}
+        onConfirm={handleDateConfirm}
+      />
+
+      <View style={[styles.fabContainer, { bottom: 80 + insets.bottom }]}>
+        <TouchableOpacity style={styles.fab} onPress={handleAdd}>
+          <Text style={styles.fabIcon}>✏️</Text>
+        </TouchableOpacity>
+        <BillForm ref={billFormRef} onSubmit={handleBillSubmit} />
+      </View>
+
+      {isSubmitting && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={styles.loadingText}>正在提交...</Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: theme.colors.background.neutral },
+  fabContainer: {
+    position: 'absolute',
+    bottom: 80,
+    right: 20,
+    zIndex: 100,
+  },
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  fabIcon: {
+    fontSize: 24,
+    color: theme.colors.text.inverse,
+  },
+  header: {
+    backgroundColor: theme.colors.primary,
+    paddingBottom: 14,
+    paddingHorizontal: 12,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    marginBottom: 8
+  },
+  headerLabel: { color: theme.colors.text.inverse, fontSize: theme.typography.size.md },
+  headerValue: { color: theme.colors.text.inverse, fontSize: theme.typography.size.xl, fontWeight: 'bold', marginRight: 24 },
+
+  headerActions: { flexDirection: 'row', justifyContent: 'flex-end' },
+  headerBtn: {
+    backgroundColor: theme.colors.primaryDark,
+    borderRadius: 8,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    marginLeft: 8
+  },
+  headerBtnText: { color: theme.colors.text.inverse, fontSize: theme.typography.size.md },
+
+  flatListContent: { paddingBottom: 80 },
+  scroll: { flex: 1, marginTop: 0 },
+  section: { backgroundColor: theme.colors.background.paper, borderRadius: 12, marginHorizontal: theme.spacing.md, marginTop: 16, paddingBottom: 8, elevation: 2 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  sectionDate: { fontWeight: 'bold', fontSize: 16, color: theme.colors.text.primary },
+  sectionStat: { fontSize: 12, color: theme.colors.text.secondary },
+  loaderContainer: {
+    paddingVertical: 20
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  loadingBox: {
+    backgroundColor: theme.colors.background.paper,
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    elevation: 5,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: theme.colors.text.primary,
+    fontSize: 14,
+  }
+});
+
+export default List;

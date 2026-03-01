@@ -30,9 +30,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 
 test('renders correctly', async () => {
   jest.useFakeTimers();
-  await ReactTestRenderer.act(async () => {
-    ReactTestRenderer.create(<App />);
-    jest.runAllTimers();
-  });
+  ReactTestRenderer.create(<App />);
+  jest.runAllTimers();
   jest.useRealTimers();
 });
