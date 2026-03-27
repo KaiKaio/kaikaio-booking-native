@@ -2,6 +2,7 @@ export interface BillParams {
   start: string; // YYYY-MM-DD 00:00:00
   end: string;   // YYYY-MM-DD 23:59:59
   orderBy?: string;
+  type_id?: string;
   page?: number;
   page_size?: number;
 }

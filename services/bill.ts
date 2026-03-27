@@ -7,6 +7,7 @@ export const getBillList = async (params: BillParams): Promise<BillListResponse>
     start: params.start,
     end: params.end,
     ...(params.orderBy ? { orderBy: params.orderBy } : {}),
+    ...(params.type_id ? { type_id: params.type_id.toString() } : {}),
     ...(params.page ? { page: params.page.toString() } : {}),
     ...(params.page_size ? { page_size: params.page_size.toString() } : {}),
   }).toString();

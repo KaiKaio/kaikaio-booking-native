@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@/theme';
 
 interface MonthYearPickerProps {
@@ -10,8 +11,11 @@ interface MonthYearPickerProps {
 }
 
 const MonthYearPicker: React.FC<MonthYearPickerProps> = ({ visible, currentDate, onClose, onConfirm }) => {
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const insets = useSafeAreaInsets();
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
   useEffect(() => {
     if (visible && currentDate) {
@@ -27,52 +31,87 @@ const MonthYearPicker: React.FC<MonthYearPickerProps> = ({ visible, currentDate,
     setSelectedYear(prev => prev + increment);
   };
 
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  const months = useMemo(() => Array.from({ length: 12 }, (_, i) => i + 1), []);
 
-  const handleMonthPress = (month: number) => {
-    setSelectedMonth(month);
-    onConfirm(selectedYear, month);
+  const handleConfirm = () => {
+    onConfirm(selectedYear, selectedMonth);
+    onClose();
+  };
+
+  const isCurrentMonth = (month: number) => {
+    return selectedYear === currentYear && month === currentMonth;
   };
 
   return (
     <Modal
       transparent
       visible={visible}
-      animationType="fade"
+      animationType="slide"
       onRequestClose={onClose}
     >
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
-        <View style={styles.container} onStartShouldSetResponder={() => true}>
+        <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]} onStartShouldSetResponder={() => true}>
+          {/* 拖拽指示器 */}
+          <View style={styles.handleBar} />
+
           {/* Header with Year Selector */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => changeYear(-1)} style={styles.arrowBtn}>
-              <Text style={styles.arrowText}>◀️</Text>
+            <TouchableOpacity onPress={onClose} style={styles.cancelBtn}>
+              <Text style={styles.cancelText}>取消</Text>
             </TouchableOpacity>
-            <Text style={styles.yearText}>{selectedYear}年</Text>
-            <TouchableOpacity onPress={() => changeYear(1)} style={styles.arrowBtn}>
-              <Text style={styles.arrowText}>▶️</Text>
+
+            <View style={styles.yearSelector}>
+              <TouchableOpacity
+                onPress={() => changeYear(-1)}
+                style={styles.arrowBtn}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.arrowText}>‹</Text>
+              </TouchableOpacity>
+              <Text style={styles.yearText}>{selectedYear}年</Text>
+              <TouchableOpacity
+                onPress={() => changeYear(1)}
+                style={styles.arrowBtn}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.arrowText}>›</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity onPress={handleConfirm} style={styles.confirmBtn}>
+              <Text style={styles.confirmText}>确定</Text>
             </TouchableOpacity>
           </View>
 
           {/* Month Grid */}
           <View style={styles.monthGrid}>
-            {months.map(month => (
-              <TouchableOpacity
-                key={month}
-                style={[
-                  styles.monthItem,
-                  month === selectedMonth && styles.selectedMonthItem
-                ]}
-                onPress={() => handleMonthPress(month)}
-              >
-                <Text style={[
-                  styles.monthText,
-                  month === selectedMonth && styles.selectedMonthText
-                ]}>
-                  {month}月
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {months.map(month => {
+              const isSelected = month === selectedMonth;
+              const isCurrent = isCurrentMonth(month);
+              return (
+                <TouchableOpacity
+                  key={month}
+                  style={[
+                    styles.monthItem,
+                    isSelected && styles.selectedMonthItem,
+                    isCurrent && !isSelected && styles.currentMonthItem,
+                  ]}
+                  onPress={() => setSelectedMonth(month)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.monthText,
+                    isSelected && styles.selectedMonthText,
+                    isCurrent && !isSelected && styles.currentMonthText,
+                  ]}>
+                    {month}
+                  </Text>
+                  {isCurrent && (
+                    <View style={styles.currentDot} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
       </TouchableOpacity>
@@ -84,59 +123,123 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   container: {
-    width: 300,
     backgroundColor: theme.colors.background.paper,
-    borderRadius: 12,
-    padding: 16,
-    elevation: 5,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 12,
+    paddingHorizontal: 16,
+  },
+  handleBar: {
+    width: 36,
+    height: 4,
+    backgroundColor: theme.colors.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 10,
+    marginBottom: 24,
+    paddingHorizontal: 4,
+  },
+  cancelBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    minWidth: 50,
+  },
+  cancelText: {
+    fontSize: 16,
+    color: theme.colors.text.secondary,
+  },
+  yearSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.neutral,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
   },
   arrowBtn: {
-    padding: 10,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 18,
   },
   arrowText: {
-    fontSize: 20,
+    fontSize: 28,
+    fontWeight: '300',
     color: theme.colors.primary,
+    lineHeight: 32,
   },
   yearText: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: theme.colors.text.primary,
+    marginHorizontal: 12,
+  },
+  confirmBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    minWidth: 50,
+    alignItems: 'flex-end',
+  },
+  confirmText: {
+    fontSize: 16,
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
   monthGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    marginHorizontal: -6,
   },
   monthItem: {
-    width: '30%',
-    aspectRatio: 2,
+    width: '25%',
+    aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
-    borderRadius: 8,
+    marginBottom: 12,
+    borderRadius: 16,
     backgroundColor: theme.colors.background.neutral,
+    marginHorizontal: '0%',
   },
   selectedMonthItem: {
     backgroundColor: theme.colors.primary,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  currentMonthItem: {
+    // borderWidth: 1.5,
+    backgroundColor: `${theme.colors.primary}10`,
   },
   monthText: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '500',
     color: theme.colors.text.primary,
   },
   selectedMonthText: {
     color: theme.colors.text.inverse,
-    fontWeight: 'bold',
+    fontWeight: '700',
+  },
+  currentMonthText: {
+    color: theme.colors.primary,
+  },
+  currentDot: {
+    position: 'absolute',
+    bottom: 8,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.primary,
   },
 });
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Button } from 'react-native';
+import { View, StyleSheet, Button } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,7 +24,6 @@ const Account = () => {
 
   return (
     <View style={styles.container}>
-      <Text>Account</Text>
       <Button title="退出登录" onPress={handleLogout} />
     </View>
   );

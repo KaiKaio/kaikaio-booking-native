@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import MonthYearPicker from '../components/MonthYearPicker';
+import TypePicker from '../components/TypePicker';
 import BillForm, { BillData, BillFormRef } from '../components/BillForm';
 import BillItem from '../components/BillItem';
 import { getBillList, addBill, updateBill } from '../services/bill';
@@ -36,7 +37,7 @@ type DailyBillGroup = {
 
 const List = () => {
   const insets = useSafeAreaInsets();
-  const { getCategoryIcon } = useCategory();
+  const { getCategoryIcon, categories } = useCategory();
   const route = useRoute<RouteProp<MainTabParamList, 'List'>>();
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<DailyBillGroup[]>([]);
@@ -53,6 +54,8 @@ const List = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const [orderBy, setOrderBy] = useState<'ASC' | 'DESC'>('DESC');
+  const [showTypePicker, setShowTypePicker] = useState(false);
+  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadLastDate = async () => {
@@ -79,7 +82,14 @@ const List = () => {
       const start = `${currentDate}-01 00:00:00`;
       const end = `${currentDate}-${lastDay} 23:59:59`;
 
-      const res = await getBillList({ start, end, page: 1, page_size: 1000, orderBy: orderBy });
+      const res = await getBillList({
+        start,
+        end,
+        page: 1,
+        page_size: 1000,
+        orderBy: orderBy,
+        ...(selectedTypeId ? { type_id: selectedTypeId } : {})
+      });
       
       if (res.code === 200) {
         setSummary({
@@ -132,7 +142,7 @@ const List = () => {
       loadingRef.current = false;
       setRefreshing(false);
     }
-  }, [currentDate, getCategoryIcon, orderBy]);
+  }, [currentDate, getCategoryIcon, orderBy, selectedTypeId]);
 
   useEffect(() => {
     fetchBills();
@@ -283,7 +293,11 @@ const List = () => {
           >
             <Text style={styles.headerBtnText}>{orderBy === 'ASC' ? '正序' : '倒序'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerBtn}><Text style={styles.headerBtnText}>全部类型</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.headerBtn} onPress={() => setShowTypePicker(true)}>
+            <Text style={styles.headerBtnText}>
+              {selectedTypeId ? categories.find(c => c.id === selectedTypeId)?.name || '全部类型' : '全部类型'}
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.headerBtn} onPress={() => setShowPicker(true)}>
             <Text style={styles.headerBtnText}>{currentDate}</Text>
           </TouchableOpacity>
@@ -313,6 +327,16 @@ const List = () => {
         currentDate={currentDate}
         onClose={() => setShowPicker(false)}
         onConfirm={handleDateConfirm}
+      />
+
+      <TypePicker
+        visible={showTypePicker}
+        selectedTypeId={selectedTypeId}
+        categories={categories}
+        getCategoryIcon={getCategoryIcon}
+        onClose={() => setShowTypePicker(false)}
+        onSelect={setSelectedTypeId}
+        footerHeight={insets.bottom > 0 ? insets.bottom : 16}
       />
 
       <View style={[styles.fabContainer, { bottom: 80 + insets.bottom }]}>
@@ -414,7 +438,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: theme.colors.text.primary,
     fontSize: 14,
-  }
+  },
 });
 
 export default List;
