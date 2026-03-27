@@ -53,14 +53,6 @@ const List = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const [orderBy, setOrderBy] = useState<'ASC' | 'DESC'>('DESC');
-  const [debouncedOrderBy, setDebouncedOrderBy] = useState<'ASC' | 'DESC'>('DESC');
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedOrderBy(orderBy);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [orderBy]);
 
   useEffect(() => {
     const loadLastDate = async () => {
@@ -79,6 +71,7 @@ const List = () => {
   const fetchBills = useCallback(async () => {
     if (loadingRef.current) return;
     loadingRef.current = true;
+    setRefreshing(true);
     try {
       const [year, month] = currentDate.split('-');
       const lastDay = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
@@ -86,7 +79,7 @@ const List = () => {
       const start = `${currentDate}-01 00:00:00`;
       const end = `${currentDate}-${lastDay} 23:59:59`;
 
-      const res = await getBillList({ start, end, page: 1, page_size: 1000, orderBy: debouncedOrderBy });
+      const res = await getBillList({ start, end, page: 1, page_size: 1000, orderBy: orderBy });
       
       if (res.code === 200) {
         setSummary({
@@ -139,7 +132,7 @@ const List = () => {
       loadingRef.current = false;
       setRefreshing(false);
     }
-  }, [currentDate, getCategoryIcon, debouncedOrderBy]);
+  }, [currentDate, getCategoryIcon, orderBy]);
 
   useEffect(() => {
     fetchBills();
@@ -265,7 +258,6 @@ const List = () => {
   );
 
   const onRefresh = async () => {
-    setRefreshing(true);
     await fetchBills();
   };
 
@@ -282,9 +274,14 @@ const List = () => {
         <View style={styles.headerActions}>
           <TouchableOpacity 
             style={styles.headerBtn} 
-            onPress={() => setOrderBy(prev => prev === 'ASC' ? 'DESC' : 'ASC')}
+            onPress={() => {
+              if (loadingRef.current) {
+                return;
+              }
+              setOrderBy(prev => prev === 'ASC' ? 'DESC' : 'ASC');
+            }}
           >
-            <Text style={styles.headerBtnText}>{orderBy === 'ASC' ? '倒序' : '正序'}</Text>
+            <Text style={styles.headerBtnText}>{orderBy === 'ASC' ? '正序' : '倒序'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerBtn}><Text style={styles.headerBtnText}>全部类型</Text></TouchableOpacity>
           <TouchableOpacity style={styles.headerBtn} onPress={() => setShowPicker(true)}>
