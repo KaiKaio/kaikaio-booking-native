@@ -13,6 +13,7 @@ import { theme } from '@/theme';
 import { RootStackParamList } from '../types/navigation';
 
 const LOGIN_URL = 'http://10.242.78.83:4000/api/user/login';
+const REGISTER_URL = 'http://10.242.78.83:4000/api/user/register';
 const PUBLIC_KEY_URL = 'http://10.242.78.83:4000/api/user/public_key';
 const encrypt = new JSEncrypt();
 
@@ -21,13 +22,16 @@ const Login = () => {
   const { refreshCategories } = useCategory();
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isRegister, setIsRegister] = useState(false);
   const [rememberPassword, setRememberPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
   const isAccountValid = account.trim().length > 0;
   const isPasswordValid = password.length > 0;
-  const isFormValid = isAccountValid && isPasswordValid;
+  const isConfirmPasswordValid = !isRegister || password === confirmPassword;
+  const isFormValid = isAccountValid && isPasswordValid && isConfirmPasswordValid;
 
   useEffect(() => {
     const fetchPublicKey = async () => {
@@ -98,6 +102,51 @@ const Login = () => {
     }
   };
 
+  const handleRegister = async () => {
+    if (!isFormValid) {
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('注册', '两次密码输入不一致');
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await request(REGISTER_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          userName: account,
+          password: encrypt.encrypt(password),
+        }),
+      });
+      if (data.token) {
+        await AsyncStorage.setItem('token', data.token);
+        await refreshCategories();
+        navigation.replace('Main', { screen: 'List' });
+      } else {
+        Alert.alert('注册', data.message || '注册失败');
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : '网络错误';
+      Alert.alert('注册', errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (isRegister) {
+      handleRegister();
+    } else {
+      handleLogin();
+    }
+  };
+
+  const handleToggleMode = () => {
+    setIsRegister(!isRegister);
+    setConfirmPassword('');
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.content}
@@ -145,26 +194,58 @@ const Login = () => {
           onBlur={() => setFocusedInput(null)}
         />
 
-        <TouchableOpacity 
-          style={styles.checkboxContainer} 
-          onPress={() => setRememberPassword(!rememberPassword)}
-          activeOpacity={0.7}
-        >
-            <Icon 
-              name={rememberPassword ? 'check-box' : 'check-box-outline-blank'} 
-              size={24} 
-              color={theme.colors.primary} 
+        {isRegister && (
+          <>
+            <Text style={styles.label}>确认密码</Text>
+            <TextInput
+              style={[
+                styles.input,
+                focusedInput === 'confirmPassword' && styles.inputFocused
+              ]}
+              placeholder="请再次输入密码"
+              placeholderTextColor={theme.colors.text.placeholder}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              editable={!loading}
+              onFocus={() => setFocusedInput('confirmPassword')}
+              onBlur={() => setFocusedInput(null)}
+            />
+          </>
+        )}
+      
+        {!isRegister && (
+          <TouchableOpacity
+            style={styles.checkboxContainer}
+            onPress={() => setRememberPassword(!rememberPassword)}
+            activeOpacity={0.7}
+          >
+            <Icon
+              name={rememberPassword ? 'check-box' : 'check-box-outline-blank'}
+              size={24}
+              color={theme.colors.primary}
             />
             <Text style={styles.checkboxLabel}>记住密码</Text>
-        </TouchableOpacity>
-
+          </TouchableOpacity>
+        )}
+      
         <TouchableOpacity
           style={[styles.button, (!isFormValid || loading) && styles.buttonDisabled]}
-          onPress={handleLogin}
+          onPress={handleSubmit}
           activeOpacity={isFormValid && !loading ? 0.7 : 1}
           disabled={!isFormValid || loading}
         >
-          <Text style={styles.buttonText}>{loading ? '登录中...' : '登录'}</Text>
+          <Text style={styles.buttonText}>{loading ? (isRegister ? '注册中...' : '登录中...') : (isRegister ? '注册' : '登录')}</Text>
+        </TouchableOpacity>
+      
+        <TouchableOpacity
+          style={styles.switchButton}
+          onPress={handleToggleMode}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.switchButtonText}>
+            {isRegister ? '已有账号？返回登录' : '没有账号？立即注册'}
+          </Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -260,6 +341,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.text.inverse,
     letterSpacing: 1,
+  },
+  switchButton: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  switchButtonText: {
+    fontSize: 15,
+    color: theme.colors.primary,
+    fontWeight: '500',
   },
 });
 
