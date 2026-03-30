@@ -50,6 +50,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   const [date, setDate] = useState(new Date());
   const [remark, setRemark] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [activeType, setActiveType] = useState<1 | 2>(1); // 1: expense, 2: income
 
   const [isRemarkInputFocused, setIsRemarkInputFocused] = useState(false);
 
@@ -116,6 +117,9 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
     };
   }, []);
 
+  // Filter categories by active type
+  const filteredCategories = categories.filter(cat => cat.type === activeType);
+
   // Reset form when opening
   useEffect(() => {
     if (visible) {
@@ -124,11 +128,14 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
         // Find category by ID if possible, otherwise name
         const cat = categories.find(c => c.id === editData.category || c.name === editData.categoryName) || categories[0];
         setCategory(cat);
+        setActiveType(cat.type as 1 | 2);
         setDate(new Date(editData.date));
         setRemark(editData.remark);
       } else {
         setAmountStr('0');
-        setCategory(categories[0]);
+        // Set default category based on active type
+        const defaultCat = categories.find(c => c.type === activeType) || categories[0];
+        setCategory(defaultCat);
         setRemark('');
         
         // Try to load last used date
@@ -157,7 +164,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
       }
       setShowDatePicker(false);
     }
-  }, [visible, editData, categories]);
+  }, [visible, editData, categories, activeType]);
 
   const handlePressKey = (key: string) => {
     if (key === 'delete') {
@@ -331,11 +338,35 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
 
         {/* Category Selection */}
         <View style={styles.categoryContainer}>
+            {/* Type Tab */}
+            <View style={styles.typeTabContainer}>
+              <TouchableOpacity 
+                style={[styles.typeTab, activeType === 1 && styles.typeTabActive]}
+                onPress={() => {
+                  setActiveType(1);
+                  const firstExpense = categories.find(c => c.type === 1);
+                  if (firstExpense) setCategory(firstExpense);
+                }}
+              >
+                <Text style={[styles.typeTabText, activeType === 1 && styles.typeTabTextActive]}>支出</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.typeTab, activeType === 2 && styles.typeTabActive]}
+                onPress={() => {
+                  setActiveType(2);
+                  const firstIncome = categories.find(c => c.type === 2);
+                  if (firstIncome) setCategory(firstIncome);
+                }}
+              >
+                <Text style={[styles.typeTabText, activeType === 2 && styles.typeTabTextActive]}>收入</Text>
+              </TouchableOpacity>
+            </View>
+            
             <ScrollView 
               showsVerticalScrollIndicator={true}
               contentContainerStyle={styles.categoryScrollContent}
             >
-              {categories.map(cat => (
+              {filteredCategories.map(cat => (
                 <TouchableOpacity 
                   key={cat.id} 
                   style={[styles.catItem, category.id === cat.id && styles.selectedCat]}
@@ -430,10 +461,41 @@ const styles = StyleSheet.create({
   amount: { fontSize: 36, fontWeight: 'bold', color: theme.colors.text.primary },
 
   categoryContainer: {
-    height: 240,
+    height: 280,
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+  },
+  typeTabContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    backgroundColor: theme.colors.background.neutral,
+    borderRadius: 20,
+    padding: 3,
+  },
+  typeTab: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 17,
+  },
+  typeTabActive: {
+    backgroundColor: theme.colors.primary,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  typeTabText: {
+    fontSize: 14,
+    color: theme.colors.text.secondary,
+    fontWeight: '500',
+  },
+  typeTabTextActive: {
+    color: theme.colors.text.inverse,
+    fontWeight: '600',
   },
   categoryScrollContent: {
     flexDirection: 'row',

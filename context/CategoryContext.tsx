@@ -9,21 +9,7 @@ interface CategoryContextType {
   refreshCategories: () => Promise<void>;
 }
 
-const DEFAULT_CATEGORIES: Category[] = [
-  { id: '1', name: '用餐', icon: '🍽️', type: 1 },
-  { id: '2', name: '交通', icon: '🚗', type: 1 },
-  { id: '3', name: '丽人', icon: '💇', type: 1 },
-  { id: '4', name: '服饰', icon: '👕', type: 1 },
-  { id: '5', name: '日用品', icon: '🧴', type: 1 },
-  { id: '6', name: '娱乐', icon: '🎳', type: 1 },
-  { id: '7', name: '买烟', icon: '🚬', type: 1 },
-  { id: '8', name: '学习', icon: '📚', type: 1 },
-  { id: '9', name: '医疗', icon: '💊', type: 1 },
-  { id: '10', name: '物业水电', icon: '💡', type: 1 },
-  { id: '11', name: '酒水', icon: '🍺', type: 1 },
-  { id: '12', name: '家居', icon: '🛋️', type: 1 },
-  { id: '99', name: '其他', icon: '❓', type: 1 },
-];
+const DEFAULT_CATEGORIES: Category[] = [];
 
 const CategoryContext = createContext<CategoryContextType | undefined>(undefined);
 
