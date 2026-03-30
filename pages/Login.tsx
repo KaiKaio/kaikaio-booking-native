@@ -13,7 +13,7 @@ import { theme } from '@/theme';
 import { RootStackParamList } from '../types/navigation';
 
 const LOGIN_URL = 'http://10.242.78.83:4000/api/user/login';
-const REGISTER_URL = 'http://10.242.78.83:4000/api/user/register';
+const REGISTER_URL = 'http://10.242.78.83:7009/api/user/register';
 const PUBLIC_KEY_URL = 'http://10.242.78.83:4000/api/user/public_key';
 const encrypt = new JSEncrypt();
 
@@ -68,6 +68,7 @@ const Login = () => {
 
   const handleLogin = async () => {
     if (!isFormValid) {
+      console.log('Form is not valid')
       return;
     }
     setLoading(true);
@@ -112,19 +113,18 @@ const Login = () => {
     }
     setLoading(true);
     try {
-      const data = await request(REGISTER_URL, {
+      const res: { data: { user_id: string; msg: string } } = await request(REGISTER_URL, {
         method: 'POST',
         body: JSON.stringify({
-          userName: account,
+          username: account,
           password: encrypt.encrypt(password),
         }),
       });
-      if (data.token) {
-        await AsyncStorage.setItem('token', data.token);
-        await refreshCategories();
-        navigation.replace('Main', { screen: 'List' });
+      if (res?.data?.user_id) {
+        Alert.alert('注册成功');
+        handleLogin();
       } else {
-        Alert.alert('注册', data.message || '注册失败');
+        Alert.alert('注册', res?.data?.msg || '注册失败');
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : '网络错误';
