@@ -19,6 +19,7 @@ import { useCategory } from '../context/CategoryContext';
 import IconFont from '../components/IconFont'; // 根据实际路径引入
 import CategoryIcon from './CategoryIcon';
 import { theme } from '@/theme';
+import { navigate } from '../utils/navigationRef';
 
 export interface BillFormRef {
   open: (data?: BillData) => void;
@@ -380,6 +381,21 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
                   <Text style={[styles.catName, category.id === cat.id && styles.selectedCatName]}>{cat.name}</Text>
                 </TouchableOpacity>
               ))}
+              {/* Add Category Button */}
+              <TouchableOpacity 
+                style={styles.catItem}
+                onPress={() => {
+                  setVisible(false);
+                  setTimeout(() => {
+                    navigate('CategoryEdit', { type: activeType });
+                  }, 300);
+                }}
+              >
+                <View style={styles.addCatIconWrap}>
+                  <Text style={styles.addCatIcon}>+</Text>
+                </View>
+                <Text style={styles.catName}>管理</Text>
+              </TouchableOpacity>
             </ScrollView>
         </View>
 
@@ -525,6 +541,22 @@ const styles = StyleSheet.create({
   catIcon: { fontSize: 24 },
   catName: { fontSize: 12, color: theme.colors.text.secondary },
   selectedCatName: { color: theme.colors.primary, fontWeight: 'bold' },
+  addCatIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  addCatIcon: {
+    fontSize: 24,
+    color: theme.colors.text.placeholder,
+    fontWeight: '300',
+  },
 
   inputsRow: {
     flexDirection: 'row',

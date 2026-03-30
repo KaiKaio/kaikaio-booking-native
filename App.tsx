@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Login from './pages/Login';
 import Main from './pages/Main';
+import CategoryEdit from './pages/CategoryEdit';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -49,6 +50,14 @@ function App() {
               <Stack.Screen name="AuthLoading" component={AuthLoading} />
               <Stack.Screen name="Login" component={Login} />
               <Stack.Screen name="Main" component={Main} />
+              <Stack.Screen 
+                name="CategoryEdit" 
+                component={CategoryEdit}
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                }}
+              />
             </Stack.Navigator>
           </NavigationContainer>
         </CategoryProvider>
