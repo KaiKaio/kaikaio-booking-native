@@ -370,15 +370,15 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
               {filteredCategories.map(cat => (
                 <TouchableOpacity 
                   key={cat.id} 
-                  style={[styles.catItem, category.id === cat.id && styles.selectedCat]}
+                  style={[styles.catItem, category?.id === cat.id && styles.selectedCat]}
                   onPress={() => {
                     setCategory(cat);
                   }}
                 >
-                  <View style={[styles.catIconWrap, category.id === cat.id && styles.selectedCatIconWrap]}>
+                  <View style={[styles.catIconWrap, category?.id === cat.id && styles.selectedCatIconWrap]}>
                     <CategoryIcon icon={cat.icon} size={22} />
                   </View>
-                  <Text style={[styles.catName, category.id === cat.id && styles.selectedCatName]}>{cat.name}</Text>
+                  <Text style={[styles.catName, category?.id === cat.id && styles.selectedCatName]}>{cat.name}</Text>
                 </TouchableOpacity>
               ))}
               {/* Add Category Button */}

@@ -5,7 +5,8 @@
   "scripts": {
     "android": "react-native run-android",
     "build:android": "cd android && ./gradlew assembleRelease",
-    "ios": "react-native run-ios",
+    "ios": "npx expo run:ios",
+    "reset-cache": "npx react-native start --reset-cache",
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
