@@ -51,7 +51,7 @@
 	<false/>
 	<key>UIAppFonts</key>
 	<array>
-		<string>KaikaioBooking/Fonts/iconfont.ttf</string>
+		<string>iconfont.ttf</string>
 	</array>
 </dict>
 </plist>
