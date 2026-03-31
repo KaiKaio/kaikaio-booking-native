@@ -554,6 +554,7 @@ const styles = StyleSheet.create({
   },
   addCatIcon: {
     fontSize: 24,
+    lineHeight: 24,
     color: theme.colors.text.placeholder,
     fontWeight: '300',
   },
