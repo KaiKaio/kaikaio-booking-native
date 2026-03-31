@@ -2,7 +2,7 @@ import request from '@/request';
 import { Category } from '../types/category';
 
 // 创建分类
-export async function createCategory(data: Omit<Category, 'id'>): Promise<Category> {
+export async function createCategory(data: Omit<Category, 'id' | 'user_id'>): Promise<Category> {
   const res = await request('/api/type/add', {
     method: 'POST',
     body: JSON.stringify(data),
@@ -17,7 +17,7 @@ export async function createCategory(data: Omit<Category, 'id'>): Promise<Catego
 }
 
 // 更新分类
-export async function updateCategory(data: Partial<Category> & Pick<Category, 'id'>): Promise<Category> {
+export async function updateCategory(data: Partial<Category> & Pick<Category, 'id' | 'type' | 'user_id'>): Promise<Category> {
   const res = await request(`/api/type/update`, {
     method: 'POST',
     body: JSON.stringify(data),

@@ -126,7 +126,13 @@ export default function CategoryEdit({ route, navigation }: Props) {
     try {
       if (editingCategory) {
         // 编辑
-        await updateCategory({ id: editingCategory.id, name: inputName.trim(), icon: inputIcon });
+        await updateCategory({
+          id: editingCategory.id,
+          name: inputName.trim(),
+          icon: inputIcon,
+          type: editingCategory.type,
+          user_id: editingCategory.user_id
+        });
       } else {
         // 新增
         await createCategory({
@@ -237,11 +243,12 @@ export default function CategoryEdit({ route, navigation }: Props) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backText}>← 返回</Text>
+          <Text style={styles.backText}>返回</Text>
         </TouchableOpacity>
         <Text style={styles.title}>类别编辑</Text>
         <TouchableOpacity onPress={handleAdd} style={styles.addBtn}>
-          <Text style={styles.addBtnText}>+ 新增</Text>
+          <Text style={styles.addBtnIcon}>+</Text>
+          <Text style={styles.addBtnText}>新增</Text>
         </TouchableOpacity>
       </View>
 
@@ -293,7 +300,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: theme.colors.background.paper,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: theme.colors.border
   },
   backBtn: {
     padding: 4,
@@ -306,23 +313,35 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: theme.colors.text.primary,
+    position: 'absolute',
+    left: '50%',
+    transform: 'translateX(-26px)',
   },
   addBtn: {
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 16,
+    flexDirection: 'row',
+    columnGap: 6
+  },
+  addBtnIcon: {
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: '500',
+    color: theme.colors.text.inverse,
   },
   addBtnText: {
     color: theme.colors.text.inverse,
-    fontSize: 14,
+    fontSize: 16,
+    lineHeight: 20,
     fontWeight: '500',
   },
   typeTabContainer: {
     flexDirection: 'row',
     marginHorizontal: 16,
     marginVertical: 12,
-    backgroundColor: theme.colors.background.neutral,
+    backgroundColor: theme.colors.background.paper,
     borderRadius: 20,
     padding: 3,
   },

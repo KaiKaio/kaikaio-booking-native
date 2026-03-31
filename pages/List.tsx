@@ -9,6 +9,7 @@ import BillForm, { BillData, BillFormRef } from '../components/BillForm';
 import BillItem from '../components/BillItem';
 import { getBillList, addBill, updateBill } from '../services/bill';
 import { BillDetail, DailyBill } from '../types/bill';
+import CategoryIcon from '@/components/CategoryIcon';
 import { useCategory } from '../context/CategoryContext';
 import { theme } from '@/theme';
 import { MainTabParamList } from '../types/navigation';
@@ -339,9 +340,9 @@ const List = () => {
         footerHeight={insets.bottom > 0 ? insets.bottom : 16}
       />
 
-      <View style={[styles.fabContainer, { bottom: 80 + insets.bottom }]}>
+      <View style={[styles.fabContainer, { bottom: 40 + insets.bottom }]}>
         <TouchableOpacity style={styles.fab} onPress={handleAdd}>
-          <Text style={styles.fabIcon}>✏️</Text>
+          <CategoryIcon style={styles.fabIcon} icon={'icon-qianming'} size={22} />
         </TouchableOpacity>
         <BillForm ref={billFormRef} onSubmit={handleBillSubmit} />
       </View>
@@ -362,7 +363,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.colors.background.neutral },
   fabContainer: {
     position: 'absolute',
-    bottom: 80,
     right: 20,
     zIndex: 100,
   },
@@ -371,6 +371,7 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     backgroundColor: theme.colors.primary,
+    opacity: 0.65,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
@@ -380,7 +381,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   fabIcon: {
-    fontSize: 24,
     color: theme.colors.text.inverse,
   },
   header: {

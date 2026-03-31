@@ -484,17 +484,15 @@ const styles = StyleSheet.create({
   },
   typeTabContainer: {
     flexDirection: 'row',
+    justifyContent: 'flex-end',
     marginHorizontal: 16,
-    marginBottom: 12,
-    backgroundColor: theme.colors.background.neutral,
-    borderRadius: 20,
-    padding: 3,
+    marginBottom: 18
   },
   typeTab: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 17,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: 4, // inner radius can be smaller
+    backgroundColor: theme.colors.background.default
   },
   typeTabActive: {
     backgroundColor: theme.colors.primary,

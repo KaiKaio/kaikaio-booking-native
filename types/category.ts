@@ -3,4 +3,5 @@ export interface Category {
   name: string;
   icon: string;
   type: number; // 1: expense, 2: income
+  user_id: string;
 }
