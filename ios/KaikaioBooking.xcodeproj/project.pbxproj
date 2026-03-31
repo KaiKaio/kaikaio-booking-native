@@ -66,15 +66,6 @@
 			name = KaikaioBooking;
 			sourceTree = "<group>";
 		};
-		C3D4E5F67890123456789012 /* Fonts */ = {
-			isa = PBXGroup;
-			children = (
-				B2C3D4E5F6789012345678901 /* iconfont.ttf */,
-			);
-			name = Fonts;
-			path = KaikaioBooking/Fonts;
-			sourceTree = "<group>";
-		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -130,6 +121,15 @@
 				5709B34CF0A7D63546082F79 /* Pods-KaikaioBooking.release.xcconfig */,
 			);
 			path = Pods;
+			sourceTree = "<group>";
+		};
+		C3D4E5F67890123456789012 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				B2C3D4E5F6789012345678901 /* iconfont.ttf */,
+			);
+			name = Fonts;
+			path = KaikaioBooking/Fonts;
 			sourceTree = "<group>";
 		};
 		DB827A8665D247F7AE889D8A /* Resources */ = {
