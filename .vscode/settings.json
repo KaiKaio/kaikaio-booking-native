@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cp /Users/chenkaiwei/Desktop/Code/kaikaio-booking-native/node_modules/react-native-vector-icons/Fonts/MaterialIcons\\.ttf /Users/chenkaiwei/Desktop/Code/kaikaio-booking-native/ios/KaikaioBooking/Fonts/$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
