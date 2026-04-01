@@ -14,12 +14,14 @@
     "link-fonts": "node scripts/link-fonts.js"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native/new-app-screen": "0.80.1",
     "@react-navigation/bottom-tabs": "^7.8.12",
     "@react-navigation/native": "^7.1.14",
     "@react-navigation/native-stack": "^7.3.21",
     "expo": "^54.0.27",
+    "expo-asset": "^55.0.10",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "^18.0.11",
     "expo-image": "~3.0.11",
@@ -27,8 +29,10 @@
     "react": "19.1.0",
     "react-native": "0.80.1",
     "react-native-gesture-handler": "^2.29.1",
+    "react-native-gifted-charts": "^1.4.76",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.13.1",
+    "react-native-svg": "^15.15.4",
     "react-native-vector-icons": "^10.3.0",
     "zustand": "^5.0.11"
   },
