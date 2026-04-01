@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
 
   headerActions: { flexDirection: 'row', justifyContent: 'flex-end' },
   headerBtn: {
-    backgroundColor: theme.colors.primaryDark,
+    backgroundColor: theme.colors.btn,
     borderRadius: 8,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,

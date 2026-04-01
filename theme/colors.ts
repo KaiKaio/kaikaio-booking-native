@@ -1,8 +1,10 @@
 export const colors = {
   // Main brand colors
-  primary: '#0090FF',
-  primaryDark: '#0072e5',
-  secondary: '#5CBBF2',
+  primary: '#F9B99F',
+  active: '#F39E7E',
+  primaryDark: '#F9B99F',
+  secondary: '#E89A9A',
+  btn: '#F7AD8F',
 
   // Status colors
   status: {
@@ -24,10 +26,10 @@ export const colors = {
   border: '#e0e0e0',
   
   background: {
-    default: '#f5f5f5',
+    default: '#FFF9F5',
     paper: '#FFFFFF',
     neutral: '#F0F2F5',
-    primaryLight: '#F0F6FF',
+    primaryLight: '#F39E7E',
   },
 
   // Opacity helpers

@@ -230,7 +230,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
             style={styles.key}
             onPress={() => handlePressKey(key)}
           >
-            <Text style={styles.keyText}>{key === 'delete' ?  <IconFont name="qianming" size={30} color="#000" /> : key}</Text>
+            <Text style={styles.keyText}>{key === 'delete' ?  <IconFont name="Backspace" size={30} color="#000" /> : key}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   selectedCatIconWrap: {
-    backgroundColor: theme.colors.background.primaryLight,
+    backgroundColor: theme.colors.background.primaryLight
   },
   catIcon: { fontSize: 24 },
   catName: { fontSize: 12, color: theme.colors.text.secondary },

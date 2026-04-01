@@ -1,4 +1,7 @@
 {
   "name": "Kaikaio",
-  "displayName": "KaikaioBooking"
+  "displayName": "KaikaioBooking",
+  "plugins": [
+    "expo-asset"
+  ]
 }

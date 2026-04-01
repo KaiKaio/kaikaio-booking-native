@@ -89,20 +89,19 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
     const ratio = (precedingSum + halfCurrentValue) / totalValue;
     
     // 转换为角度
-    // gifted-charts 默认从右侧 (3点钟方向) 开始顺时针绘制
+    // gifted-charts 默认从顶部 (12点钟方向) 开始顺时针绘制
     // 我们想要将选中区域的中点对齐到顶部 (12点钟方向)
-    // 也就是说，需要倒退相应的角度，再加上 270 度 (或减去 90 度)
-    const angle = 270 - (ratio * 360);
-    let transAngle = 0
-    
-    // 保证角度在 0-360 之间
-    if (angle < 0) {
-      transAngle = angle + 360;
-    } else {
-      transAngle = angle
-    }
+    /**
+     * 注意：
+     * 1. transAngle 返回 0 则无旋转
+     * 2. transAngle 返回 -Math.PI / 2 则顺时针旋转 90 度
+     * 3. transAngle 返回 -Math.PI 则顺时针旋转 180 度
+     * 4. transAngle 返回 -Math.PI * 1.5 则顺时针旋转 270 度
+     * 5. transAngle 返回 -Math.PI * 2 则顺时针旋转 360 度
+     */
 
-    console.log({ selectedIndex, transAngle, angle, ratio, pieData, totalValue, halfCurrentValue }, '=> RotationAngle')
+    const transAngle = -Math.PI * 2 * ratio;
+
     return transAngle;
   }, [pieData, selectedIndex]);
 
