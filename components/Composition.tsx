@@ -28,16 +28,23 @@ interface CompositionProps {
   data: StatisticsData[];
 }
 
-const getCenterLabelComponent = (type: 'expense' | 'income', totalAmount: number) => () => (
-  <View style={styles.chartCenter}>
-    <Text style={styles.chartCenterLabel}>{type === 'expense' ? '总支出' : '总收入'}</Text>
-    <Text style={styles.chartCenterValue}>¥{totalAmount.toFixed(2)}</Text>
-  </View>
-);
+
+
+const getCenterLabelComponent = (currentItem: StatisticsData & { icon: string }, totalAmount: number) => () => {
+  return (
+    <View style={styles.chartCenter}>
+      <View style={styles.chartCenterLabel}>
+        <CategoryIcon icon={currentItem.icon} size={22} />
+      </View>
+      <Text style={styles.chartCenterValue}>{((currentItem.number / totalAmount) * 100).toFixed(2)}%</Text>
+    </View>
+  )
+};
 
 const Composition: React.FC<CompositionProps> = ({ data }) => {
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [selectedIndex, setSelectedIndex] = useState(0);
+
   const { getCategoryIcon } = useCategory();
 
   // 1 for expense, 2 for income
@@ -154,16 +161,19 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
 
             <View style={styles.chartContainer}>
               <PieChart
-                data={pieData}
-                donut
-                innerRadius={70}
-                radius={90}
-                innerCircleColor={theme.colors.background.paper}
-                centerLabelComponent={getCenterLabelComponent(type, totalAmount)}
-                initialAngle={rotationAngle}
-                isAnimated={true}
-                animationDuration={500}
-              />
+                  data={pieData}
+                  donut
+                  innerRadius={70}
+                  radius={90}
+                  innerCircleColor={theme.colors.background.paper}
+                  centerLabelComponent={getCenterLabelComponent({
+                    ...sortedData[selectedIndex],
+                    icon: getCategoryIcon(sortedData[selectedIndex].type_name)
+                  }, totalAmount)}
+                  initialAngle={rotationAngle}
+                  isAnimated={true}
+                  animationDuration={500}
+                />
             </View>
           </View>
 
@@ -312,8 +322,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chartCenterLabel: {
-    fontSize: theme.typography.size.sm,
-    color: theme.colors.text.secondary,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.background.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   chartCenterValue: {
     fontSize: theme.typography.size.lg,

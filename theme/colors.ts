@@ -22,6 +22,12 @@ export const colors = {
     disabled: '#C0C0C0',
     inverse: '#FFFFFF',
   },
+
+  icon: {
+    default: '#FFFFFF',
+    active: '#FFFFFF',
+    inactive: '#333333',
+  },
   
   border: '#e0e0e0',
   
