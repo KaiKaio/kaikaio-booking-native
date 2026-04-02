@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { BASE_URL } from '@/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -203,7 +204,10 @@ const Account = () => {
       try {
         const res = await uploadAvatar(localAvatarUri);
         if (res.data?.url) {
-          await updateAvatar({ avatar: res.data.url });
+          const updateRes = await updateAvatar({ avatar: res.data.url });
+          if (updateRes.code !== 200) {
+            throw new Error('头像修改失败');
+          }
           updateUserInfo({ avatar: res.data.url });
           setAvatarModalVisible(false);
           setLocalAvatarUri(null);
@@ -239,7 +243,6 @@ const Account = () => {
     }
   };
 
-  const defaultAvatar = 'https://via.placeholder.com/100';
   const avatarInitial = (userInfo?.username?.trim()?.charAt(0) ?? '?').toUpperCase();
 
   if (loading) {
@@ -266,7 +269,7 @@ const Account = () => {
         >
           {userInfo?.avatar ? (
             <Image
-              source={{ uri: userInfo.avatar }}
+              source={{ uri: `${BASE_URL}${userInfo.avatar}` }}
               style={styles.avatar}
               contentFit="cover"
               transition={200}
@@ -445,7 +448,7 @@ const Account = () => {
             
             {/* 头像预览 */}
             <Image
-              source={{ uri: localAvatarUri || avatarUrl || userInfo?.avatar || defaultAvatar }}
+              source={{ uri: localAvatarUri || (avatarUrl ? `${BASE_URL}${avatarUrl}` : avatarUrl) || `${BASE_URL}${userInfo?.avatar}` }}
               style={styles.avatarPreview}
               contentFit="cover"
             />

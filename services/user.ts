@@ -1,11 +1,10 @@
 import request from '../request';
-import { BASE_URL } from '../config';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface UserInfo {
-  user_id: string;
-  username: string;
-  avatar?: string;
+  id: number,
+  username: string,
+  signature: string,
+  avatar: string,
 }
 
 export interface UpdateUsernameParams {
@@ -23,7 +22,7 @@ export interface UpdateAvatarParams {
 
 // 获取用户信息
 export const getUserInfo = async (): Promise<{ data: UserInfo }> => {
-  return request('/api/user/info', {
+  return request('/api/user/get_userinfo', {
     method: 'GET',
   });
 };
@@ -45,8 +44,8 @@ export const updatePassword = async (params: UpdatePasswordParams): Promise<{ ms
 };
 
 // 更新头像
-export const updateAvatar = async (params: UpdateAvatarParams): Promise<{ msg: string }> => {
-  return request('/api/user/update/avatar', {
+export const updateAvatar = async (params: UpdateAvatarParams): Promise<{ msg: string, code: number }> => {
+  return request('/api/user/edit_userinfo', {
     method: 'POST',
     body: JSON.stringify(params),
   });
@@ -54,8 +53,6 @@ export const updateAvatar = async (params: UpdateAvatarParams): Promise<{ msg: s
 
 // 上传头像图片
 export const uploadAvatar = async (uri: string): Promise<{ data: { url: string } }> => {
-  const token = await AsyncStorage.getItem('token');
-  
   const formData = new FormData();
   const filename = uri.split('/').pop() || 'avatar.jpg';
   const match = /\.(\w+)$/.exec(filename);
@@ -67,19 +64,11 @@ export const uploadAvatar = async (uri: string): Promise<{ data: { url: string }
     type: type,
   } as any);
 
-  const response = await fetch(`${BASE_URL}/api/user/upload/avatar`, {
+  return request('/api/user/upload/avatar ', {
     method: 'POST',
     headers: {
-      ...(token ? { Authorization: token } : {}),
+      'Content-Type': 'multipart/form-data',
     },
     body: formData,
   });
-
-  const data = await response.json();
-  
-  if (!response.ok) {
-    throw new Error(data.msg || '上传失败');
-  }
-  
-  return data;
 };
