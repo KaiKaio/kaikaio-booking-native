@@ -17,11 +17,11 @@ const AsyncStorageMock = {
     return Promise.resolve();
   }),
   multiRemove: jest.fn((keys: string[]) => {
-    keys.forEach(k =>.delete mockStorage[k]);
+    keys.forEach(k => { delete mockStorage[k] });
     return Promise.resolve();
   }),
   clear: jest.fn(() => {
-    Object.keys(mockStorage).forEach(k =>.delete mockStorage[k]);
+    Object.keys(mockStorage).forEach(k => { delete mockStorage[k] });
     return Promise.resolve();
   }),
 };

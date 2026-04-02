@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "android": "npm run link-fonts && expo run:android",
-    "build:android": "npm run link-fonts && cd android && ./gradlew assembleRelease",
+    "build:android": "npm run link-fonts && cd android && gradlew assembleRelease",
     "ios": "npm run link-fonts && npx expo run:ios",
     "reset-cache": "expo start --dev-client -c",
     "lint": "eslint .",
@@ -26,6 +26,7 @@
     "expo-clipboard": "~8.0.8",
     "expo-constants": "^18.0.11",
     "expo-image": "~3.0.11",
+    "expo-image-manipulator": "~14.0.8",
     "expo-image-picker": "~17.0.10",
     "expo-linear-gradient": "~15.0.8",
     "jsencrypt": "^3.3.2",

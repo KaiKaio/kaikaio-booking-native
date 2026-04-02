@@ -4,7 +4,7 @@ import { getUserInfo, UserInfo } from '../services/user';
 interface UserContextType {
   userInfo: UserInfo | null;
   loading: boolean;
-  refreshUserInfo: () => Promise<void>;
+  refreshUserInfo: (silent?: boolean) => Promise<void>;
   updateUserInfo: (info: Partial<UserInfo>) => void;
 }
 
@@ -14,8 +14,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshUserInfo = async () => {
-    setLoading(true);
+  const refreshUserInfo = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await getUserInfo();
       if (res.data) {
@@ -24,7 +24,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
       console.error('Failed to fetch user info:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 

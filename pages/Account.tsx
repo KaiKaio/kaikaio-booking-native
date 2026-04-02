@@ -10,6 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { BASE_URL } from '@/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,6 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { RootStackParamList } from '../types/navigation';
 import { useUser } from '../context/UserContext';
@@ -29,7 +32,7 @@ const encrypt = new JSEncrypt();
 
 const Account = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { userInfo, loading, updateUserInfo } = useUser();
+  const { userInfo, loading, updateUserInfo, refreshUserInfo } = useUser();
 
   // Modal states
   const [usernameModalVisible, setUsernameModalVisible] = useState(false);
@@ -44,6 +47,18 @@ const Account = () => {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshUserInfo(true);
+    } catch (error) {
+      console.error('刷新用户数据失败', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -73,6 +88,24 @@ const Account = () => {
     }
   };
 
+  const compressImage = async (uri: string) => {
+    try {
+      const imageRef = await ImageManipulator.manipulate(uri)
+        .resize({ width: 800 })
+        .renderAsync();
+      
+      const saveResult = await imageRef.saveAsync({
+        compress: 0.7,
+        format: SaveFormat.JPEG
+      });
+      
+      return saveResult.uri;
+    } catch (error) {
+      console.error('图片压缩失败', error);
+      return uri; // 如果压缩失败，返回原图
+    }
+  };
+
   // 从相册选择图片
   const pickImage = async () => {
     try {
@@ -90,8 +123,9 @@ const Account = () => {
       });
 
       if (!result.canceled && result.assets[0]) {
-        const uri = result.assets[0].uri;
-        setLocalAvatarUri(uri);
+        const originalUri = result.assets[0].uri;
+        const compressedUri = await compressImage(originalUri);
+        setLocalAvatarUri(compressedUri);
         setAvatarUrl(''); // 清空 URL 输入
       }
     } catch (error) {
@@ -116,8 +150,9 @@ const Account = () => {
       });
 
       if (!result.canceled && result.assets[0]) {
-        const uri = result.assets[0].uri;
-        setLocalAvatarUri(uri);
+        const originalUri = result.assets[0].uri;
+        const compressedUri = await compressImage(originalUri);
+        setLocalAvatarUri(compressedUri);
         setAvatarUrl(''); // 清空 URL 输入
       }
     } catch (error) {
@@ -179,10 +214,14 @@ const Account = () => {
         return;
       }
 
-      await updatePassword({
+      const updateRes = await updatePassword({
         oldPassword: encryptedOldPassword,
         newPassword: encryptedNewPassword,
       });
+      if (updateRes.code !== 200) {
+        throw new Error(updateRes.msg || '密码修改失败');
+      }
+
       setPasswordModalVisible(false);
       setOldPassword('');
       setNewPassword('');
@@ -245,7 +284,7 @@ const Account = () => {
 
   const avatarInitial = (userInfo?.username?.trim()?.charAt(0) ?? '?').toUpperCase();
 
-  if (loading) {
+  if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -255,7 +294,18 @@ const Account = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <View style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
+          />
+        }
+      >
       {/* 用户信息卡片 */}
       <View style={styles.card}>
         {/* 头像区域 */}
@@ -319,9 +369,10 @@ const Account = () => {
 
       {/* 退出登录按钮 */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Icon name="logout" size={20} color={theme.colors.status.error} />
+        <Icon name="logout" size={20} color={theme.colors.active} />
         <Text style={styles.logoutText}>退出登录</Text>
       </TouchableOpacity>
+      </ScrollView>
 
       {/* 修改用户名 Modal */}
       <Modal
@@ -504,7 +555,6 @@ const Account = () => {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-      </View>
     </SafeAreaView>
   );
 };
@@ -517,7 +567,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background.default,
+  },
+  contentContainer: {
     padding: 16,
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -607,7 +660,7 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: 16,
-    color: theme.colors.status.error,
+    color: theme.colors.active,
     marginLeft: 8,
   },
   modalOverlay: {

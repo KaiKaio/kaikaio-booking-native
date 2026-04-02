@@ -29,15 +29,15 @@ export const getUserInfo = async (): Promise<{ data: UserInfo }> => {
 
 // 更新用户名
 export const updateUsername = async (params: UpdateUsernameParams): Promise<{ msg: string }> => {
-  return request('/api/user/update/username', {
+  return request('/api/user/edit_userinfo', {
     method: 'POST',
     body: JSON.stringify(params),
   });
 };
 
 // 更新密码
-export const updatePassword = async (params: UpdatePasswordParams): Promise<{ msg: string }> => {
-  return request('/api/user/update/password', {
+export const updatePassword = async (params: UpdatePasswordParams): Promise<{ msg: string, code: number }> => {
+  return request('/api/user/modify_pass', {
     method: 'POST',
     body: JSON.stringify(params),
   });
