@@ -1,7 +1,30 @@
 {
   "name": "Kaikaio",
   "displayName": "KaikaioBooking",
+  "icon": "./assets/icon.png",
+  "splash": {
+    "image": "./assets/splash.png",
+    "resizeMode": "contain",
+    "backgroundColor": "#ffffff"
+  },
   "plugins": [
-    "expo-asset"
-  ]
+    "expo-asset",
+    [
+      "expo-image-picker",
+      {
+        "photosPermission": "我们需要访问您的相册以便您可以选择并上传照片。",
+        "cameraPermission": "我们需要访问您的相机以便您可以拍摄并上传照片。",
+        "microphonePermission": "我们需要访问您的麦克风以便您可以录制带有声音的视频。"
+      }
+    ]
+  ],
+  "ios": {
+    "bundleIdentifier": "com.anonymous.kaikaio"
+  },
+  "android": {
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/icon.png",
+      "backgroundColor": "#ffffff"
+    }
+  }
 }

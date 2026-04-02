@@ -3,8 +3,8 @@ const path = require('path');
 
 const srcDir = path.join(__dirname, '../assets/fonts');
 const androidDestDir = path.join(__dirname, '../android/app/src/main/assets/fonts');
-const iosDestDir = path.join(__dirname, '../ios/KaikaioBooking/Fonts');
-const infoPlistPath = path.join(__dirname, '../ios/KaikaioBooking/Info.plist');
+const iosDestDir = path.join(__dirname, '../ios/Kaikaio/Fonts');
+const infoPlistPath = path.join(__dirname, '../ios/Kaikaio/Info.plist');
 
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -42,8 +42,8 @@ files.forEach(file => {
 if (fs.existsSync(infoPlistPath)) {
   let plist = fs.readFileSync(infoPlistPath, 'utf8');
   const fontStrings = files.map(f => `\t\t<string>${f}</string>`).join('\n');
-  if (/\<key\>UIAppFonts\<\/key\>\s*\<array\>[\s\S]*?\<\/array\>/m.test(plist)) {
-    plist = plist.replace(/\<key\>UIAppFonts\<\/key\>\s*\<array\>[\s\S]*?\<\/array\>/m, `<key>UIAppFonts</key>\n\t<array>\n${fontStrings}\n\t</array>`);
+  if (/<key>UIAppFonts<\/key>\s*<array>[\s\S]*?<\/array>/m.test(plist)) {
+    plist = plist.replace(/<key>UIAppFonts<\/key>\s*<array>[\s\S]*?<\/array>/m, `<key>UIAppFonts</key>\n\t<array>\n${fontStrings}\n\t</array>`);
     console.log('Updated UIAppFonts entries in Info.plist');
   } else {
     // Insert before closing </dict>

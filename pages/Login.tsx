@@ -154,7 +154,7 @@ const Login = () => {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
       <Image
-        source={require('../assets/login-title-icon.webp')}
+        source={require('../assets/login-title-icon.png')}
         style={styles.logo}
         contentFit="contain"
         transition={1000}

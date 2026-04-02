@@ -14,6 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from './types/navigation';
 import { navigationRef } from './utils/navigationRef';
 import { CategoryProvider } from './context/CategoryContext';
+import { UserProvider } from './context/UserContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -39,7 +40,8 @@ function App() {
     <GestureHandlerRootView style={styles.container}>
       <SafeAreaProvider>
         <CategoryProvider>
-          <NavigationContainer ref={navigationRef}>
+          <UserProvider>
+            <NavigationContainer ref={navigationRef}>
             <Stack.Navigator 
               initialRouteName="AuthLoading" 
               screenOptions={{ 
@@ -59,7 +61,8 @@ function App() {
                 }}
               />
             </Stack.Navigator>
-          </NavigationContainer>
+            </NavigationContainer>
+          </UserProvider>
         </CategoryProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
