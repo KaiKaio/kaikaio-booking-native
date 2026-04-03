@@ -320,25 +320,24 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
             transform: [{ translateY: slideAnim }]
           }
         ]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => setVisible(false)}>
-            <Text style={styles.cancelBtn}>取消</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>{editData ? '编辑账单' : '记一笔'}</Text>
-          <TouchableOpacity onPress={handleSubmit}>
-            <Text style={styles.submitBtn}>完成</Text>
-          </TouchableOpacity>
-        </View>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => setVisible(false)}>
+              <Text style={styles.cancelBtn}>取消</Text>
+            </TouchableOpacity>
+            <Text style={styles.title}>{editData ? '编辑账单' : '记一笔'}</Text>
+            <TouchableOpacity onPress={handleSubmit}>
+              <Text style={styles.submitBtn}>完成</Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Amount Display */}
-        <View style={styles.amountContainer}>
-          <Text style={styles.currency}>￥</Text>
-          <Text style={styles.amount}>{amountStr}</Text>
-        </View>
+          <View style={styles.mainHeader}>
+            {/* Amount Display */}
+            <View style={styles.amountContainer}>
+              <Text style={styles.currency}>￥</Text>
+              <Text style={styles.amount}>{amountStr}</Text>
+            </View>
 
-        {/* Category Selection */}
-        <View style={styles.categoryContainer}>
             {/* Type Tab */}
             <View style={styles.typeTabContainer}>
               <TouchableOpacity 
@@ -362,7 +361,10 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
                 <Text style={[styles.typeTabText, activeType === 2 && styles.typeTabTextActive]}>收入</Text>
               </TouchableOpacity>
             </View>
-            
+          </View>
+
+          {/* Category Selection */}
+          <View style={styles.categoryContainer}>
             <ScrollView 
               showsVerticalScrollIndicator={true}
               contentContainerStyle={styles.categoryScrollContent}
@@ -397,38 +399,38 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
                 <Text style={styles.catName}>管理</Text>
               </TouchableOpacity>
             </ScrollView>
-        </View>
+          </View>
 
-        {/* Inputs Row */}
-        <View style={styles.inputsRow}>
-            <TouchableOpacity 
-              style={styles.dateInput} 
-              onPress={() => setShowDatePicker(!showDatePicker)}
-            >
-              <Text style={styles.label}>日期</Text>
-              <Text style={styles.value}>{date.getFullYear()}-{String(date.getMonth() + 1).padStart(2, '0')}-{String(date.getDate()).padStart(2, '0')}</Text>
-            </TouchableOpacity>
-            
-            <View style={styles.remarkInputContainer}>
-              <Text style={styles.label}>备注</Text>
-              <TextInput
-                style={styles.remarkInput}
-                placeholder="写点什么..."
-                value={remark}
-                onChangeText={setRemark}
-                onFocus={() => setIsRemarkInputFocused(true)}
-                onBlur={() => setIsRemarkInputFocused(false)}
-                maxLength={50}
-                returnKeyType="done"
-                onSubmitEditing={Keyboard.dismiss}
-              />
-            </View>
-        </View>
+          {/* Inputs Row */}
+          <View style={styles.inputsRow}>
+              <TouchableOpacity 
+                style={styles.dateInput} 
+                onPress={() => setShowDatePicker(!showDatePicker)}
+              >
+                <Text style={styles.label}>日期</Text>
+                <Text style={styles.value}>{date.getFullYear()}-{String(date.getMonth() + 1).padStart(2, '0')}-{String(date.getDate()).padStart(2, '0')}</Text>
+              </TouchableOpacity>
+              
+              <View style={styles.remarkInputContainer}>
+                <Text style={styles.label}>备注</Text>
+                <TextInput
+                  style={styles.remarkInput}
+                  placeholder="写点什么..."
+                  value={remark}
+                  onChangeText={setRemark}
+                  onFocus={() => setIsRemarkInputFocused(true)}
+                  onBlur={() => setIsRemarkInputFocused(false)}
+                  maxLength={50}
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                />
+              </View>
+          </View>
 
-        {/* Bottom Area: Keypad or DatePicker */}
-        <View style={[styles.bottomArea, isRemarkInputFocused && styles.bottomAreaFocused]}>
-          {showDatePicker ? renderDatePicker() : renderKeypad()}
-        </View>
+          {/* Bottom Area: Keypad or DatePicker */}
+          <View style={[styles.bottomArea, isRemarkInputFocused && styles.bottomAreaFocused]}>
+            {showDatePicker ? renderDatePicker() : renderKeypad()}
+          </View>
 
         </Animated.View>
       </KeyboardAvoidingView>
@@ -449,7 +451,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingBottom: 20, // safe area
-    height: '85%', // Occupy significant space
     position: 'absolute',
     bottom: 0,
     width: '100%',
@@ -466,18 +467,25 @@ const styles = StyleSheet.create({
   cancelBtn: { color: theme.colors.text.secondary, fontSize: 16 },
   submitBtn: { color: theme.colors.primary, fontSize: 16, fontWeight: 'bold' },
   title: { fontSize: 18, fontWeight: 'bold', color: theme.colors.text.primary },
+
+  mainHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    marginVertical: 18
+  },
   
   amountContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
     justifyContent: 'center',
   },
-  currency: { fontSize: 24, fontWeight: 'bold', color: theme.colors.text.primary, marginRight: 4 },
-  amount: { fontSize: 36, fontWeight: 'bold', color: theme.colors.text.primary },
+  currency: { fontSize: 18, fontWeight: 'bold', color: theme.colors.text.primary, marginRight: 4 },
+  amount: { fontSize: 24, fontWeight: 'bold', color: theme.colors.text.primary },
 
   categoryContainer: {
-    height: 280,
+    height: 230,
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
@@ -485,8 +493,6 @@ const styles = StyleSheet.create({
   typeTabContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginHorizontal: 16,
-    marginBottom: 18
   },
   typeTab: {
     paddingVertical: theme.spacing.xs,
@@ -581,7 +587,7 @@ const styles = StyleSheet.create({
   },
 
   bottomArea: {
-    flex: 1,
+    height: 250,
     backgroundColor: theme.colors.background.neutral,
   },
   bottomAreaFocused: {

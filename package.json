@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "android": "npm run link-fonts && expo run:android",
-    "build:android": "npm run link-fonts && cd android && gradlew assembleRelease",
+    "build:android": "npm run link-fonts && cd android && ./gradlew assembleRelease",
     "ios": "npm run link-fonts && npx expo run:ios",
     "reset-cache": "expo start --dev-client -c",
     "lint": "eslint .",
