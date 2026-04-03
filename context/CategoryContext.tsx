@@ -7,6 +7,7 @@ interface CategoryContextType {
   getCategoryIcon: (name: string) => string;
   getCategoryName: (id: string) => string;
   refreshCategories: () => Promise<void>;
+  isReady: boolean;
 }
 
 const DEFAULT_CATEGORIES: Category[] = [];
@@ -15,6 +16,7 @@ const CategoryContext = createContext<CategoryContextType | undefined>(undefined
 
 export const CategoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+  const [isReady, setIsReady] = useState(false);
 
   const refreshCategories = async () => {
     try {
@@ -30,6 +32,8 @@ export const CategoryProvider: React.FC<{ children: ReactNode }> = ({ children }
       }
     } catch (error) {
       console.error('Failed to fetch categories:', error);
+    } finally {
+      setIsReady(true);
     }
   };
 
@@ -48,8 +52,8 @@ export const CategoryProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   return (
-    <CategoryContext.Provider value={{ categories, getCategoryIcon, getCategoryName, refreshCategories }}>
-      {children}
+    <CategoryContext.Provider value={{ categories, getCategoryIcon, getCategoryName, refreshCategories, isReady }}>
+      {isReady ? children : null}
     </CategoryContext.Provider>
   );
 };

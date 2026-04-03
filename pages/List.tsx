@@ -42,10 +42,7 @@ const List = () => {
   const route = useRoute<RouteProp<MainTabParamList, 'List'>>();
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<DailyBillGroup[]>([]);
-  const [currentDate, setCurrentDate] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
+  const [currentDate, setCurrentDate] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const loadingRef = useRef(false);
   const [summary, setSummary] = useState({ totalExpense: 0, totalIncome: 0 });
@@ -64,6 +61,10 @@ const List = () => {
         const savedDate = await AsyncStorage.getItem('lastSelectedDate');
         if (savedDate) {
           setCurrentDate(savedDate);
+        } else {
+          // 如果没有保存的日期，默认使用当前年月
+          const now = new Date();
+          setCurrentDate(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
         }
       } catch (e) {
         console.error('Failed to load date', e);
@@ -73,7 +74,12 @@ const List = () => {
   }, []);
 
   const fetchBills = useCallback(async () => {
+    // 如果没有选定日期，直接返回
+    if (!currentDate) return;
+
+    // 防止重复请求
     if (loadingRef.current) return;
+
     loadingRef.current = true;
     setRefreshing(true);
     try {
@@ -82,7 +88,6 @@ const List = () => {
       
       const start = `${currentDate}-01 00:00:00`;
       const end = `${currentDate}-${lastDay} 23:59:59`;
-
       const res = await getBillList({
         start,
         end,
@@ -113,7 +118,6 @@ const List = () => {
             } else {
               dailyIncome += amount;
             }
-
             return {
               id: bill.id,
               type: bill.type_name,
