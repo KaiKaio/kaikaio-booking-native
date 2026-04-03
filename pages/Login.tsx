@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCategory } from '../context/CategoryContext';
+import { useUser } from '../context/UserContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '@/theme';
 
@@ -20,6 +21,7 @@ const encrypt = new JSEncrypt();
 const Login = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { refreshCategories } = useCategory();
+  const { refreshUserInfo  } = useUser();
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -91,6 +93,7 @@ const Login = () => {
         }
 
         await refreshCategories();
+        await refreshUserInfo();
         navigation.replace('Main', { screen: 'List' });
       } else {
         Alert.alert('登录', data.message || '未获取到Token');
