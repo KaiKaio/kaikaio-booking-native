@@ -66,6 +66,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   const [modalVisible, setModalVisible] = useState(visible);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const slideAnim = React.useRef(new Animated.Value(Dimensions.get('window').height)).current;
+  const remarkInputRef = React.useRef<TextInput | null>(null);
 
   useEffect(() => {
     if (visible) {
@@ -108,6 +109,8 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
     const hideSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => {
+        // 键盘隐藏时，手动让输入框失去焦点
+        remarkInputRef.current?.blur();
         setKeyboardVisible(false);
       }
     );
@@ -249,6 +252,9 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
     return (
       <View style={styles.datePickerContainer}>
         <View style={styles.dateHeader}>
+          <TouchableOpacity style={styles.numBtn} onPress={() => setShowDatePicker(false)}>
+            <Text style={styles.numText}>数字键盘</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => setDate(new Date(year, month - 2, day))}>
             <Text style={styles.arrow}>◀️</Text>
           </TouchableOpacity>
@@ -415,6 +421,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
                 <Text style={styles.label}>备注</Text>
                 <TextInput
                   style={styles.remarkInput}
+                  ref={remarkInputRef}
                   placeholder="写点什么..."
                   value={remark}
                   onChangeText={setRemark}
@@ -623,6 +630,14 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
     position: 'relative',
   },
+  numBtn: {
+    position: 'absolute',
+    left: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: theme.colors.background.neutral,
+    borderRadius: 14,
+  },
   todayBtn: {
     position: 'absolute',
     right: 16,
@@ -636,6 +651,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text.primary,
   },
   arrow: { fontSize: 20, paddingHorizontal: 20 },
+  numText: { fontSize: 12, color: theme.colors.text.primary },
   dateTitle: { fontSize: 16, fontWeight: 'bold' },
   daysGrid: {
     flexDirection: 'row',

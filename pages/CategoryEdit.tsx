@@ -189,7 +189,9 @@ export default function CategoryEdit({ route, navigation }: Props) {
         style={styles.modalOverlay}
       >
         <TouchableOpacity
-          style={styles.modalBackdrop}
+          style={[styles.modalBackdrop, { 
+            paddingBottom: Math.max(0, insets.bottom)
+          }]}
           activeOpacity={1}
           onPress={() => setEditModalVisible(false)}
         />
@@ -239,7 +241,9 @@ export default function CategoryEdit({ route, navigation }: Props) {
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container]}>
+      {/* Safe Area Background */}
+      <View style={{ height: insets.top, backgroundColor: theme.colors.background.paper }} />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -290,7 +294,7 @@ export default function CategoryEdit({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background.default,
+    backgroundColor: theme.colors.background.neutral,
   },
   header: {
     flexDirection: 'row',
@@ -399,8 +403,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   actionBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 0,
   },
   editText: {
     color: theme.colors.primary,
