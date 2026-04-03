@@ -182,6 +182,8 @@ export default function CategoryEdit({ route, navigation }: Props) {
       visible={editModalVisible}
       transparent
       animationType="fade"
+      statusBarTranslucent
+      navigationBarTranslucent
       onRequestClose={() => setEditModalVisible(false)}
     >
       <KeyboardAvoidingView
