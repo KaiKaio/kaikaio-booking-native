@@ -189,13 +189,11 @@ export default function CategoryEdit({ route, navigation }: Props) {
         style={styles.modalOverlay}
       >
         <TouchableOpacity
-          style={[styles.modalBackdrop, { 
-            paddingBottom: Math.max(0, insets.bottom)
-          }]}
+          style={styles.modalBackdrop}
           activeOpacity={1}
           onPress={() => setEditModalVisible(false)}
         />
-        <View style={[styles.modalContent, { paddingBottom: Math.max(20, insets.bottom) }]}>
+        <View style={[styles.modalContent, { paddingBottom: Math.max(0, insets.bottom) }]}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setEditModalVisible(false)}>
               <Text style={styles.cancelText}>取消</Text>

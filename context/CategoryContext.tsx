@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Category } from '../types/category';
 import request from '../request';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LoadingScreen } from '../components/LoadingScreen';
 
 interface CategoryContextType {
   categories: Category[];
@@ -11,6 +13,7 @@ interface CategoryContextType {
 }
 
 const DEFAULT_CATEGORIES: Category[] = [];
+const CATEGORIES_CACHE_KEY = 'categories_cache';
 
 const CategoryContext = createContext<CategoryContextType | undefined>(undefined);
 
@@ -29,6 +32,8 @@ export const CategoryProvider: React.FC<{ children: ReactNode }> = ({ children }
           icon: item.icon
         }));
         setCategories(mappedList);
+        // 缓存到本地存储
+        await AsyncStorage.setItem(CATEGORIES_CACHE_KEY, JSON.stringify(mappedList));
       }
     } catch (error) {
       console.error('Failed to fetch categories:', error);
@@ -38,7 +43,25 @@ export const CategoryProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   useEffect(() => {
-    refreshCategories();
+    const initializeCategories = async () => {
+      try {
+        // 尝试从缓存读取数据
+        const cachedData = await AsyncStorage.getItem(CATEGORIES_CACHE_KEY);
+        if (cachedData) {
+          const parsedCategories = JSON.parse(cachedData);
+          setCategories(parsedCategories);
+          setIsReady(true);
+          console.log('Loaded categories from cache');
+        }
+      } catch (error) {
+        console.error('Failed to load categories from cache:', error);
+      }
+
+      // 后台获取最新数据（无论如何都要尝试）
+      refreshCategories();
+    };
+
+    initializeCategories();
   }, []);
 
   const getCategoryIcon = (name: string) => {
@@ -53,7 +76,7 @@ export const CategoryProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   return (
     <CategoryContext.Provider value={{ categories, getCategoryIcon, getCategoryName, refreshCategories, isReady }}>
-      {isReady ? children : null}
+      {isReady ? children : <LoadingScreen />}
     </CategoryContext.Provider>
   );
 };
