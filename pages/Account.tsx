@@ -282,6 +282,13 @@ const Account = () => {
     }
   };
 
+  const computedPreviewUri = () => {
+    const joinAvatarUrl = avatarUrl ? `${BASE_URL}${avatarUrl}` : null;
+    const userInfoAvatar = userInfo?.avatar ? `${BASE_URL}${userInfo.avatar}` : null;
+
+    return localAvatarUri || joinAvatarUrl || userInfoAvatar;
+  };
+
   const avatarInitial = (userInfo?.username?.trim()?.charAt(0) ?? '?').toUpperCase();
 
   if (loading && !refreshing) {
@@ -498,11 +505,19 @@ const Account = () => {
             <Text style={styles.modalTitle}>修改头像</Text>
             
             {/* 头像预览 */}
-            <Image
-              source={{ uri: localAvatarUri || (avatarUrl ? `${BASE_URL}${avatarUrl}` : avatarUrl) || `${BASE_URL}${userInfo?.avatar}` }}
-              style={styles.avatarPreview}
-              contentFit="cover"
-            />
+            {
+              computedPreviewUri() ? (
+                <Image
+                  source={ computedPreviewUri() }
+                  style={styles.avatarPreview}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={[styles.avatarPreview, styles.avatarInitial]}>
+                  <Text style={styles.avatarInitialText}>{avatarInitial}</Text>
+                </View>
+              )
+            }
 
             {/* 选择图片按钮 */}
             <View style={styles.imagePickerButtons}>

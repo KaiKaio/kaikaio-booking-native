@@ -29,6 +29,8 @@ const Login = () => {
   const [rememberPassword, setRememberPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const isAccountValid = account.trim().length > 0;
   const isPasswordValid = password.length > 0;
@@ -182,38 +184,64 @@ const Login = () => {
         />
 
         <Text style={styles.label}>密码</Text>
-        <TextInput
-          style={[
-            styles.input,
-            focusedInput === 'password' && styles.inputFocused
-          ]}
-          placeholder="请输入密码"
-          placeholderTextColor={theme.colors.text.placeholder}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          editable={!loading}
-          onFocus={() => setFocusedInput('password')}
-          onBlur={() => setFocusedInput(null)}
-        />
+        <View style={[
+          styles.passwordInputContainer,
+          focusedInput === 'password' && styles.passwordInputContainerFocused
+        ]}>
+          <TextInput
+            style={styles.inputWithIcon}
+            placeholder="请输入密码"
+            placeholderTextColor={theme.colors.text.placeholder}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            editable={!loading}
+            onFocus={() => setFocusedInput('password')}
+            onBlur={() => setFocusedInput(null)}
+          />
+          <TouchableOpacity
+            style={styles.eyeIcon}
+            onPress={() => setShowPassword(!showPassword)}
+            disabled={!password}
+          >
+            <Icon
+              name={showPassword ? 'visibility' : 'visibility-off'}
+              size={24}
+              color={password ? theme.colors.text.secondary : theme.colors.text.disabled}
+            />
+          </TouchableOpacity>
+        </View>
 
         {isRegister && (
           <>
             <Text style={styles.label}>确认密码</Text>
-            <TextInput
-              style={[
-                styles.input,
-                focusedInput === 'confirmPassword' && styles.inputFocused
-              ]}
-              placeholder="请再次输入密码"
-              placeholderTextColor={theme.colors.text.placeholder}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              editable={!loading}
-              onFocus={() => setFocusedInput('confirmPassword')}
-              onBlur={() => setFocusedInput(null)}
-            />
+            <View style={[
+              styles.passwordInputContainer,
+              focusedInput === 'confirmPassword' && styles.passwordInputContainerFocused
+            ]}>
+              <TextInput
+                style={styles.inputWithIcon}
+                placeholder="请再次输入密码"
+                placeholderTextColor={theme.colors.text.placeholder}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                editable={!loading}
+                onFocus={() => setFocusedInput('confirmPassword')}
+                onBlur={() => setFocusedInput(null)}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                disabled={!confirmPassword}
+              >
+                <Icon
+                  name={showConfirmPassword ? 'visibility' : 'visibility-off'}
+                  size={24}
+                  color={confirmPassword ? theme.colors.text.secondary : theme.colors.text.disabled}
+                />
+              </TouchableOpacity>
+            </View>
           </>
         )}
       
@@ -303,8 +331,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.text.primary,
   },
+  passwordInputContainer: {
+    width: '100%',
+    height: 50,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    backgroundColor: theme.colors.background.neutral,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  inputWithIcon: {
+    flex: 1,
+    height: 50,
+    paddingHorizontal: 4,
+    fontSize: 16,
+    color: theme.colors.text.primary,
+    borderWidth: 0,
+  },
+  eyeIcon: {
+    padding: 8,
+    marginLeft: 4,
+  },
   inputFocused: {
     borderColor: theme.colors.primary, // Highlight color
+    backgroundColor: theme.colors.background.paper,
+  },
+  passwordInputContainerFocused: {
+    borderColor: theme.colors.primary,
     backgroundColor: theme.colors.background.paper,
   },
   checkboxContainer: {
