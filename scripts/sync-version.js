@@ -28,7 +28,7 @@ if (fs.existsSync(androidBuildGradlePath)) {
 
 // 2. Update iOS project.pbxproj
 // We look for MARKETING_VERSION = ...;
-const iosProjectPath = path.join(__dirname, '..', 'ios', 'KaikaioBooking.xcodeproj', 'project.pbxproj');
+const iosProjectPath = path.join(__dirname, '..', 'ios', 'Kaikaio.xcodeproj', 'project.pbxproj');
 if (fs.existsSync(iosProjectPath)) {
   let pbxContent = fs.readFileSync(iosProjectPath, 'utf8');
   // Regex to match MARKETING_VERSION = ...;
@@ -42,5 +42,5 @@ if (fs.existsSync(iosProjectPath)) {
     console.warn('⚠️  Could not find MARKETING_VERSION in project.pbxproj');
   }
 } else {
-  console.error('❌ ios/KaikaioBooking.xcodeproj/project.pbxproj not found');
+  console.error('❌ ios/Kaikaio.xcodeproj/project.pbxproj not found');
 }
