@@ -189,9 +189,11 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
           const percentage = totalAmount > 0 ? (amount / totalAmount * 100) : 0;
           const icon = getCategoryIcon(item.type_name);
 
-          // Bar width calculation: simple scaling
-          // Scale factor 1.5 ensures 100% -> 150dp, which fits most screens
-          const barWidth = Math.max(percentage * 1.5, 4);
+          const maxItemAmount = sortedData?.[0]?.number || 0;
+          // 以最大金额为基准，计算当前项的相对宽度，最小宽度为5%，最大宽度为100%
+
+          // Bar width calculation
+          const barWidth = maxItemAmount > 0 ? Math.max(5, (amount / maxItemAmount) * 100) : 5; // 最小宽度为5%
           const itemColor = CHART_COLORS[index % CHART_COLORS.length];
 
           return (
@@ -205,11 +207,8 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
               <View style={styles.info}>
                 <Text style={styles.categoryName}>{item.type_name}</Text>
                 <Text style={styles.amountText}>{amount.toFixed(2)}</Text>
+                <View style={[styles.bar, { width: `${Number(barWidth.toFixed(2))}%`, backgroundColor: itemColor }]} />
               </View>
-
-              <View style={[styles.bar, { width: barWidth, backgroundColor: itemColor }]} />
-
-              <View style={styles.spacer} />
 
               <Text style={styles.percentageText}>{percentage.toFixed(2)}%</Text>
             </View>
@@ -341,6 +340,8 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: 'row',
     alignItems: 'center',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
   },
   colorDot: {
     width: 8,
@@ -360,6 +361,9 @@ const styles = StyleSheet.create({
   info: {
     display: 'flex',
     flexDirection: 'column',
+    rowGap: theme.spacing.xs,
+    flex: 1,
+    marginRight: theme.spacing.md,
   },
   categoryName: {
     width: 60,
@@ -375,9 +379,7 @@ const styles = StyleSheet.create({
   bar: {
     height: 6,
     borderRadius: 3,
-  },
-  spacer: {
-    flex: 1,
+    marginRight: theme.spacing.md,
   },
   percentageText: {
     fontSize: theme.typography.size.md,
