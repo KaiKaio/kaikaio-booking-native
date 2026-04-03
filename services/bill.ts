@@ -1,5 +1,5 @@
 import request from '../request';
-import { BillListResponse, BillParams, AddBillParams, AddBillResponse, StatisticsResponse } from '../types/bill';
+import { BillListResponse, BillParams, EarliestItemDateResponse, AddBillParams, AddBillResponse, StatisticsResponse } from '../types/bill';
 
 export const getBillList = async (params: BillParams): Promise<BillListResponse> => {
   // TODO: Replace with actual API base URL if needed
@@ -43,5 +43,13 @@ export const getBillStatistics = async (start: string, end: string): Promise<Sta
   const queryString = new URLSearchParams({ start, end }).toString();
   return request(`/api/bill/data?${queryString}`, {
     method: 'GET',
+  });
+};
+
+// 查询某类型账单最早日期
+export const getEarliestItemDate = async (type_id?: number): Promise<EarliestItemDateResponse> => {
+  return request(`/api/bill/getEarliestItemDate`, {
+    method: 'GET',
+    params: { type_id },
   });
 };

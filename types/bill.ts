@@ -68,3 +68,9 @@ export interface StatisticsResponse {
   msg: string;
   data: StatisticsResponseData;
 }
+
+export interface EarliestItemDateResponse {
+  code: number;
+  msg: string;
+  data: string // "2020-11-10T12:16:59.000Z"
+}

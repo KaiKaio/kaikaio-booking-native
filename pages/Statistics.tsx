@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getBillStatistics } from '../services/bill';
+import { getBillStatistics, getEarliestItemDate } from '../services/bill';
 import { StatisticsResponseData } from '../types/bill';
 import Composition from '../components/Composition';
 import { theme } from '../theme';
@@ -15,36 +15,68 @@ const Statistics = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<StatisticsResponseData | null>(null);
 
-  // Generate month list (e.g., last 12 months + current month)
+  const [earliestDate, setEarliestDate] = useState<string>('');
+
+  // 根据 earliestDate 计算出到当前月的月份列表
   const months = React.useMemo(() => {
-    const list = [];
-    const now = new Date();
-    for (let i = 0; i < 12; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      list.unshift(`${year}-${month}`);
+    if (!earliestDate) return [];
+
+    const monthList = [];
+    const startDate = new Date(earliestDate);
+    const endDate = new Date();
+
+    const startYear = startDate.getFullYear();
+    const startMonth = startDate.getMonth();
+    const endYear = endDate.getFullYear();
+    const endMonth = endDate.getMonth();
+
+    for (let year = startYear; year <= endYear; year++) {
+      const monthStart = year === startYear ? startMonth : 0;
+      const monthEnd = year === endYear ? endMonth : 11;
+
+      for (let month = monthStart; month <= monthEnd; month++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+        monthList.push(dateStr);
+      }
     }
-    return list;
-  }, []);
+
+    return monthList;
+  }, [earliestDate]);
+
+  const handleFetchEarliestItemDate = async () => {
+    try {
+      const res = await getEarliestItemDate();
+      
+      if (res.code !== 200 || !res?.data) {
+        throw new Error(`Failed to fetch earliest item date: ${res.msg}`);
+      }
+      // 处理日期字符串，例如 "2020-11-10T12:16:59.000Z"，转换为 YYYY-MM-DD 格式
+      const formattedDate = new Date(res.data).toISOString().split('T')[0];
+      setEarliestDate(formattedDate);
+      // Scroll to end (current month) on mount
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: false });
+      }, 100);
+    } catch (error) {
+      console.error('Error fetching earliest item dates:', error);  
+    }
+  };
 
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    // Scroll to end (current month) on mount
-    setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: false });
-    }, 100);
+    handleFetchEarliestItemDate();
   }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
+        // currentMonth 格式为 YYYY-MM
         const [year, month] = currentMonth.split('-');
         const lastDay = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
-        const start = `${currentMonth}-01 00:00:00`;
-        const end = `${currentMonth}-${lastDay} 23:59:59`;
+        const start = `${year}-${month}-01 00:00:00`;
+        const end = `${year}-${month}-${lastDay} 23:59:59`;
 
         const res = await getBillStatistics(start, end);
         if (res.code === 200) {
