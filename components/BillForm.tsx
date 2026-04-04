@@ -1,4 +1,4 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,11 @@ import {
   TextInput,
   ScrollView,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   Animated,
   Dimensions
 } from 'react-native';
+import type { KeyboardEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCategory } from '../context/CategoryContext';
@@ -44,6 +44,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   const [visible, setVisible] = useState(false);
   const [editData, setEditData] = useState<BillData | undefined>(undefined);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   
   // Form State
   const [amountStr, setAmountStr] = useState('0');
@@ -102,8 +103,9 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => {
+      (e: KeyboardEvent) => {
         setKeyboardVisible(true);
+        setKeyboardHeight(e.endCoordinates?.height ?? 0);
       }
     );
     const hideSub = Keyboard.addListener(
@@ -112,6 +114,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
         // 键盘隐藏时，手动让输入框失去焦点
         remarkInputRef.current?.blur();
         setKeyboardVisible(false);
+        setKeyboardHeight(0);
       }
     );
 
@@ -290,6 +293,22 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
     );
   };
 
+  const keyboardOffset = Platform.OS === 'ios'
+    ? Math.max(0, keyboardHeight - insets.bottom)
+    : Math.max(0, keyboardHeight + 8);
+
+  const overlayAnimatedStyle = useMemo(() => ({
+    opacity: fadeAnim
+  }), [fadeAnim]);
+
+  const panelDynamicStyle = useMemo(() => ({
+    paddingBottom: Math.max(20, insets.bottom),
+    bottom: isRemarkInputFocused && keyboardVisible
+      ? keyboardOffset
+      : 0,
+    transform: [{ translateY: slideAnim }]
+  }), [insets.bottom, isRemarkInputFocused, keyboardVisible, keyboardOffset, slideAnim]);
+
   return (
     <Modal
       transparent
@@ -298,15 +317,9 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
       statusBarTranslucent
       onRequestClose={() => setVisible(false)}
     >
-      <KeyboardAvoidingView
-        behavior={keyboardVisible ? (Platform.OS === 'ios' ? 'padding' : 'height') : undefined}
-        style={styles.avoidView}
-        // // 可以尝试结合 StatusBar.currentHeight (Android) 来动态设置这个值
-        // // https://github.com/facebook/react-native/issues/47140
-        // keyboardVerticalOffset={keyboardVisible ? 0 : -80}
-      >
+      <View style={styles.avoidView}>
         <Animated.View 
-          style={[styles.overlay, { opacity: fadeAnim }]}
+          style={[styles.overlay, overlayAnimatedStyle]}
         >
           <TouchableOpacity
             style={styles.avoidView}
@@ -320,11 +333,8 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
 
 
         <Animated.View onTouchStart={() => Keyboard.dismiss()} style={[
-          styles.panel, 
-          { 
-            paddingBottom: Math.max(20, insets.bottom),
-            transform: [{ translateY: slideAnim }]
-          }
+          styles.panel,
+          panelDynamicStyle
         ]}>
           {/* Header */}
           <View style={styles.header}>
@@ -440,7 +450,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
           </View>
 
         </Animated.View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 });
