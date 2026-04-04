@@ -25,13 +25,13 @@
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Kaikaio/Info.plist; sourceTree = "<group>"; };
 		392F1637F1CA40FF205A681F /* libPods-Kaikaio.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Kaikaio.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		745B0D5EEFDE095B227D0129 /* Pods-Kaikaio.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Kaikaio.release.xcconfig"; path = "Target Support Files/Pods-Kaikaio/Pods-Kaikaio.release.xcconfig"; sourceTree = "<group>"; };
-		79559BF6B0304FB4A98CD8DE /* iconfont.json */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = iconfont.json; path = ../assets/fonts/iconfont.json; sourceTree = "<group>"; };
+		79559BF6B0304FB4A98CD8DE /* iconfont.json */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = iconfont.json; path = ../assets/fonts/iconfont.json; sourceTree = "<group>"; };
 		7E4EE91D322BF791FBA8ED29 /* Pods-Kaikaio.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Kaikaio.debug.xcconfig"; path = "Target Support Files/Pods-Kaikaio/Pods-Kaikaio.debug.xcconfig"; sourceTree = "<group>"; };
-		A3C2D75C9A201EB03813D1F2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Kaikaio/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A3C2D75C9A201EB03813D1F2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = Kaikaio/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Kaikaio/SplashScreen.storyboard; sourceTree = "<group>"; };
-		BA3F758E5672463994DA07AD /* README.md */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = README.md; path = ../assets/fonts/README.md; sourceTree = "<group>"; };
+		BA3F758E5672463994DA07AD /* README.md */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = README.md; path = ../assets/fonts/README.md; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		C5F1EC7928B04B7CB1495918 /* iconfont.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = iconfont.ttf; path = ../assets/fonts/iconfont.ttf; sourceTree = "<group>"; };
+		C5F1EC7928B04B7CB1495918 /* iconfont.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = iconfont.ttf; path = ../assets/fonts/iconfont.ttf; sourceTree = "<group>"; };
 		E046CE389B337543A8FEFFA9 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Kaikaio/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Kaikaio/AppDelegate.swift; sourceTree = "<group>"; };
@@ -79,7 +79,6 @@
 				7E4EE91D322BF791FBA8ED29 /* Pods-Kaikaio.debug.xcconfig */,
 				745B0D5EEFDE095B227D0129 /* Pods-Kaikaio.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -147,7 +146,6 @@
 				BA3F758E5672463994DA07AD /* README.md */,
 			);
 			name = Resources;
-			path = "";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -402,6 +400,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Kaikaio/Kaikaio.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 57Q2M8B6P7;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -438,6 +437,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Kaikaio/Kaikaio.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 57Q2M8B6P7;
 				INFOPLIST_FILE = Kaikaio/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (

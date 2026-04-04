@@ -64,7 +64,7 @@ export const uploadAvatar = async (uri: string): Promise<{ data: { url: string }
     type: type,
   } as any);
 
-  return request('/api/user/upload/avatar ', {
+  return request('/api/user/upload/avatar', {
     method: 'POST',
     headers: {
       'Content-Type': 'multipart/form-data',
