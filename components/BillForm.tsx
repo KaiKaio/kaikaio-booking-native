@@ -492,8 +492,8 @@ const styles = StyleSheet.create({
   amount: { fontSize: 24, fontWeight: 'bold', color: theme.colors.text.primary },
 
   categoryContainer: {
-    height: 230,
-    paddingVertical: 10,
+    height: 200,
+    paddingVertical: 0,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
@@ -572,7 +572,8 @@ const styles = StyleSheet.create({
 
   inputsRow: {
     flexDirection: 'row',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
@@ -594,7 +595,7 @@ const styles = StyleSheet.create({
   },
 
   bottomArea: {
-    height: 250,
+    height: 210,
     backgroundColor: theme.colors.background.neutral,
   },
   bottomAreaFocused: {
