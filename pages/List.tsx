@@ -43,6 +43,8 @@ type DailyBillGroup = {
   items: SubItem[];
 };
 
+const PENDING_BILLS_STORAGE_KEY = 'pendingOptimisticBills';
+
 const List = () => {
   const insets = useSafeAreaInsets();
   const { getCategoryIcon, categories } = useCategory();
@@ -64,6 +66,118 @@ const List = () => {
   const [orderBy, setOrderBy] = useState<'ASC' | 'DESC'>('DESC');
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
+
+  const formatBillDate = useCallback((dateValue: string) => {
+    const dateObj = /^\d+$/.test(dateValue) ? new Date(parseInt(dateValue, 10)) : new Date(dateValue);
+    if (Number.isNaN(dateObj.getTime())) return '';
+
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const loadPendingBillsFromStorage = useCallback(async (): Promise<SubItem[]> => {
+    try {
+      const raw = await AsyncStorage.getItem(PENDING_BILLS_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      console.error('Failed to load pending bills', error);
+      return [];
+    }
+  }, []);
+
+  const savePendingBillsToStorage = useCallback(async (pendingBills: SubItem[]) => {
+    try {
+      if (pendingBills.length === 0) {
+        await AsyncStorage.removeItem(PENDING_BILLS_STORAGE_KEY);
+      } else {
+        await AsyncStorage.setItem(PENDING_BILLS_STORAGE_KEY, JSON.stringify(pendingBills));
+      }
+    } catch (error) {
+      console.error('Failed to save pending bills', error);
+    }
+  }, []);
+
+  const upsertPendingBillToStorage = useCallback(async (bill: SubItem) => {
+    if (!bill.localId) return;
+
+    const pendingBills = await loadPendingBillsFromStorage();
+    const nextPendingBills = pendingBills.filter(item => item.localId !== bill.localId);
+
+    if (bill.syncStatus === 'failed' || bill.syncStatus === 'syncing') {
+      nextPendingBills.unshift(bill);
+    }
+
+    await savePendingBillsToStorage(nextPendingBills);
+  }, [loadPendingBillsFromStorage, savePendingBillsToStorage]);
+
+  const updatePendingBillStatusInStorage = useCallback(async (localId: string, status: SyncStatus) => {
+    const pendingBills = await loadPendingBillsFromStorage();
+    const targetIndex = pendingBills.findIndex(item => item.localId === localId);
+    if (targetIndex < 0) return;
+
+    if (status === 'synced') {
+      pendingBills.splice(targetIndex, 1);
+    } else {
+      pendingBills[targetIndex] = {
+        ...pendingBills[targetIndex],
+        syncStatus: status,
+        ...(status === 'failed' ? {} : { retryParams: undefined })
+      };
+    }
+
+    await savePendingBillsToStorage(pendingBills);
+  }, [loadPendingBillsFromStorage, savePendingBillsToStorage]);
+
+  const mergePendingBills = useCallback((serverData: DailyBillGroup[], pendingBills: SubItem[]) => {
+    if (!currentDate || pendingBills.length === 0) {
+      return serverData;
+    }
+
+    const merged: DailyBillGroup[] = serverData.map(group => ({ ...group, items: [...group.items] }));
+    const monthPrefix = `${currentDate}-`;
+
+    pendingBills
+      .filter(item => item.localId && (item.syncStatus === 'failed' || item.syncStatus === 'syncing'))
+      .filter(item => (selectedTypeId ? item.typeId === selectedTypeId : true))
+      .forEach(pending => {
+        const dateStr = formatBillDate(String(pending.date));
+        if (!dateStr.startsWith(monthPrefix)) return;
+
+        const group = merged.find(g => g.date === dateStr);
+        const isExpense = pending.payType === 1;
+        const amountAbs = Math.abs(pending.rawAmount ?? pending.amount);
+
+        if (group) {
+          if (!group.items.find(i => i.localId === pending.localId)) {
+            if (orderBy === 'ASC') {
+              group.items.push(pending);
+            } else {
+              group.items.unshift(pending);
+            }
+            group.total += isExpense ? amountAbs : 0;
+            group.income += isExpense ? 0 : amountAbs;
+          }
+        } else {
+          const newGroup: DailyBillGroup = {
+            date: dateStr,
+            total: isExpense ? amountAbs : 0,
+            income: isExpense ? 0 : amountAbs,
+            items: [pending]
+          };
+          if (orderBy === 'ASC') {
+            merged.push(newGroup);
+          } else {
+            merged.unshift(newGroup);
+          }
+        }
+      });
+
+    return merged;
+  }, [currentDate, formatBillDate, orderBy, selectedTypeId]);
 
   useEffect(() => {
     const loadLastDate = async () => {
@@ -149,7 +263,9 @@ const List = () => {
           };
         });
         
-        setData(transformedData);
+        const pendingBills = await loadPendingBillsFromStorage();
+        const mergedData = mergePendingBills(transformedData, pendingBills);
+        setData(mergedData);
       }
     } catch (error) {
       console.error('Fetch error:', error);
@@ -157,7 +273,7 @@ const List = () => {
       loadingRef.current = false;
       setRefreshing(false);
     }
-  }, [currentDate, getCategoryIcon, orderBy, selectedTypeId]);
+  }, [currentDate, getCategoryIcon, loadPendingBillsFromStorage, mergePendingBills, orderBy, selectedTypeId]);
 
   useEffect(() => {
     fetchBills();
@@ -281,6 +397,10 @@ const List = () => {
         })
       }));
     });
+
+    updatePendingBillStatusInStorage(localId, status).catch(error => {
+      console.error('Failed to update pending bill status', error);
+    });
   };
 
   // 重试同步
@@ -382,6 +502,10 @@ const List = () => {
           };
           return [newGroup, ...prevData];
         }
+      });
+
+      upsertPendingBillToStorage(localBill).catch(error => {
+        console.error('Failed to persist local bill', error);
       });
 
       // 更新统计
