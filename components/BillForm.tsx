@@ -332,7 +332,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
         </Animated.View>
 
 
-        <Animated.View onTouchStart={() => Keyboard.dismiss()} style={[
+        <Animated.View style={[
           styles.panel,
           panelDynamicStyle
         ]}>
