@@ -2,9 +2,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from './config';
 import { navigate } from './utils/navigationRef';
+import { clearUserLocalData, TOKEN_STORAGE_KEY } from './utils/storage';
 
 export default async function request(url: string, options: any = {}) {
-  const token = await AsyncStorage.getItem('token');
+  const token = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
   
   const defaultHeaders = {
     'Content-Type': 'application/json',
@@ -44,7 +45,7 @@ export default async function request(url: string, options: any = {}) {
           statusText: response.statusText,
         });
       }
-      await AsyncStorage.removeItem('token');
+      await clearUserLocalData();
       navigate('Login');
       throw new Error(msg);
     }
@@ -66,9 +67,19 @@ export default async function request(url: string, options: any = {}) {
     return data;
   } catch (err: any) {
     console.error(err, 'Rquest Error')
-    if (err.name === 'AbortError') {
-      throw new Error('请求超时，请稍后重试');
+
+    if (err?.message === 'NETWORK_UNAVAILABLE' || err?.message === 'REQUEST_TIMEOUT') {
+      throw err;
     }
+
+    if (err.name === 'AbortError') {
+      throw new Error('REQUEST_TIMEOUT');
+    }
+
+    if (err instanceof TypeError && err.message.includes('Network request failed')) {
+      throw new Error('NETWORK_UNAVAILABLE');
+    }
+
     const errorMsg = err instanceof Error ? err.message : '网络错误';
     throw new Error(errorMsg);
   } finally {

@@ -8,6 +8,12 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCategory } from '../context/CategoryContext';
 import { useUser } from '../context/UserContext';
+import {
+  ACTIVE_ACCOUNT_STORAGE_KEY,
+  TOKEN_STORAGE_KEY,
+  USER_CREDENTIALS_STORAGE_KEY,
+  clearUserLocalData,
+} from '@/utils/storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '@/theme';
 
@@ -20,8 +26,8 @@ const encrypt = new JSEncrypt();
 
 const Login = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { refreshCategories } = useCategory();
-  const { refreshUserInfo  } = useUser();
+  const { refreshCategories, resetCategories } = useCategory();
+  const { refreshUserInfo, resetUserInfo } = useUser();
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -56,7 +62,7 @@ const Login = () => {
     // Load saved credentials
     const loadCredentials = async () => {
       try {
-        const credentials = await AsyncStorage.getItem('user_credentials');
+        const credentials = await AsyncStorage.getItem(USER_CREDENTIALS_STORAGE_KEY);
         if (credentials) {
           const { account: savedAccount, password: savedPassword } = JSON.parse(credentials);
           setAccount(savedAccount);
@@ -85,13 +91,26 @@ const Login = () => {
         }),
       });
       if (data.token) {
-        await AsyncStorage.setItem('token', data.token); // 存储 token
-        
+        const previousAccount = await AsyncStorage.getItem(ACTIVE_ACCOUNT_STORAGE_KEY);
+        const oldToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
+        const shouldClearOldData =
+          (previousAccount && previousAccount !== account) ||
+          (!previousAccount && !!oldToken);
+
+        if (shouldClearOldData) {
+          await clearUserLocalData();
+          resetUserInfo();
+          resetCategories();
+        }
+
+        await AsyncStorage.setItem(TOKEN_STORAGE_KEY, data.token);
+        await AsyncStorage.setItem(ACTIVE_ACCOUNT_STORAGE_KEY, account);
+
         // Handle Remember Password
         if (rememberPassword) {
-            await AsyncStorage.setItem('user_credentials', JSON.stringify({ account, password }));
+          await AsyncStorage.setItem(USER_CREDENTIALS_STORAGE_KEY, JSON.stringify({ account, password }));
         } else {
-            await AsyncStorage.removeItem('user_credentials');
+          await AsyncStorage.removeItem(USER_CREDENTIALS_STORAGE_KEY);
         }
 
         await refreshCategories();

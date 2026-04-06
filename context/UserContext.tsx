@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getUserInfo, UserInfo } from '../services/user';
+import { TOKEN_STORAGE_KEY } from '@/utils/storage';
 
 interface UserContextType {
   userInfo: UserInfo | null;
   loading: boolean;
   refreshUserInfo: (silent?: boolean) => Promise<void>;
   updateUserInfo: (info: Partial<UserInfo>) => void;
+  resetUserInfo: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -34,12 +37,27 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const resetUserInfo = () => {
+    setUserInfo(null);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    refreshUserInfo();
+    const initializeUser = async () => {
+      const token = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
+      if (!token) {
+        setLoading(false);
+        setUserInfo(null);
+        return;
+      }
+      await refreshUserInfo();
+    };
+
+    initializeUser();
   }, []);
 
   return (
-    <UserContext.Provider value={{ userInfo, loading, refreshUserInfo, updateUserInfo }}>
+    <UserContext.Provider value={{ userInfo, loading, refreshUserInfo, updateUserInfo, resetUserInfo }}>
       {children}
     </UserContext.Provider>
   );

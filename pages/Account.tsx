@@ -14,7 +14,6 @@ import {
   RefreshControl,
 } from 'react-native';
 import { BASE_URL } from '@/config';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Image } from 'expo-image';
@@ -23,16 +22,19 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { RootStackParamList } from '../types/navigation';
 import { useUser } from '../context/UserContext';
+import { useCategory } from '../context/CategoryContext';
 import { updateUsername, updatePassword, updateAvatar, uploadAvatar } from '../services/user';
 import JSEncrypt from 'jsencrypt';
 import { theme } from '@/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { clearUserLocalData } from '@/utils/storage';
 
 const encrypt = new JSEncrypt();
 
 const Account = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { userInfo, loading, updateUserInfo, refreshUserInfo } = useUser();
+  const { userInfo, loading, updateUserInfo, refreshUserInfo, resetUserInfo } = useUser();
+  const { resetCategories } = useCategory();
 
   // Modal states
   const [usernameModalVisible, setUsernameModalVisible] = useState(false);
@@ -62,13 +64,15 @@ const Account = () => {
 
   const handleLogout = async () => {
     try {
-      await AsyncStorage.removeItem('token');
+      await clearUserLocalData();
+      resetUserInfo();
+      resetCategories();
       navigation.reset({
         index: 0,
         routes: [{ name: 'Login' }],
       });
     } catch (error) {
-      console.error('清除 token 失败', error);
+      console.error('清除本地数据失败', error);
     }
   };
 

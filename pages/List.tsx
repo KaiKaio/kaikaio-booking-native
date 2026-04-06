@@ -7,15 +7,18 @@ import MonthYearPicker from '../components/MonthYearPicker';
 import TypePicker from '../components/TypePicker';
 import BillForm, { BillData, BillFormRef } from '../components/BillForm';
 import BillItem from '../components/BillItem';
-import { getBillList, addBill, updateBill } from '../services/bill';
+import { getBillList, addBill, updateBill, loadBillMonthCache, saveBillMonthCache } from '../services/bill';
 import { BillDetail, DailyBill } from '../types/bill';
 import CategoryIcon from '@/components/CategoryIcon';
 import { useCategory } from '../context/CategoryContext';
 import { theme } from '@/theme';
 import { MainTabParamList } from '../types/navigation';
+import { PENDING_BILLS_STORAGE_KEY } from '@/utils/storage';
 
 // 同步状态类型
 type SyncStatus = 'syncing' | 'synced' | 'failed';
+
+type DataState = 'online' | 'offline-cached' | 'empty' | 'error';
 
 // 定义 SubItem 类型
 type SubItem = {
@@ -43,7 +46,6 @@ type DailyBillGroup = {
   items: SubItem[];
 };
 
-const PENDING_BILLS_STORAGE_KEY = 'pendingOptimisticBills';
 
 const List = () => {
   const insets = useSafeAreaInsets();
@@ -56,6 +58,7 @@ const List = () => {
   const loadingRef = useRef(false);
   const [summary, setSummary] = useState({ totalExpense: 0, totalIncome: 0 });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dataState, setDataState] = useState<DataState>('online');
   
   const billFormRef = useRef<BillFormRef>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -76,6 +79,86 @@ const List = () => {
     const day = String(dateObj.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   }, []);
+
+  const transformDailyBills = useCallback((list: DailyBill[]): DailyBillGroup[] => {
+    return list.map((daily: DailyBill) => {
+      let dailyTotal = 0;
+      let dailyIncome = 0;
+
+      const items: SubItem[] = daily.bills.map((bill: BillDetail) => {
+        const amount = parseFloat(bill.amount);
+        const isExpense = bill.pay_type === '1';
+        const displayAmount = isExpense ? -amount : amount;
+
+        if (isExpense) {
+          dailyTotal += amount;
+        } else {
+          dailyIncome += amount;
+        }
+
+        return {
+          id: bill.id,
+          type: bill.type_name,
+          icon: getCategoryIcon(bill.type_name),
+          remark: bill.remark,
+          amount: displayAmount,
+          typeId: bill.type_id,
+          payType: parseInt(bill.pay_type, 10),
+          date: bill.date,
+          rawAmount: amount,
+        };
+      });
+
+      return {
+        date: daily.date,
+        total: dailyTotal,
+        income: dailyIncome,
+        items,
+      };
+    });
+  }, [getCategoryIcon]);
+
+  const applyTypeAndOrder = useCallback((groups: DailyBillGroup[]) => {
+    const sortedGroups = [...groups]
+      .map(group => ({ ...group, items: [...group.items] }))
+      .sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return orderBy === 'ASC' ? dateA - dateB : dateB - dateA;
+      });
+
+    return sortedGroups
+      .map(group => {
+        const filteredItems = selectedTypeId ? group.items.filter(item => item.typeId === selectedTypeId) : group.items;
+
+        const sortedItems = filteredItems.sort((a, b) => {
+          const aTime = /^\d+$/.test(String(a.date)) ? parseInt(String(a.date), 10) : new Date(String(a.date)).getTime();
+          const bTime = /^\d+$/.test(String(b.date)) ? parseInt(String(b.date), 10) : new Date(String(b.date)).getTime();
+          return orderBy === 'ASC' ? aTime - bTime : bTime - aTime;
+        });
+
+        const totals = sortedItems.reduce(
+          (acc, item) => {
+            const absAmount = Math.abs(item.rawAmount ?? item.amount);
+            if (item.payType === 1) {
+              acc.total += absAmount;
+            } else {
+              acc.income += absAmount;
+            }
+            return acc;
+          },
+          { total: 0, income: 0 }
+        );
+
+        return {
+          ...group,
+          total: totals.total,
+          income: totals.income,
+          items: sortedItems,
+        };
+      })
+      .filter(group => group.items.length > 0);
+  }, [orderBy, selectedTypeId]);
 
   const loadPendingBillsFromStorage = useCallback(async (): Promise<SubItem[]> => {
     try {
@@ -198,18 +281,33 @@ const List = () => {
   }, []);
 
   const fetchBills = useCallback(async () => {
-    // 如果没有选定日期，直接返回
     if (!currentDate) return;
-
-    // 防止重复请求
     if (loadingRef.current) return;
 
     loadingRef.current = true;
     setRefreshing(true);
+
+    let hasCache = false;
+    let pendingBills: SubItem[] = [];
+
     try {
+      pendingBills = await loadPendingBillsFromStorage();
+      const cachedMonth = await loadBillMonthCache(currentDate);
+
+      if (cachedMonth) {
+        hasCache = true;
+        setSummary(cachedMonth.summary);
+
+        const transformedCached = transformDailyBills(cachedMonth.list);
+        const filteredCached = applyTypeAndOrder(transformedCached);
+        const mergedCached = mergePendingBills(filteredCached, pendingBills);
+        setData(mergedCached);
+        setDataState(mergedCached.length === 0 ? 'empty' : 'offline-cached');
+      }
+
       const [year, month] = currentDate.split('-');
       const lastDay = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
-      
+
       const start = `${currentDate}-01 00:00:00`;
       const end = `${currentDate}-${lastDay} 23:59:59`;
       const res = await getBillList({
@@ -217,63 +315,48 @@ const List = () => {
         end,
         page: 1,
         page_size: 1000,
-        orderBy: orderBy,
+        orderBy,
         ...(selectedTypeId ? { type_id: selectedTypeId } : {})
       });
-      
+
       if (res.code === 200) {
+        const transformedData = transformDailyBills(res.data.list);
+        const filteredData = applyTypeAndOrder(transformedData);
+        const mergedData = mergePendingBills(filteredData, pendingBills);
+
         setSummary({
           totalExpense: res.data.totalExpense,
           totalIncome: res.data.totalIncome,
         });
-
-        const transformedData: DailyBillGroup[] = res.data.list.map((daily: DailyBill) => {
-          let dailyTotal = 0;
-          let dailyIncome = 0;
-          
-          const items: SubItem[] = daily.bills.map((bill: BillDetail) => {
-            const amount = parseFloat(bill.amount);
-            
-            const isExpense = bill.pay_type === '1';
-            const displayAmount = isExpense ? -amount : amount;
-            
-            if (isExpense) {
-              dailyTotal += amount;
-            } else {
-              dailyIncome += amount;
-            }
-            return {
-              id: bill.id,
-              type: bill.type_name,
-              icon: getCategoryIcon(bill.type_name),
-              remark: bill.remark,
-              amount: displayAmount,
-              typeId: bill.type_id,
-              payType: parseInt(bill.pay_type, 10),
-              date: bill.date,
-              rawAmount: amount
-            };
-          });
-
-          return {
-            date: daily.date,
-            total: dailyTotal,
-            income: dailyIncome,
-            items: items
-          };
-        });
-        
-        const pendingBills = await loadPendingBillsFromStorage();
-        const mergedData = mergePendingBills(transformedData, pendingBills);
         setData(mergedData);
+        setDataState(mergedData.length === 0 ? 'empty' : 'online');
+
+        if (!selectedTypeId) {
+          await saveBillMonthCache(currentDate, res.data.list, {
+            totalExpense: res.data.totalExpense,
+            totalIncome: res.data.totalIncome,
+          });
+        }
+      } else if (!hasCache) {
+        setDataState('error');
       }
     } catch (error) {
       console.error('Fetch error:', error);
+
+      if (!hasCache) {
+        const pendingOnly = mergePendingBills([], pendingBills);
+        if (pendingOnly.length > 0) {
+          setData(pendingOnly);
+          setDataState('offline-cached');
+        } else {
+          setDataState('error');
+        }
+      }
     } finally {
       loadingRef.current = false;
       setRefreshing(false);
     }
-  }, [currentDate, getCategoryIcon, loadPendingBillsFromStorage, mergePendingBills, orderBy, selectedTypeId]);
+  }, [applyTypeAndOrder, currentDate, loadPendingBillsFromStorage, mergePendingBills, orderBy, selectedTypeId, transformDailyBills]);
 
   useEffect(() => {
     fetchBills();
@@ -381,7 +464,7 @@ const List = () => {
   };
 
   // 更新本地账单状态
-  const updateLocalBillStatus = (localId: string, status: SyncStatus) => {
+  const updateLocalBillStatus = useCallback((localId: string, status: SyncStatus) => {
     setData(prevData => {
       return prevData.map(group => ({
         ...group,
@@ -401,7 +484,7 @@ const List = () => {
     updatePendingBillStatusInStorage(localId, status).catch(error => {
       console.error('Failed to update pending bill status', error);
     });
-  };
+  }, [updatePendingBillStatusInStorage]);
 
   // 重试同步
   const handleRetrySync = async (localId: string) => {
@@ -436,6 +519,41 @@ const List = () => {
       showToast('同步失败,请重试');
     }
   };
+
+  const retryFailedPendingBills = useCallback(async () => {
+    const pendingBills = await loadPendingBillsFromStorage();
+    const failedBills = pendingBills.filter(item => item.syncStatus === 'failed' && item.localId && item.retryParams);
+
+    if (failedBills.length === 0) return;
+
+    let hasSynced = false;
+
+    for (const bill of failedBills) {
+      if (!bill.localId || !bill.retryParams) continue;
+
+      updateLocalBillStatus(bill.localId, 'syncing');
+      try {
+        const res = await addBill(bill.retryParams);
+        if (res.code === 200) {
+          updateLocalBillStatus(bill.localId, 'synced');
+          hasSynced = true;
+        } else {
+          updateLocalBillStatus(bill.localId, 'failed');
+        }
+      } catch (error) {
+        updateLocalBillStatus(bill.localId, 'failed');
+      }
+    }
+
+    if (hasSynced) {
+      showToast('离线账单已自动同步');
+      fetchBills();
+    }
+  }, [fetchBills, loadPendingBillsFromStorage, updateLocalBillStatus]);
+
+  useEffect(() => {
+    retryFailedPendingBills();
+  }, [currentDate, retryFailedPendingBills]);
 
   const showToast = (message: string) => {
     if (Platform.OS === 'android') {
@@ -556,10 +674,17 @@ const List = () => {
 
   const onRefresh = async () => {
     await fetchBills();
+    await retryFailedPendingBills();
   };
 
   return (
     <View style={styles.root}>
+      {dataState === 'offline-cached' && (
+        <View style={[styles.offlineBanner, { paddingTop: insets.top + 6 }]}>
+          <Text style={styles.offlineBannerText}>当前离线，展示缓存账单</Text>
+        </View>
+      )}
+
       {/* 顶部统计栏 */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerRow}>
@@ -600,6 +725,13 @@ const List = () => {
         showsVerticalScrollIndicator={false}
         onRefresh={onRefresh}
         refreshing={refreshing}
+        ListEmptyComponent={!refreshing ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              {dataState === 'error' ? '加载失败，请下拉重试' : '暂无账单数据'}
+            </Text>
+          </View>
+        ) : null}
         // 使用三元运算符，refreshing 为 true 时显示加载指示器，否则返回 null
         ListFooterComponent={refreshing ? (
           <View style={styles.loaderContainer}>
@@ -647,6 +779,16 @@ const List = () => {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.colors.background.neutral },
+  offlineBanner: {
+    backgroundColor: '#FFF4E5',
+    alignItems: 'center',
+    paddingBottom: 8,
+  },
+  offlineBannerText: {
+    color: '#8A4B00',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   fabContainer: {
     position: 'absolute',
     right: 20,
@@ -701,6 +843,15 @@ const styles = StyleSheet.create({
   sectionStat: { fontSize: 12, color: theme.colors.text.secondary },
   loaderContainer: {
     paddingVertical: 20
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+  },
+  emptyText: {
+    color: theme.colors.text.secondary,
+    fontSize: 14,
   },
   loadingOverlay: {
     position: 'absolute',

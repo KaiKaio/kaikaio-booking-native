@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getBillStatistics, getEarliestItemDate } from '../services/bill';
+import { buildStatisticsFromDailyBills, getBillStatistics, getEarliestItemDate, loadBillMonthCache } from '../services/bill';
 import { StatisticsResponseData } from '../types/bill';
 import Composition from '../components/Composition';
 import { theme } from '../theme';
@@ -14,6 +14,7 @@ const Statistics = () => {
   });
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<StatisticsResponseData | null>(null);
+  const [dataState, setDataState] = useState<'online' | 'offline-cached' | 'empty' | 'error'>('online');
 
   const [earliestDate, setEarliestDate] = useState<string>('');
 
@@ -71,7 +72,17 @@ const Statistics = () => {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+
+      let hasCache = false;
+
       try {
+        const monthCache = await loadBillMonthCache(currentMonth);
+        if (monthCache) {
+          hasCache = true;
+          setData(buildStatisticsFromDailyBills(monthCache.list));
+          setDataState('offline-cached');
+        }
+
         // currentMonth 格式为 YYYY-MM
         const [year, month] = currentMonth.split('-');
         const lastDay = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
@@ -81,9 +92,15 @@ const Statistics = () => {
         const res = await getBillStatistics(start, end);
         if (res.code === 200) {
           setData(res.data);
+          setDataState(res.data.total_data.length === 0 ? 'empty' : 'online');
+        } else if (!hasCache) {
+          setDataState('error');
         }
       } catch (error) {
         console.error('Fetch statistics failed', error);
+        if (!hasCache) {
+          setDataState('error');
+        }
       } finally {
         setLoading(false);
       }
@@ -144,6 +161,18 @@ const Statistics = () => {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {renderHeader()}
       {renderMonthSelector()}
+
+      {dataState === 'offline-cached' && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineText}>当前离线，展示缓存统计</Text>
+        </View>
+      )}
+
+      {dataState === 'error' && !loading && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineText}>统计加载失败，请稍后重试</Text>
+        </View>
+      )}
       
       <View style={styles.content}>
         {loading ? (
@@ -202,6 +231,19 @@ const styles = StyleSheet.create({
   monthSelectorContainer: {
     paddingVertical: theme.spacing.sm,
     marginTop: theme.spacing.sm,
+  },
+  offlineBanner: {
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    backgroundColor: '#FFF4E5',
+    borderRadius: theme.spacing.radius.sm,
+    paddingVertical: theme.spacing.sm,
+    alignItems: 'center',
+  },
+  offlineText: {
+    color: '#8A4B00',
+    fontSize: theme.typography.size.sm,
+    fontWeight: theme.typography.weight.medium,
   },
   monthList: {
     alignItems: 'center',
