@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import CategoryIcon from './CategoryIcon';
+import IconFont from './IconFont';
 import { deleteBill } from '../services/bill';
 import { theme } from '@/theme';
 
@@ -23,9 +24,13 @@ export interface BillItemProps {
   onDeleteSuccess?: () => void;
   onEdit?: (id: number) => void;
   isLast?: boolean;
+  // 同步状态相关
+  syncStatus?: 'syncing' | 'synced' | 'failed';
+  localId?: string;
+  onRetry?: (localId: string) => void;
 }
 
-const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, onDeleteSuccess, onEdit, isLast }) => {
+const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, onDeleteSuccess, onEdit, isLast, syncStatus, localId, onRetry }) => {
   const [deleting, setDeleting] = useState(false);
   const swipeableRef = React.useRef<Swipeable>(null);
 
@@ -83,6 +88,32 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, onD
     onEdit?.(id);
   };
 
+  // 处理同步状态点击
+  const handleSyncStatusPress = () => {
+    if (syncStatus === 'failed' && localId && onRetry) {
+      onRetry(localId);
+    }
+  };
+
+  // 渲染同步状态图标
+  const renderSyncIndicator = () => {
+    if (syncStatus === 'syncing') {
+      return (
+        <View style={styles.syncIndicator}>
+          <ActivityIndicator size="small" color={theme.colors.status.info} />
+        </View>
+      );
+    }
+    if (syncStatus === 'failed') {
+      return (
+        <TouchableOpacity style={styles.syncIndicator} onPress={handleSyncStatusPress}>
+          <IconFont name="warning" size={18} color={theme.colors.status.warning} />
+        </TouchableOpacity>
+      );
+    }
+    return null;
+  };
+
   const renderRightActions = () => {
     return (
       <View style={styles.rightActions}>
@@ -121,6 +152,7 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, onD
           <Text style={styles.itemType}>{type}</Text>
           {remark ? <Text style={styles.itemRemark}>{remark}</Text> : null}
         </View>
+        {renderSyncIndicator()}
         <Text style={styles.itemAmount}>{amount.toFixed(2)}</Text>
       </View>
     </Swipeable>
@@ -196,6 +228,11 @@ const styles = StyleSheet.create({
     color: theme.colors.text.inverse,
     fontWeight: 'bold',
     fontSize: 14
+  },
+  syncIndicator: {
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   }
 });
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Platform, ToastAndroid } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, RouteProp } from '@react-navigation/native';
@@ -14,6 +14,9 @@ import { useCategory } from '../context/CategoryContext';
 import { theme } from '@/theme';
 import { MainTabParamList } from '../types/navigation';
 
+// 同步状态类型
+type SyncStatus = 'syncing' | 'synced' | 'failed';
+
 // 定义 SubItem 类型
 type SubItem = {
   id: number;
@@ -26,6 +29,10 @@ type SubItem = {
   date: string;
   payType: number;
   rawAmount: number;
+  // 同步状态相关
+  syncStatus?: SyncStatus; // 'syncing' | 'synced' | 'failed'
+  localId?: string; // 本地唯一标识,用于乐观更新时定位
+  retryParams?: any; // 用于重试的参数
 };
 
 // 定义 BillItem 类型
@@ -50,6 +57,9 @@ const List = () => {
   
   const billFormRef = useRef<BillFormRef>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+  
+  // 生成唯一本地ID
+  const generateLocalId = () => `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   const [orderBy, setOrderBy] = useState<'ASC' | 'DESC'>('DESC');
   const [showTypePicker, setShowTypePicker] = useState(false);
@@ -225,31 +235,178 @@ const List = () => {
     }
   };
 
-  const handleBillSubmit = async (billData: BillData) => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      const timestamp = new Date(billData.date).getTime();
-      const params = {
+  // 乐观更新: 立即添加本地账单
+  const optimisticAddBill = (billData: BillData): SubItem => {
+    const localId = generateLocalId();
+    const isExpense = billData.type === 1;
+    const category = categories.find(c => c.id === billData.category);
+    
+    return {
+      id: -Date.now(), // 临时负ID
+      type: billData.categoryName,
+      icon: category?.icon || 'icon-qianming',
+      remark: billData.remark,
+      amount: isExpense ? -billData.amount : billData.amount,
+      typeId: billData.category,
+      date: new Date(billData.date).getTime().toString(),
+      payType: billData.type,
+      rawAmount: billData.amount,
+      syncStatus: 'syncing',
+      localId,
+      retryParams: {
         amount: billData.amount.toFixed(2),
         type_id: parseInt(billData.category, 10),
         type_name: billData.categoryName,
-        date: timestamp,
+        date: new Date(billData.date).getTime(),
         pay_type: billData.type,
         remark: billData.remark || ''
-      };
-
-      if (editingId) {
-        await updateBill({ ...params, id: editingId });
-      } else {
-        await addBill(params);
       }
+    };
+  };
+
+  // 更新本地账单状态
+  const updateLocalBillStatus = (localId: string, status: SyncStatus) => {
+    setData(prevData => {
+      return prevData.map(group => ({
+        ...group,
+        items: group.items.map(item => {
+          if (item.localId === localId) {
+            return {
+              ...item,
+              syncStatus: status,
+              ...(status === 'failed' ? {} : { retryParams: undefined })
+            };
+          }
+          return item;
+        })
+      }));
+    });
+  };
+
+  // 重试同步
+  const handleRetrySync = async (localId: string) => {
+    // 找到对应的账单项
+    let targetItem: SubItem | undefined;
+    for (const group of data) {
+      const item = group.items.find(i => i.localId === localId);
+      if (item) {
+        targetItem = item;
+        break;
+      }
+    }
+    
+    if (!targetItem?.retryParams) return;
+    
+    // 更新状态为同步中
+    updateLocalBillStatus(localId, 'syncing');
+    
+    try {
+      const res = await addBill(targetItem.retryParams);
+      if (res.code === 200) {
+        updateLocalBillStatus(localId, 'synced');
+        showToast('同步成功');
+        // 同步成功后刷新列表获取真实ID
+        fetchBills();
+      } else {
+        updateLocalBillStatus(localId, 'failed');
+        showToast('同步失败,请重试');
+      }
+    } catch (error) {
+      updateLocalBillStatus(localId, 'failed');
+      showToast('同步失败,请重试');
+    }
+  };
+
+  const showToast = (message: string) => {
+    if (Platform.OS === 'android') {
+      ToastAndroid.show(message, ToastAndroid.SHORT);
+    } else {
+      Alert.alert('提示', message);
+    }
+  };
+
+  const handleBillSubmit = async (billData: BillData) => {
+    if (isSubmitting) return;
+    
+    const timestamp = new Date(billData.date).getTime();
+    const params = {
+      amount: billData.amount.toFixed(2),
+      type_id: parseInt(billData.category, 10),
+      type_name: billData.categoryName,
+      date: timestamp,
+      pay_type: billData.type,
+      remark: billData.remark || ''
+    };
+
+    if (editingId) {
+      // 编辑模式: 保持原有逻辑(需要真实ID)
+      setIsSubmitting(true);
+      try {
+        await updateBill({ ...params, id: editingId });
+        fetchBills();
+      } catch (error: any) {
+        Alert.alert('错误', error.message || '修改失败');
+      } finally {
+        setIsSubmitting(false);
+        setEditingId(null);
+      }
+    } else {
+      // 新增模式: 乐观更新
+      const localBill = optimisticAddBill(billData);
+      const dateStr = billData.date; // YYYY-MM-DD
       
-      fetchBills(); // Refresh list
-    } catch (error: any) {
-      Alert.alert('错误', error.message || (editingId ? '修改失败' : '记账失败'));
-    } finally {
-      setIsSubmitting(false);
+      // 立即更新UI
+      setData(prevData => {
+        const existingGroup = prevData.find(g => g.date === dateStr);
+        if (existingGroup) {
+          return prevData.map(g => {
+            if (g.date === dateStr) {
+              const newAmount = billData.type === 1 ? billData.amount : 0;
+              const newIncome = billData.type === 2 ? billData.amount : 0;
+              return {
+                ...g,
+                total: g.total + newAmount,
+                income: g.income + newIncome,
+                items: [localBill, ...g.items]
+              };
+            }
+            return g;
+          });
+        } else {
+          // 创建新的日期分组
+          const newGroup: DailyBillGroup = {
+            date: dateStr,
+            total: billData.type === 1 ? billData.amount : 0,
+            income: billData.type === 2 ? billData.amount : 0,
+            items: [localBill]
+          };
+          return [newGroup, ...prevData];
+        }
+      });
+
+      // 更新统计
+      setSummary(prev => ({
+        totalExpense: billData.type === 1 ? prev.totalExpense + billData.amount : prev.totalExpense,
+        totalIncome: billData.type === 2 ? prev.totalIncome + billData.amount : prev.totalIncome,
+      }));
+
+      // 后台异步同步
+      addBill(params)
+        .then(res => {
+          if (res.code === 200) {
+            updateLocalBillStatus(localBill.localId!, 'synced');
+            // 同步成功后静默刷新列表获取真实ID
+            fetchBills();
+          } else {
+            updateLocalBillStatus(localBill.localId!, 'failed');
+            showToast('账单保存失败,点击可重试');
+          }
+        })
+        .catch(() => {
+          updateLocalBillStatus(localBill.localId!, 'failed');
+          showToast('账单保存失败,点击可重试');
+        });
+      
       setEditingId(null);
     }
   };
@@ -262,10 +419,11 @@ const List = () => {
       </View>
       {item.items.map((subItem: SubItem, index: number) => (
         <BillItem
-          key={subItem.id}
+          key={subItem.localId || subItem.id}
           {...subItem}
           onDeleteSuccess={onRefresh}
           onEdit={handleEdit}
+          onRetry={handleRetrySync}
           isLast={index === item.items.length - 1}
         />
       ))}
