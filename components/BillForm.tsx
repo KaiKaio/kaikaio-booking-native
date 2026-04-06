@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCategory } from '../context/CategoryContext';
 import IconFont from '../components/IconFont'; // 根据实际路径引入
 import CategoryIcon from './CategoryIcon';
+import DatePicker from './DatePicker';
 import { theme } from '@/theme';
 import { navigate } from '../utils/navigationRef';
 
@@ -243,55 +244,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
     );
   };
 
-  // Simple Custom Date Picker Implementation
-  const renderDatePicker = () => {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-    return (
-      <View style={styles.datePickerContainer}>
-        <View style={styles.dateHeader}>
-          <TouchableOpacity style={styles.numBtn} onPress={() => setShowDatePicker(false)}>
-            <Text style={styles.numText}>数字键盘</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setDate(new Date(year, month - 2, day))}>
-            <Text style={styles.arrow}>◀️</Text>
-          </TouchableOpacity>
-          <Text style={styles.dateTitle}>{year}年 {month}月</Text>
-          <TouchableOpacity onPress={() => setDate(new Date(year, month, day))}>
-            <Text style={styles.arrow}>▶️</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.todayBtn}
-            onPress={() => {
-              setDate(new Date());
-              setShowDatePicker(false);
-            }}
-          >
-            <Text style={styles.todayText}>今日</Text>
-          </TouchableOpacity>
-        </View>
-        <ScrollView contentContainerStyle={styles.daysGrid}>
-          {days.map(d => (
-            <TouchableOpacity
-              key={d}
-              style={[styles.dayItem, d === day && styles.selectedDay]}
-              onPress={() => {
-                setDate(new Date(year, month - 1, d));
-                setShowDatePicker(false);
-              }}
-            >
-              <Text style={[styles.dayText, d === day && styles.selectedDayText]}>{d}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-    );
-  };
+  // Date picker was extracted to components/DatePicker.tsx
 
   const keyboardOffset = Platform.OS === 'ios'
     ? Math.max(0, keyboardHeight - insets.bottom)
@@ -446,7 +399,14 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
 
           {/* Bottom Area: Keypad or DatePicker */}
           <View style={[styles.bottomArea, isRemarkInputFocused && styles.bottomAreaFocused]}>
-            {showDatePicker ? renderDatePicker() : renderKeypad()}
+            {showDatePicker ? (
+              <DatePicker
+                date={date}
+                onChange={(d) => setDate(d)}
+                onClose={() => setShowDatePicker(false)}
+                onSwitchToKeypad={() => setShowDatePicker(false)}
+              />
+            ) : renderKeypad()}
           </View>
 
         </Animated.View>

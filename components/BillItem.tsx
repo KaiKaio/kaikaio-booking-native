@@ -10,8 +10,8 @@ import {
   Platform
 } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import CategoryIcon from './CategoryIcon';
-import IconFont from './IconFont';
 import { deleteBill } from '../services/bill';
 import { theme } from '@/theme';
 
@@ -107,7 +107,12 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, onD
     if (syncStatus === 'failed') {
       return (
         <TouchableOpacity style={styles.syncIndicator} onPress={handleSyncStatusPress}>
-          <IconFont name="warning" size={18} color={theme.colors.status.warning} />
+          {/* <IconFont name="warning" size={18} color={theme.colors.status.warning} /> */}
+          <Icon
+            name={'warning'}
+            size={18}
+            color={theme.colors.status.warning}
+          />
         </TouchableOpacity>
       );
     }
