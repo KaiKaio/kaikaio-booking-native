@@ -15,6 +15,7 @@ export interface BillDetail {
   type_id: string;
   type_name: string;
   remark: string;
+  create_time: string;
 }
 
 export interface DailyBill {
@@ -42,12 +43,19 @@ export interface AddBillParams {
   date: number;
   pay_type: number;
   remark?: string;
+  client_local_id?: string; // 本地生成的唯一 ID，用于同步后匹配
 }
 
 export interface AddBillResponse {
   code: number;
   msg: string;
-  data: null;
+  data: (BillDetail & { client_local_id?: string }) | null;
+}
+
+export interface UpdateBillResponse {
+  code: number;
+  msg: string;
+  data: BillDetail | null;
 }
 
 export interface StatisticsData {

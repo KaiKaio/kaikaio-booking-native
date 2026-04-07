@@ -6,6 +6,7 @@ import {
   EarliestItemDateResponse,
   AddBillParams,
   AddBillResponse,
+  UpdateBillResponse,
   StatisticsResponse,
   StatisticsResponseData,
   StatisticsData,
@@ -129,7 +130,7 @@ export const deleteBill = async (id: number): Promise<any> => {
   });
 };
 
-export const updateBill = async (params: AddBillParams & { id: number }): Promise<any> => {
+export const updateBill = async (params: AddBillParams & { id: number }): Promise<UpdateBillResponse> => {
   return request('/api/bill/update', {
     method: 'POST',
     body: JSON.stringify(params),

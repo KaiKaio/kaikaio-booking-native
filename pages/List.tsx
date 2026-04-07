@@ -289,12 +289,16 @@ const List = () => {
   }, []);
 
   const fetchBills = useCallback(async () => {
+    // 无currentDate时不发请求，避免重复请求和错误展示；
     if (!currentDate) return;
+
+    // 如果正在加载中，也不发请求，避免重复请求
     if (loadingRef.current) return;
 
     loadingRef.current = true;
     setRefreshing(true);
 
+    // 先尝试加载离线缓存和待同步账单，确保无论网络状态如何都能展示数据，提升用户体验
     let hasCache = false;
     let pendingBills: SubItem[] = [];
 
@@ -466,13 +470,101 @@ const List = () => {
         type_name: billData.categoryName,
         date: new Date(billData.date).getTime(),
         pay_type: billData.type,
-        remark: billData.remark || ''
+        remark: billData.remark || '',
+        client_local_id: localId,
       }
     };
   };
 
+  const recalculateGroup = useCallback((date: string, items: SubItem[]): DailyBillGroup => {
+    const totals = items.reduce(
+      (acc, item) => {
+        const amountAbs = Math.abs(item.rawAmount ?? item.amount);
+        if (item.payType === 1) {
+          acc.total += amountAbs;
+        } else {
+          acc.income += amountAbs;
+        }
+        return acc;
+      },
+      { total: 0, income: 0 }
+    );
+
+    return {
+      date,
+      total: totals.total,
+      income: totals.income,
+      items,
+    };
+  }, []);
+
+  const findSubItemById = useCallback((targetId: number): SubItem | undefined => {
+    for (const group of data) {
+      const matched = group.items.find(item => item.id === targetId);
+      if (matched) return matched;
+    }
+    return undefined;
+  }, [data]);
+
+  const buildSubItemFromServer = useCallback((bill: BillDetail): SubItem => {
+    const payType = parseInt(String(bill.pay_type), 10);
+    const amountAbs = parseFloat(String(bill.amount));
+
+    return {
+      id: bill.id,
+      type: bill.type_name,
+      icon: getCategoryIcon(bill.type_name),
+      remark: bill.remark,
+      amount: payType === 1 ? -amountAbs : amountAbs,
+      typeId: String(bill.type_id),
+      date: String(bill.date),
+      payType,
+      rawAmount: amountAbs,
+    };
+  }, [getCategoryIcon]);
+
+  const upsertLocalDataItem = useCallback((nextItem: SubItem, matcher: (item: SubItem) => boolean) => {
+    setData(prevData => {
+      const groups: DailyBillGroup[] = [];
+
+      prevData.forEach(group => {
+        const filteredItems = group.items.filter(item => !matcher(item));
+        if (filteredItems.length > 0) {
+          groups.push(recalculateGroup(group.date, filteredItems));
+        }
+      });
+
+      if (selectedTypeId && nextItem.typeId !== selectedTypeId) {
+        return groups;
+      }
+
+      const targetDate = formatBillDate(String(nextItem.date));
+      if (!targetDate) return groups;
+
+      const targetIndex = groups.findIndex(group => group.date === targetDate);
+      if (targetIndex >= 0) {
+        const nextItems = [...groups[targetIndex].items];
+        if (orderBy === 'ASC') {
+          nextItems.push(nextItem);
+        } else {
+          nextItems.unshift(nextItem);
+        }
+        groups[targetIndex] = recalculateGroup(groups[targetIndex].date, nextItems);
+      } else {
+        const newGroup = recalculateGroup(targetDate, [nextItem]);
+        if (orderBy === 'ASC') {
+          groups.push(newGroup);
+        } else {
+          groups.unshift(newGroup);
+        }
+      }
+
+      return groups;
+    });
+  }, [formatBillDate, orderBy, recalculateGroup, selectedTypeId]);
+
   // 更新本地账单状态
-  const updateLocalBillStatus = useCallback((localId: string, status: SyncStatus) => {
+  const updateLocalBillStatus = useCallback(async (localId: string, status: SyncStatus) => {
     setData(prevData => {
       return prevData.map(group => ({
         ...group,
@@ -489,9 +581,11 @@ const List = () => {
       }));
     });
 
-    updatePendingBillStatusInStorage(localId, status).catch(error => {
+    try {
+      await updatePendingBillStatusInStorage(localId, status);
+    } catch (error) {
       console.error('Failed to update pending bill status', error);
-    });
+    }
   }, [updatePendingBillStatusInStorage]);
 
   // 重试同步
@@ -505,25 +599,27 @@ const List = () => {
         break;
       }
     }
-    
+
     if (!targetItem?.retryParams) return;
-    
+
     // 更新状态为同步中
-    updateLocalBillStatus(localId, 'syncing');
-    
+    await updateLocalBillStatus(localId, 'syncing');
+
     try {
       const res = await addBill(targetItem.retryParams);
       if (res.code === 200) {
-        updateLocalBillStatus(localId, 'synced');
+        await updateLocalBillStatus(localId, 'synced');
+        if (res.data) {
+          const serverId = res.data.id;
+          upsertLocalDataItem(buildSubItemFromServer(res.data), item => item.localId === localId || item.id === serverId);
+        }
         showToast('同步成功');
-        // 同步成功后刷新列表获取真实ID
-        fetchBills();
       } else {
-        updateLocalBillStatus(localId, 'failed');
+        await updateLocalBillStatus(localId, 'failed');
         showToast('同步失败,请重试');
       }
     } catch (error) {
-      updateLocalBillStatus(localId, 'failed');
+      await updateLocalBillStatus(localId, 'failed');
       showToast('同步失败,请重试');
     }
   };
@@ -539,25 +635,28 @@ const List = () => {
     for (const bill of failedBills) {
       if (!bill.localId || !bill.retryParams) continue;
 
-      updateLocalBillStatus(bill.localId, 'syncing');
+      await updateLocalBillStatus(bill.localId, 'syncing');
       try {
         const res = await addBill(bill.retryParams);
         if (res.code === 200) {
-          updateLocalBillStatus(bill.localId, 'synced');
+          await updateLocalBillStatus(bill.localId, 'synced');
+          if (res.data) {
+            const serverId = res.data.id;
+            upsertLocalDataItem(buildSubItemFromServer(res.data), item => item.localId === bill.localId || item.id === serverId);
+          }
           hasSynced = true;
         } else {
-          updateLocalBillStatus(bill.localId, 'failed');
+          await updateLocalBillStatus(bill.localId, 'failed');
         }
       } catch (error) {
-        updateLocalBillStatus(bill.localId, 'failed');
+        await updateLocalBillStatus(bill.localId, 'failed');
       }
     }
 
     if (hasSynced) {
       showToast('离线账单已自动同步');
-      fetchBills();
     }
-  }, [fetchBills, loadPendingBillsFromStorage, updateLocalBillStatus]);
+  }, [buildSubItemFromServer, loadPendingBillsFromStorage, updateLocalBillStatus, upsertLocalDataItem]);
 
   useEffect(() => {
     retryFailedPendingBills();
@@ -574,7 +673,7 @@ const List = () => {
   const handleBillSubmit = async (billData: BillData) => {
     // 防止重复提交
     if (isSubmitting) return;
-    
+
     // 将日期转换为时间戳（毫秒）
     const timestamp = new Date(billData.date).getTime();
     const params = {
@@ -587,86 +686,97 @@ const List = () => {
     };
 
     if (editingId) {
-      // 编辑模式: 保持原有逻辑(需要真实ID)
+      const previousData = data;
+      const previousSummary = summary;
+      const oldItem = findSubItemById(editingId);
+      const category = categories.find(c => c.id === billData.category);
+      const optimisticEditedItem: SubItem = {
+        id: editingId,
+        type: billData.categoryName,
+        icon: category?.icon || 'icon-qianming',
+        remark: billData.remark,
+        amount: billData.type === 1 ? -billData.amount : billData.amount,
+        typeId: billData.category,
+        date: timestamp.toString(),
+        payType: billData.type,
+        rawAmount: billData.amount,
+      };
+
+      if (oldItem) {
+        const oldExpense = oldItem.payType === 1 ? Math.abs(oldItem.rawAmount ?? oldItem.amount) : 0;
+        const oldIncome = oldItem.payType === 2 ? Math.abs(oldItem.rawAmount ?? oldItem.amount) : 0;
+        const newExpense = billData.type === 1 ? billData.amount : 0;
+        const newIncome = billData.type === 2 ? billData.amount : 0;
+
+        setSummary(prev => ({
+          totalExpense: prev.totalExpense - oldExpense + newExpense,
+          totalIncome: prev.totalIncome - oldIncome + newIncome,
+        }));
+        upsertLocalDataItem(optimisticEditedItem, item => item.id === editingId);
+      }
+
       setIsSubmitting(true);
       try {
-        await updateBill({ ...params, id: editingId });
-        fetchBills();
+        const res = await updateBill({ ...params, id: editingId });
+        if (res.code !== 200) {
+          throw new Error(res.msg || '修改失败');
+        }
+
+        if (res.data) {
+          const serverId = res.data.id;
+          upsertLocalDataItem(buildSubItemFromServer(res.data), item => item.id === editingId || item.id === serverId);
+        }
       } catch (error: any) {
+        setData(previousData);
+        setSummary(previousSummary);
         Alert.alert('错误', error.message || '修改失败');
       } finally {
         setIsSubmitting(false);
         setEditingId(null);
       }
-    } else {
-      // 新增模式: 乐观更新
-      const localBill = optimisticAddBill(billData);
-      const dateStr = billData.date; // YYYY-MM-DD
-      
-      // 立即更新UI
-      setData(prevData => {
-        // 先查找是否已有该日期的分组
-        const existingGroup = prevData.find(g => g.date === dateStr);
 
-        // 如果有，直接更新该分组
-        if (existingGroup) {
-          return prevData.map(g => {
-            // 找到对应日期分组，更新统计并添加新账单
-            if (g.date === dateStr) {
-              const newAmount = billData.type === 1 ? billData.amount : 0;
-              const newIncome = billData.type === 2 ? billData.amount : 0;
-              return {
-                ...g,
-                total: g.total + newAmount,
-                income: g.income + newIncome,
-                items: [localBill, ...g.items]
-              };
-            }
-            // 其他分组保持不变
-            return g;
-          });
-        } else {
-          // 创建新的日期分组
-          const newGroup: DailyBillGroup = {
-            date: dateStr,
-            total: billData.type === 1 ? billData.amount : 0,
-            income: billData.type === 2 ? billData.amount : 0,
-            items: [localBill]
-          };
-          return [newGroup, ...prevData];
-        }
-      });
-
-      // 将本地账单保存到 Storage，以便离线时展示和后续重试
-      upsertPendingBillToStorage(localBill).catch(error => {
-        console.error('Failed to persist local bill', error);
-      });
-
-      // 更新统计
-      setSummary(prev => ({
-        totalExpense: billData.type === 1 ? prev.totalExpense + billData.amount : prev.totalExpense,
-        totalIncome: billData.type === 2 ? prev.totalIncome + billData.amount : prev.totalIncome,
-      }));
-
-      // 后台异步同步
-      addBill(params)
-        .then(res => {
-          if (res.code === 200) {
-            updateLocalBillStatus(localBill.localId!, 'synced');
-            // 同步成功后静默刷新列表获取真实ID
-            fetchBills();
-          } else {
-            updateLocalBillStatus(localBill.localId!, 'failed');
-            showToast('账单保存失败,点击可重试');
-          }
-        })
-        .catch(() => {
-          updateLocalBillStatus(localBill.localId!, 'failed');
-          showToast('账单保存失败,点击可重试');
-        });
-      
-      setEditingId(null);
+      return;
     }
+
+    // 新增模式: 乐观更新
+    const localBill = optimisticAddBill(billData);
+    const shouldShowInCurrentFilter = !selectedTypeId || selectedTypeId === localBill.typeId;
+
+    if (shouldShowInCurrentFilter) {
+      upsertLocalDataItem(localBill, item => item.localId === localBill.localId);
+    }
+
+    // 将本地账单保存到 Storage，以便离线时展示和后续重试
+    upsertPendingBillToStorage(localBill).catch(error => {
+      console.error('Failed to persist local bill', error);
+    });
+
+    // 更新统计
+    setSummary(prev => ({
+      totalExpense: billData.type === 1 ? prev.totalExpense + billData.amount : prev.totalExpense,
+      totalIncome: billData.type === 2 ? prev.totalIncome + billData.amount : prev.totalIncome,
+    }));
+
+    try {
+      const res = await addBill({ ...params, client_local_id: localBill.localId });
+      if (res.code === 200) {
+        await updateLocalBillStatus(localBill.localId!, 'synced');
+
+        if (res.data) {
+          const matchedLocalId = res.data.client_local_id || localBill.localId;
+          const serverId = res.data.id;
+          upsertLocalDataItem(buildSubItemFromServer(res.data), item => item.localId === matchedLocalId || item.localId === localBill.localId || item.id === serverId);
+        }
+      } else {
+        await updateLocalBillStatus(localBill.localId!, 'failed');
+        showToast('账单保存失败,点击可重试');
+      }
+    } catch (error) {
+      await updateLocalBillStatus(localBill.localId!, 'failed');
+      showToast('账单保存失败,点击可重试');
+    }
+
+    setEditingId(null);
   };
 
   const renderBillItem = ({ item }: { item: DailyBillGroup }) => (
