@@ -301,6 +301,7 @@ const List = () => {
     // 先尝试加载离线缓存和待同步账单，确保无论网络状态如何都能展示数据，提升用户体验
     let hasCache = false;
     let pendingBills: SubItem[] = [];
+    let finalDataState: DataState = 'online';
 
     try {
       pendingBills = await loadPendingBillsFromStorage();
@@ -314,7 +315,7 @@ const List = () => {
         const filteredCached = applyTypeAndOrder(transformedCached);
         const mergedCached = mergePendingBills(filteredCached, pendingBills);
         setData(mergedCached);
-        setDataState(mergedCached.length === 0 ? 'empty' : 'offline-cached');
+        finalDataState = mergedCached.length === 0 ? 'empty' : 'offline-cached';
       }
 
       const [year, month] = currentDate.split('-');
@@ -341,7 +342,7 @@ const List = () => {
           totalIncome: res.data.totalIncome,
         });
         setData(mergedData);
-        setDataState(mergedData.length === 0 ? 'empty' : 'online');
+        finalDataState = mergedData.length === 0 ? 'empty' : 'online';
 
         if (!selectedTypeId) {
           await saveBillMonthCache(currentDate, res.data.list, {
@@ -350,7 +351,7 @@ const List = () => {
           });
         }
       } else if (!hasCache) {
-        setDataState('error');
+        finalDataState = 'error';
       }
     } catch (error) {
       console.error('Fetch error:', error);
@@ -359,12 +360,13 @@ const List = () => {
         const pendingOnly = mergePendingBills([], pendingBills);
         if (pendingOnly.length > 0) {
           setData(pendingOnly);
-          setDataState('offline-cached');
+          finalDataState = 'offline-cached';
         } else {
-          setDataState('error');
+          finalDataState = 'error';
         }
       }
     } finally {
+      setDataState(finalDataState);
       loadingRef.current = false;
       setRefreshing(false);
     }
