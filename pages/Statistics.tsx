@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { buildStatisticsFromDailyBills, getBillStatistics, getEarliestItemDate, loadBillMonthCache } from '../services/bill';
 import { StatisticsResponseData } from '../types/bill';
@@ -13,6 +13,7 @@ const Statistics = () => {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<StatisticsResponseData | null>(null);
   const [dataState, setDataState] = useState<'online' | 'offline-cached' | 'empty' | 'error'>('online');
 
@@ -69,47 +70,59 @@ const Statistics = () => {
     handleFetchEarliestItemDate();
   }, []);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = React.useCallback(async (monthToFetch: string, isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
       setLoading(true);
+    }
 
-      let hasCache = false;
-      let finalDataState: 'online' | 'offline-cached' | 'empty' | 'error' = 'online';
+    let hasCache = false;
+    let finalDataState: 'online' | 'offline-cached' | 'empty' | 'error' = 'online';
 
-      try {
-        const monthCache = await loadBillMonthCache(currentMonth);
-        if (monthCache) {
-          hasCache = true;
-          setData(buildStatisticsFromDailyBills(monthCache.list));
-          finalDataState = 'offline-cached';
-        }
+    try {
+      const monthCache = await loadBillMonthCache(monthToFetch);
+      if (monthCache) {
+        hasCache = true;
+        setData(buildStatisticsFromDailyBills(monthCache.list));
+        finalDataState = 'offline-cached';
+      }
 
-        // currentMonth 格式为 YYYY-MM
-        const [year, month] = currentMonth.split('-');
-        const lastDay = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
-        const start = `${year}-${month}-01 00:00:00`;
-        const end = `${year}-${month}-${lastDay} 23:59:59`;
+      // monthToFetch 格式为 YYYY-MM
+      const [year, month] = monthToFetch.split('-');
+      const lastDay = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
+      const start = `${year}-${month}-01 00:00:00`;
+      const end = `${year}-${month}-${lastDay} 23:59:59`;
 
-        const res = await getBillStatistics(start, end);
-        if (res.code === 200) {
-          setData(res.data);
-          finalDataState = res.data.total_data.length === 0 ? 'empty' : 'online';
-        } else if (!hasCache) {
-          finalDataState = 'error';
-        }
-      } catch (error) {
-        console.error('Fetch statistics failed', error);
-        if (!hasCache) {
-          finalDataState = 'error';
-        }
-      } finally {
-        setDataState(finalDataState);
+      const res = await getBillStatistics(start, end);
+      if (res.code === 200) {
+        setData(res.data);
+        finalDataState = res.data.total_data.length === 0 ? 'empty' : 'online';
+      } else if (!hasCache) {
+        finalDataState = 'error';
+      }
+    } catch (error) {
+      console.error('Fetch statistics failed', error);
+      if (!hasCache) {
+        finalDataState = 'error';
+      }
+    } finally {
+      setDataState(finalDataState);
+      if (isRefresh) {
+        setRefreshing(false);
+      } else {
         setLoading(false);
       }
-    };
+    }
+  }, []);
 
-    fetchData();
-  }, [currentMonth]);
+  useEffect(() => {
+    fetchData(currentMonth);
+  }, [currentMonth, fetchData]);
+
+  const handleRefresh = React.useCallback(() => {
+    fetchData(currentMonth, true);
+  }, [currentMonth, fetchData]);
 
   const renderHeader = () => {
     return (
@@ -183,6 +196,14 @@ const Statistics = () => {
           <ScrollView 
             style={styles.detailsScroll}
             contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={[theme.colors.primary]}
+                tintColor={theme.colors.primary}
+              />
+            }
           >
             <Composition data={data?.total_data || []} />
             <View style={styles.spacer} />
