@@ -9,6 +9,7 @@ import {
   ScrollView,
   Keyboard,
   Platform,
+  Alert,
   Animated,
   Dimensions
 } from 'react-native';
@@ -204,7 +205,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   const handleSubmit = () => {
     const amount = parseFloat(amountStr);
     if (amount <= 0) {
-      // Optionally show alert
+      Alert.alert('提示', '是不是忘了输入金额？');
       return;
     }
     const year = date.getFullYear();
@@ -212,7 +213,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
     const day = String(date.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
 
-    // Save last used date
+    // Save last used date（保存本次使用日期，便于下次再次打开Form时快速填写）
     AsyncStorage.setItem('LAST_BILL_DATE', dateStr).catch(err => console.warn('Failed to save date', err));
 
     const data: BillData = {

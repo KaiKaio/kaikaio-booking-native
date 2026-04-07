@@ -160,6 +160,7 @@ const List = () => {
       .filter(group => group.items.length > 0);
   }, [orderBy, selectedTypeId]);
 
+  // 加载待同步账单列表
   const loadPendingBillsFromStorage = useCallback(async (): Promise<SubItem[]> => {
     try {
       const raw = await AsyncStorage.getItem(PENDING_BILLS_STORAGE_KEY);
@@ -184,16 +185,23 @@ const List = () => {
     }
   }, []);
 
+  // 新增/更新待同步账单到 Storage
   const upsertPendingBillToStorage = useCallback(async (bill: SubItem) => {
+    // 只有本地账单才需要处理
     if (!bill.localId) return;
 
+    // 先加载当前待同步账单列表，过滤掉当前账单（如果已存在）
     const pendingBills = await loadPendingBillsFromStorage();
+
+    // 如果当前账单的 syncStatus 是 syncing 或 failed，说明是新增或更新操作，需要保留在列表中；如果是 synced，则说明已成功同步，需要从列表中移除
     const nextPendingBills = pendingBills.filter(item => item.localId !== bill.localId);
 
+    // 如果是新增或更新操作，才将账单添加到列表中；如果是 synced，则不添加（相当于删除）
     if (bill.syncStatus === 'failed' || bill.syncStatus === 'syncing') {
       nextPendingBills.unshift(bill);
     }
 
+    // 保存更新后的列表到 Storage
     await savePendingBillsToStorage(nextPendingBills);
   }, [loadPendingBillsFromStorage, savePendingBillsToStorage]);
 
@@ -564,8 +572,10 @@ const List = () => {
   };
 
   const handleBillSubmit = async (billData: BillData) => {
+    // 防止重复提交
     if (isSubmitting) return;
     
+    // 将日期转换为时间戳（毫秒）
     const timestamp = new Date(billData.date).getTime();
     const params = {
       amount: billData.amount.toFixed(2),
@@ -595,9 +605,13 @@ const List = () => {
       
       // 立即更新UI
       setData(prevData => {
+        // 先查找是否已有该日期的分组
         const existingGroup = prevData.find(g => g.date === dateStr);
+
+        // 如果有，直接更新该分组
         if (existingGroup) {
           return prevData.map(g => {
+            // 找到对应日期分组，更新统计并添加新账单
             if (g.date === dateStr) {
               const newAmount = billData.type === 1 ? billData.amount : 0;
               const newIncome = billData.type === 2 ? billData.amount : 0;
@@ -608,6 +622,7 @@ const List = () => {
                 items: [localBill, ...g.items]
               };
             }
+            // 其他分组保持不变
             return g;
           });
         } else {
@@ -622,6 +637,7 @@ const List = () => {
         }
       });
 
+      // 将本地账单保存到 Storage，以便离线时展示和后续重试
       upsertPendingBillToStorage(localBill).catch(error => {
         console.error('Failed to persist local bill', error);
       });
