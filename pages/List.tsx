@@ -244,11 +244,7 @@ const List = () => {
 
         if (group) {
           if (!group.items.find(i => i.localId === pending.localId)) {
-            if (orderBy === 'ASC') {
-              group.items.push(pending);
-            } else {
-              group.items.unshift(pending);
-            }
+            group.items.push(pending);
             group.total += isExpense ? amountAbs : 0;
             group.income += isExpense ? 0 : amountAbs;
           }
@@ -259,13 +255,24 @@ const List = () => {
             income: isExpense ? 0 : amountAbs,
             items: [pending]
           };
-          if (orderBy === 'ASC') {
-            merged.push(newGroup);
-          } else {
-            merged.unshift(newGroup);
-          }
+          merged.push(newGroup);
         }
       });
+
+    // 重新排序 items 和 groups
+    merged.forEach(group => {
+      group.items.sort((a, b) => {
+        const aTime = /^\d+$/.test(String(a.date)) ? parseInt(String(a.date), 10) : new Date(String(a.date)).getTime();
+        const bTime = /^\d+$/.test(String(b.date)) ? parseInt(String(b.date), 10) : new Date(String(b.date)).getTime();
+        return orderBy === 'ASC' ? aTime - bTime : bTime - aTime;
+      });
+    });
+
+    merged.sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return orderBy === 'ASC' ? dateA - dateB : dateB - dateA;
+    });
 
     return merged;
   }, [currentDate, formatBillDate, orderBy, selectedTypeId]);
@@ -546,19 +553,21 @@ const List = () => {
       const targetIndex = groups.findIndex(group => group.date === targetDate);
       if (targetIndex >= 0) {
         const nextItems = [...groups[targetIndex].items];
-        if (orderBy === 'ASC') {
-          nextItems.push(nextItem);
-        } else {
-          nextItems.unshift(nextItem);
-        }
+        nextItems.push(nextItem);
+        nextItems.sort((a, b) => {
+          const aTime = /^\d+$/.test(String(a.date)) ? parseInt(String(a.date), 10) : new Date(String(a.date)).getTime();
+          const bTime = /^\d+$/.test(String(b.date)) ? parseInt(String(b.date), 10) : new Date(String(b.date)).getTime();
+          return orderBy === 'ASC' ? aTime - bTime : bTime - aTime;
+        });
         groups[targetIndex] = recalculateGroup(groups[targetIndex].date, nextItems);
       } else {
         const newGroup = recalculateGroup(targetDate, [nextItem]);
-        if (orderBy === 'ASC') {
-          groups.push(newGroup);
-        } else {
-          groups.unshift(newGroup);
-        }
+        groups.push(newGroup);
+        groups.sort((a, b) => {
+          const dateA = new Date(a.date).getTime();
+          const dateB = new Date(b.date).getTime();
+          return orderBy === 'ASC' ? dateA - dateB : dateB - dateA;
+        });
       }
 
       return groups;
