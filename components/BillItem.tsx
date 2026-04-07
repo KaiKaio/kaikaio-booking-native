@@ -21,6 +21,7 @@ export interface BillItemProps {
   icon: string;
   remark: string;
   amount: number;
+  payType?: number;  // 1=支出, 2=收入
   onDeleteSuccess?: () => void;
   onEdit?: (id: number) => void;
   isLast?: boolean;
@@ -30,9 +31,12 @@ export interface BillItemProps {
   onRetry?: (localId: string) => void;
 }
 
-const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, onDeleteSuccess, onEdit, isLast, syncStatus, localId, onRetry }) => {
+const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, payType, onDeleteSuccess, onEdit, isLast, syncStatus, localId, onRetry }) => {
   const [deleting, setDeleting] = useState(false);
   const swipeableRef = React.useRef<Swipeable>(null);
+
+  // 根据 payType 判断颜色：1=支出（绿色），2=收入（红色）
+  const amountColor = payType === 1 ? theme.colors.status.success : theme.colors.status.error;
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -158,7 +162,7 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, onD
           {remark ? <Text style={styles.itemRemark}>{remark}</Text> : null}
         </View>
         {renderSyncIndicator()}
-        <Text style={styles.itemAmount}>{amount.toFixed(2)}</Text>
+        <Text style={[styles.itemAmount, { color: amountColor }]}>{ payType !== 1 && '+' }{amount.toFixed(2)}</Text>
       </View>
     </Swipeable>
   );
@@ -202,7 +206,7 @@ const styles = StyleSheet.create({
   itemAmount: {
     fontSize: 16,
     color: theme.colors.status.success,
-    fontWeight: 'bold',
+    fontWeight: 500,
     minWidth: 60,
     textAlign: 'right'
   },
