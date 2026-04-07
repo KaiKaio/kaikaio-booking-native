@@ -74,13 +74,14 @@ const Statistics = () => {
       setLoading(true);
 
       let hasCache = false;
+      let finalDataState: 'online' | 'offline-cached' | 'empty' | 'error' = 'online';
 
       try {
         const monthCache = await loadBillMonthCache(currentMonth);
         if (monthCache) {
           hasCache = true;
           setData(buildStatisticsFromDailyBills(monthCache.list));
-          setDataState('offline-cached');
+          finalDataState = 'offline-cached';
         }
 
         // currentMonth 格式为 YYYY-MM
@@ -92,16 +93,17 @@ const Statistics = () => {
         const res = await getBillStatistics(start, end);
         if (res.code === 200) {
           setData(res.data);
-          setDataState(res.data.total_data.length === 0 ? 'empty' : 'online');
+          finalDataState = res.data.total_data.length === 0 ? 'empty' : 'online';
         } else if (!hasCache) {
-          setDataState('error');
+          finalDataState = 'error';
         }
       } catch (error) {
         console.error('Fetch statistics failed', error);
         if (!hasCache) {
-          setDataState('error');
+          finalDataState = 'error';
         }
       } finally {
+        setDataState(finalDataState);
         setLoading(false);
       }
     };
