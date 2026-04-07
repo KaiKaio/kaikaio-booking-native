@@ -19,18 +19,38 @@ const DatePicker: React.FC<Props> = ({ date, onChange, onClose, onSwitchToKeypad
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
   const emptySlots = Array.from({ length: firstDayOfWeek }, (_, i) => i);
 
+  const getSafeDate = (targetYear: number, targetMonthIndex: number, targetDay: number) => {
+    const maxDay = new Date(targetYear, targetMonthIndex + 1, 0).getDate();
+    return new Date(targetYear, targetMonthIndex, Math.min(targetDay, maxDay));
+  };
+
+  const handleMonthChange = (offset: number) => {
+    const target = new Date(year, month - 1 + offset, 1);
+    onChange(getSafeDate(target.getFullYear(), target.getMonth(), day));
+  };
+
+  const handleYearChange = (offset: number) => {
+    onChange(getSafeDate(year + offset, month - 1, day));
+  };
+
   return (
     <View style={styles.datePickerContainer}>
       <View style={styles.dateHeader}>
         <TouchableOpacity style={styles.numBtn} onPress={() => onSwitchToKeypad?.() }>
           <Text style={styles.numText}>数字键盘</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => onChange(new Date(year, month - 2, day))}>
-          <Text style={styles.arrow}>◀️</Text>
+        <TouchableOpacity onPress={() => handleYearChange(-1)}>
+          <Text style={styles.arrow}>«</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleMonthChange(-1)}>
+          <Text style={styles.arrow}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.dateTitle}>{year}年 {month}月</Text>
-        <TouchableOpacity onPress={() => onChange(new Date(year, month, day))}>
-          <Text style={styles.arrow}>▶️</Text>
+        <TouchableOpacity onPress={() => handleMonthChange(1)}>
+          <Text style={styles.arrow}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleYearChange(1)}>
+          <Text style={styles.arrow}>»</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.todayBtn}
@@ -106,9 +126,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.text.primary,
   },
-  arrow: { fontSize: 20, paddingHorizontal: 20 },
+  arrow: { fontSize: 20, paddingHorizontal: 8, color: theme.colors.text.primary },
   numText: { fontSize: 12, color: theme.colors.text.primary },
-  dateTitle: { fontSize: 16, fontWeight: 'bold' },
+  dateTitle: { fontSize: 16, fontWeight: 'bold', marginHorizontal: 4 },
   weekdaysRow: {
     flexDirection: 'row',
     paddingHorizontal: 8,
