@@ -107,6 +107,23 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       (e: KeyboardEvent) => {
         setKeyboardVisible(true);
+        // On Android, determine whether the app is running in full-screen (immersive)
+        // mode by comparing screen and window heights. If full-screen, use the
+        // original keyboard height; otherwise treat as no keyboard space adjustment.
+        if (Platform.OS === 'android') {
+          try {
+            const screenH = Dimensions.get('screen').height;
+            const windowH = Dimensions.get('window').height;
+            const isFullScreen = Math.abs(screenH - windowH) < 1;
+            setKeyboardHeight(isFullScreen ? (e.endCoordinates?.height ?? 0) : 0);
+            return;
+          } catch (err) {
+            // Fallback to original behavior on any unexpected error
+            setKeyboardHeight(e.endCoordinates?.height ?? 0);
+            return;
+          }
+        }
+
         setKeyboardHeight(e.endCoordinates?.height ?? 0);
       }
     );
