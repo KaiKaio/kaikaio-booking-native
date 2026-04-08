@@ -65,6 +65,8 @@ const List = () => {
   const [dataState, setDataState] = useState<DataState>('online');
   const [highlightedLocalId, setHighlightedLocalId] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
+  const needsRefetchRef = useRef(false);
+
   
   const billFormRef = useRef<BillFormRef>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -412,6 +414,11 @@ const List = () => {
       setDataState(finalDataState);
       loadingRef.current = false;
       setRefreshing(false);
+      
+      if (needsRefetchRef.current) {
+        needsRefetchRef.current = false;
+        fetchBills();
+      }
     }
   }, [applyTypeAndOrder, currentDate, loadPendingBillsFromStorage, mergePendingBills, orderBy, selectedTypeId, transformDailyBills]);
 
@@ -671,16 +678,28 @@ const List = () => {
           if (cancelledLocalIdsRef.current.has(localId)) return;
           upsertLocalDataItem(buildSubItemFromServer(res.data), item => item.localId === localId || item.id === serverId);
         }
+        
+        if (loadingRef.current) {
+          needsRefetchRef.current = true;
+        }
         showToast('同步成功');
       } else {
         if (cancelledLocalIdsRef.current.has(localId)) return;
         await updateLocalBillStatus(localId, 'failed');
         showToast('同步失败,请重试');
+        
+        if (loadingRef.current) {
+          needsRefetchRef.current = true;
+        }
       }
     } catch (error) {
       if (cancelledLocalIdsRef.current.has(localId)) return;
       await updateLocalBillStatus(localId, 'failed');
       showToast('同步失败,请重试');
+      
+      if (loadingRef.current) {
+        needsRefetchRef.current = true;
+      }
     }
   };
 
@@ -710,13 +729,25 @@ const List = () => {
             upsertLocalDataItem(buildSubItemFromServer(res.data), item => item.localId === bill.localId || item.id === serverId);
           }
           hasSynced = true;
+          
+          if (loadingRef.current) {
+            needsRefetchRef.current = true;
+          }
         } else {
           if (cancelledLocalIdsRef.current.has(bill.localId)) continue;
           await updateLocalBillStatus(bill.localId, 'failed');
+          
+          if (loadingRef.current) {
+            needsRefetchRef.current = true;
+          }
         }
       } catch (error) {
         if (cancelledLocalIdsRef.current.has(bill.localId)) continue;
         await updateLocalBillStatus(bill.localId, 'failed');
+        
+        if (loadingRef.current) {
+          needsRefetchRef.current = true;
+        }
       }
     }
 
@@ -738,16 +769,28 @@ const List = () => {
   };
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    let clearId: NodeJS.Timeout;
+
     if (highlightedLocalId && data.length > 0) {
       const groupIndex = data.findIndex(g => g.items.some(i => i.localId === highlightedLocalId));
       if (groupIndex >= 0) {
-        setTimeout(() => {
-          flatListRef.current?.scrollToIndex({ index: groupIndex, animated: true, viewPosition: 0.5 });
+        timeoutId = setTimeout(() => {
+          try {
+            flatListRef?.current?.scrollToIndex({ index: groupIndex, animated: true, viewPosition: 0.5 });
+          } catch (e) {
+            console.warn('scrollToIndex failed', e);
+          }
           // Ensure we don't clear highlightedId before the animation has a chance to play fully (3 seconds)
-          setTimeout(() => setHighlightedLocalId(null), 3500);
+          clearId = setTimeout(() => setHighlightedLocalId(null), 3500);
         }, 500);
       }
     }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (clearId) clearTimeout(clearId);
+    };
   }, [highlightedLocalId, data]);
 
   const handleBillSubmit = async (billData: BillData) => {
@@ -805,6 +848,10 @@ const List = () => {
         if (res.data) {
           const serverId = res.data.id;
           upsertLocalDataItem(buildSubItemFromServer(res.data), item => item.id === editingId || item.id === serverId);
+        }
+        
+        if (loadingRef.current) {
+          needsRefetchRef.current = true;
         }
       } catch (error: any) {
         setData(previousData);
@@ -870,15 +917,27 @@ const List = () => {
               );
             }
           }
+          
+          if (loadingRef.current) {
+            needsRefetchRef.current = true;
+          }
         } else {
           if (cancelledLocalIdsRef.current.has(localId)) return;
           await updateLocalBillStatus(localId, 'failed');
           showToast('账单保存失败,点击可重试');
+          
+          if (loadingRef.current) {
+            needsRefetchRef.current = true;
+          }
         }
       } catch (error) {
         if (cancelledLocalIdsRef.current.has(localBill.localId!)) return;
         await updateLocalBillStatus(localBill.localId!, 'failed');
         showToast('账单保存失败,点击可重试');
+        
+        if (loadingRef.current) {
+          needsRefetchRef.current = true;
+        }
       }
     };
 
