@@ -320,9 +320,12 @@ const List = () => {
     setRefreshing(true);
 
     // 先尝试加载离线缓存和待同步账单，确保无论网络状态如何都能展示数据，提升用户体验
+    // 但为了避免 UI 跳动：只在最终确定数据源后，统一 setData 一次
     let hasCache = false;
     let pendingBills: SubItem[] = [];
     let finalDataState: DataState = 'online';
+    let nextData: DailyBillGroup[] = [];
+    let nextSummary: { totalExpense: number; totalIncome: number } | null = null;
 
     try {
       pendingBills = await loadPendingBillsFromStorage();
@@ -330,13 +333,12 @@ const List = () => {
 
       if (cachedMonth) {
         hasCache = true;
-        setSummary(cachedMonth.summary);
 
         const transformedCached = transformDailyBills(cachedMonth.list);
         const filteredCached = applyTypeAndOrder(transformedCached);
-        const mergedCached = mergePendingBills(filteredCached, pendingBills);
-        setData(mergedCached);
-        finalDataState = mergedCached.length === 0 ? 'empty' : 'offline-cached';
+        nextData = mergePendingBills(filteredCached, pendingBills);
+        nextSummary = cachedMonth.summary;
+        finalDataState = nextData.length === 0 ? 'empty' : 'offline-cached';
       }
 
       const [year, month] = currentDate.split('-');
@@ -358,11 +360,11 @@ const List = () => {
         const filteredData = applyTypeAndOrder(transformedData);
         const mergedData = mergePendingBills(filteredData, pendingBills);
 
-        setSummary({
+        nextData = mergedData;
+        nextSummary = {
           totalExpense: res.data.totalExpense,
           totalIncome: res.data.totalIncome,
-        });
-        setData(mergedData);
+        };
         finalDataState = mergedData.length === 0 ? 'empty' : 'online';
 
         if (!selectedTypeId) {
@@ -372,21 +374,35 @@ const List = () => {
           });
         }
       } else if (!hasCache) {
-        finalDataState = 'error';
+        // 没缓存且线上失败：先以 pendingOnly 回填 UI
+        nextData = mergePendingBills([], pendingBills);
+        finalDataState = nextData.length === 0 ? 'error' : 'offline-cached';
       }
     } catch (error) {
       console.error('Fetch error:', error);
 
+      // 如果没缓存：只用待同步账单回填 UI（避免空白/报错闪烁）
       if (!hasCache) {
-        const pendingOnly = mergePendingBills([], pendingBills);
-        if (pendingOnly.length > 0) {
-          setData(pendingOnly);
-          finalDataState = 'offline-cached';
-        } else {
-          finalDataState = 'error';
-        }
+        nextData = mergePendingBills([], pendingBills);
+        finalDataState = nextData.length > 0 ? 'offline-cached' : 'error';
       }
     } finally {
+      // 兜底计算统计（在没拿到 summary 时）
+      if (!nextSummary) {
+        const computed = nextData.reduce(
+          (acc, group) => {
+            acc.totalExpense += group.total;
+            acc.totalIncome += group.income;
+            return acc;
+          },
+          { totalExpense: 0, totalIncome: 0 }
+        );
+        nextSummary = computed;
+      }
+
+      // 最终只更新一次，避免 UI 频繁跳动
+      setSummary(nextSummary);
+      setData(nextData);
       setDataState(finalDataState);
       loadingRef.current = false;
       setRefreshing(false);
