@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,8 @@ import {
   Alert,
   ActivityIndicator,
   ToastAndroid,
-  Platform
+  Platform,
+  Animated
 } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -31,11 +32,37 @@ export interface BillItemProps {
   syncStatus?: 'syncing' | 'synced' | 'failed';
   localId?: string;
   onRetry?: (localId: string) => void;
+  isHighlighted?: boolean;
 }
 
-const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, payType, onDeleteSuccess, onDelete, onEdit, isLast, syncStatus, localId, onRetry }) => {
+const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, payType, onDeleteSuccess, onDelete, onEdit, isLast, syncStatus, localId, onRetry, isHighlighted }) => {
   const [deleting, setDeleting] = useState(false);
-  const swipeableRef = React.useRef<Swipeable>(null);
+  const swipeableRef = useRef<Swipeable>(null);
+  const flashAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (isHighlighted) {
+      flashAnim.setValue(0);
+      // 每秒闪 1 次（500ms 亮，500ms 灭），持续 3 秒（共 3 次循环）
+      Animated.sequence([
+        Animated.timing(flashAnim, { toValue: 1, duration: 500, useNativeDriver: false }),
+        Animated.timing(flashAnim, { toValue: 0, duration: 500, useNativeDriver: false }),
+        Animated.timing(flashAnim, { toValue: 1, duration: 500, useNativeDriver: false }),
+        Animated.timing(flashAnim, { toValue: 0, duration: 500, useNativeDriver: false }),
+        Animated.timing(flashAnim, { toValue: 1, duration: 500, useNativeDriver: false }),
+        Animated.timing(flashAnim, { toValue: 0, duration: 500, useNativeDriver: false })
+      ]).start();
+    } else {
+      flashAnim.setValue(0);
+    }
+  }, [isHighlighted, flashAnim]);
+
+  const animatedStyle = {
+    backgroundColor: flashAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [theme.colors.background.paper, theme.colors.background.primaryLight,] // Using a semi-transparent primary color
+    })
+  };
 
   // 根据 payType 判断颜色：1=支出（绿色），2=收入（红色）
   const amountColor = payType === 1 ? theme.colors.status.success : theme.colors.status.error;
@@ -167,7 +194,7 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, pay
       renderRightActions={renderRightActions}
       overshootRight={false}
     >
-      <View style={[styles.item, isLast && styles.lastItem]}>
+      <Animated.View style={[styles.item, isLast && styles.lastItem, animatedStyle]}>
         <View style={styles.itemIconWrap}>
           <CategoryIcon icon={icon} size={22} />
         </View>
@@ -177,7 +204,7 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, pay
         </View>
         {renderSyncIndicator()}
         <Text style={[styles.itemAmount, { color: amountColor }]}>{ payType !== 1 && '+' }{amount.toFixed(2)}</Text>
-      </View>
+      </Animated.View>
     </Swipeable>
   );
 };

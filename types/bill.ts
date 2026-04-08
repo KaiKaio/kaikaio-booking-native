@@ -16,6 +16,7 @@ export interface BillDetail {
   type_name: string;
   remark: string;
   create_time: string;
+  client_local_id?: string;
 }
 
 export interface DailyBill {

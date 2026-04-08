@@ -54,11 +54,17 @@ const List = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<DailyBillGroup[]>([]);
   const [currentDate, setCurrentDate] = useState('');
+  const currentDateRef = useRef(currentDate);
+  useEffect(() => {
+    currentDateRef.current = currentDate;
+  }, [currentDate]);
   const [showPicker, setShowPicker] = useState(false);
   const loadingRef = useRef(false);
   const [summary, setSummary] = useState({ totalExpense: 0, totalIncome: 0 });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dataState, setDataState] = useState<DataState>('online');
+  const [highlightedLocalId, setHighlightedLocalId] = useState<string | null>(null);
+  const flatListRef = useRef<FlatList>(null);
   
   const billFormRef = useRef<BillFormRef>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -559,6 +565,7 @@ const List = () => {
       date: String(bill.date),
       payType,
       rawAmount: amountAbs,
+      localId: bill.client_local_id || undefined, // 关键：从服务端保留 localId，防止被替换后丢失高亮匹配
     };
   }, [getCategoryIcon]);
 
@@ -579,6 +586,11 @@ const List = () => {
 
       const targetDate = formatBillDate(String(nextItem.date));
       if (!targetDate) return groups;
+
+      const targetMonth = targetDate.substring(0, 7);
+      if (currentDateRef.current && targetMonth !== currentDateRef.current) {
+        return groups;
+      }
 
       const targetIndex = groups.findIndex(group => group.date === targetDate);
       if (targetIndex >= 0) {
@@ -725,6 +737,19 @@ const List = () => {
     }
   };
 
+  useEffect(() => {
+    if (highlightedLocalId && data.length > 0) {
+      const groupIndex = data.findIndex(g => g.items.some(i => i.localId === highlightedLocalId));
+      if (groupIndex >= 0) {
+        setTimeout(() => {
+          flatListRef.current?.scrollToIndex({ index: groupIndex, animated: true, viewPosition: 0.5 });
+          // Ensure we don't clear highlightedId before the animation has a chance to play fully (3 seconds)
+          setTimeout(() => setHighlightedLocalId(null), 3500);
+        }, 500);
+      }
+    }
+  }, [highlightedLocalId, data]);
+
   const handleBillSubmit = async (billData: BillData) => {
     // 防止重复提交
     if (isSubmitting) return;
@@ -797,51 +822,92 @@ const List = () => {
     const localBill = optimisticAddBill(billData);
     const shouldShowInCurrentFilter = !selectedTypeId || selectedTypeId === localBill.typeId;
 
-    if (shouldShowInCurrentFilter) {
-      upsertLocalDataItem(localBill, item => item.localId === localBill.localId);
-    }
+    const billDateStr = formatBillDate(billData.date);
+    const billMonth = billDateStr.substring(0, 7);
+    const isCurrentMonth = billMonth === currentDate;
 
-    // 将本地账单保存到 Storage，以便离线时展示和后续重试
-    upsertPendingBillToStorage(localBill).catch(error => {
-      console.error('Failed to persist local bill', error);
-    });
+    const executeAddBill = async (updateOldUI: boolean, jumpToMonth?: string) => {
+      if (shouldShowInCurrentFilter && updateOldUI) {
+        upsertLocalDataItem(localBill, item => item.localId === localBill.localId);
+        // 更新统计
+        setSummary(prev => ({
+          totalExpense: billData.type === 1 ? prev.totalExpense + billData.amount : prev.totalExpense,
+          totalIncome: billData.type === 2 ? prev.totalIncome + billData.amount : prev.totalIncome,
+        }));
+      }
 
-    // 更新统计
-    setSummary(prev => ({
-      totalExpense: billData.type === 1 ? prev.totalExpense + billData.amount : prev.totalExpense,
-      totalIncome: billData.type === 2 ? prev.totalIncome + billData.amount : prev.totalIncome,
-    }));
+      try {
+        // 将本地账单保存到 Storage，以便离线时展示和后续重试
+        await upsertPendingBillToStorage(localBill);
+      } catch (error) {
+        console.error('Failed to persist local bill', error);
+      }
 
-    try {
-      const localId = localBill.localId!;
-      const res = await addBill({ ...params, client_local_id: localBill.localId });
-      if (cancelledLocalIdsRef.current.has(localId)) return;
+      if (jumpToMonth) {
+        setCurrentDate(jumpToMonth);
+        currentDateRef.current = jumpToMonth; // 同步更新 ref 避免接口响应过快拿到老月份
+        AsyncStorage.setItem('lastSelectedDate', jumpToMonth).catch(e => console.error('Failed to save date', e));
+        setHighlightedLocalId(localBill.localId!);
+      }
 
-      if (res.code === 200) {
+      try {
+        const localId = localBill.localId!;
+        const res = await addBill({ ...params, client_local_id: localBill.localId });
         if (cancelledLocalIdsRef.current.has(localId)) return;
-        await updateLocalBillStatus(localId, 'synced');
 
-        if (res.data) {
-          const matchedLocalId = res.data.client_local_id || localBill.localId;
-          const serverId = res.data.id;
-          if (!cancelledLocalIdsRef.current.has(localId)) {
-            upsertLocalDataItem(
-              buildSubItemFromServer(res.data),
-              item => item.localId === matchedLocalId || item.localId === localBill.localId || item.id === serverId
-            );
+        if (res.code === 200) {
+          if (cancelledLocalIdsRef.current.has(localId)) return;
+          await updateLocalBillStatus(localId, 'synced');
+
+          if (res.data) {
+            const matchedLocalId = res.data.client_local_id || localBill.localId;
+            const serverId = res.data.id;
+            if (!cancelledLocalIdsRef.current.has(localId)) {
+              // 避免这里触发重新渲染导致原组件销毁：如果 localId 和原本一致，直接复用
+              upsertLocalDataItem(
+                buildSubItemFromServer(res.data),
+                item => item.localId === matchedLocalId || item.localId === localBill.localId || item.id === serverId
+              );
+            }
           }
+        } else {
+          if (cancelledLocalIdsRef.current.has(localId)) return;
+          await updateLocalBillStatus(localId, 'failed');
+          showToast('账单保存失败,点击可重试');
         }
-      } else {
-        if (cancelledLocalIdsRef.current.has(localId)) return;
-        await updateLocalBillStatus(localId, 'failed');
+      } catch (error) {
+        if (cancelledLocalIdsRef.current.has(localBill.localId!)) return;
+        await updateLocalBillStatus(localBill.localId!, 'failed');
         showToast('账单保存失败,点击可重试');
       }
-    } catch (error) {
-      if (cancelledLocalIdsRef.current.has(localBill.localId!)) return;
-      await updateLocalBillStatus(localBill.localId!, 'failed');
-      showToast('账单保存失败,点击可重试');
+    };
+
+    if (!isCurrentMonth) {
+      Alert.alert(
+        '提示',
+        '该账单不在当前月份，是否跳转到该月份？',
+        [
+          {
+            text: '取消',
+            style: 'cancel',
+            onPress: () => {
+              executeAddBill(false);
+            }
+          },
+          {
+            text: '跳转',
+            onPress: () => {
+              executeAddBill(false, billMonth);
+            }
+          }
+        ]
+      );
+      setEditingId(null);
+      return;
     }
 
+    setHighlightedLocalId(localBill.localId!);
+    executeAddBill(true);
     setEditingId(null);
   };
 
@@ -902,6 +968,7 @@ const List = () => {
         <BillItem
           key={subItem.localId || subItem.id}
           {...subItem}
+          isHighlighted={subItem.localId === highlightedLocalId}
           onDeleteSuccess={onRefresh}
           onDelete={handleDeleteOptimisticBill}
           onEdit={handleEdit}
@@ -957,12 +1024,19 @@ const List = () => {
       </View>
       {/* 账单列表 */}
       <FlatList
+        ref={flatListRef}
         style={styles.scroll}
         contentContainerStyle={[styles.flatListContent, { paddingBottom: 80 + insets.bottom }]}
         data={data}
         renderItem={renderBillItem}
         keyExtractor={(item) => item.date}
         showsVerticalScrollIndicator={false}
+        onScrollToIndexFailed={(info) => {
+          const wait = new Promise(resolve => setTimeout(resolve, 500));
+          wait.then(() => {
+            flatListRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.5 });
+          });
+        }}
         onRefresh={onRefresh}
         refreshing={refreshing}
         ListEmptyComponent={!refreshing ? (
