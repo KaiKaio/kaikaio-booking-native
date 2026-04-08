@@ -23,6 +23,8 @@ export interface BillItemProps {
   amount: number;
   payType?: number;  // 1=支出, 2=收入
   onDeleteSuccess?: () => void;
+  // 删除回调：用于处理“本地乐观数据”删除（避免误调用真实删除接口）
+  onDelete?: (payload: { id: number; localId?: string; syncStatus?: 'syncing' | 'synced' | 'failed' }) => Promise<void> | void;
   onEdit?: (id: number) => void;
   isLast?: boolean;
   // 同步状态相关
@@ -31,7 +33,7 @@ export interface BillItemProps {
   onRetry?: (localId: string) => void;
 }
 
-const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, payType, onDeleteSuccess, onEdit, isLast, syncStatus, localId, onRetry }) => {
+const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, payType, onDeleteSuccess, onDelete, onEdit, isLast, syncStatus, localId, onRetry }) => {
   const [deleting, setDeleting] = useState(false);
   const swipeableRef = React.useRef<Swipeable>(null);
 
@@ -41,6 +43,18 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, pay
   const handleDelete = async () => {
     setDeleting(true);
     try {
+      // 乐观更新（本地数据）直接走本地删除逻辑，避免错误调用真实删除接口
+      if (localId && id < 0) {
+        if (!onDelete) {
+          showToast('本地删除未配置，请重试');
+          return;
+        }
+        await onDelete({ id, localId, syncStatus });
+        // 仅关闭滑动组件：本地列表由父组件更新
+        swipeableRef.current?.close();
+        return;
+      }
+
       const res = await deleteBill(id);
       if (res.code === 200) {
         // Close swipeable

@@ -66,6 +66,10 @@ const List = () => {
   // 生成唯一本地ID
   const generateLocalId = () => `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+  // 用于“取消乐观删除”：当用户删除了本地未同步成功的数据，
+  // 后续 addBill 的异步回写不应再把它插回列表。
+  const cancelledLocalIdsRef = useRef<Set<string>>(new Set());
+
   const [orderBy, setOrderBy] = useState<'ASC' | 'DESC'>('DESC');
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
@@ -185,10 +189,20 @@ const List = () => {
     }
   }, []);
 
+  // 本地乐观数据删除时：从待同步列表移除
+  const removePendingBillFromStorage = useCallback(async (localId: string) => {
+    const pendingBills = await loadPendingBillsFromStorage();
+    const nextPendingBills = pendingBills.filter(item => item.localId !== localId);
+    await savePendingBillsToStorage(nextPendingBills);
+  }, [loadPendingBillsFromStorage, savePendingBillsToStorage]);
+
   // 新增/更新待同步账单到 Storage
   const upsertPendingBillToStorage = useCallback(async (bill: SubItem) => {
     // 只有本地账单才需要处理
     if (!bill.localId) return;
+
+    // 已取消的本地条目不应写回待同步队列
+    if (cancelledLocalIdsRef.current.has(bill.localId)) return;
 
     // 先加载当前待同步账单列表，过滤掉当前账单（如果已存在）
     const pendingBills = await loadPendingBillsFromStorage();
@@ -198,6 +212,7 @@ const List = () => {
 
     // 如果是新增或更新操作，才将账单添加到列表中；如果是 synced，则不添加（相当于删除）
     if (bill.syncStatus === 'failed' || bill.syncStatus === 'syncing') {
+      if (cancelledLocalIdsRef.current.has(bill.localId)) return;
       nextPendingBills.unshift(bill);
     }
 
@@ -215,8 +230,7 @@ const List = () => {
     } else {
       pendingBills[targetIndex] = {
         ...pendingBills[targetIndex],
-        syncStatus: status,
-        ...(status === 'failed' ? {} : { retryParams: undefined })
+        syncStatus: status
       };
     }
 
@@ -584,7 +598,7 @@ const List = () => {
             return {
               ...item,
               syncStatus: status,
-              ...(status === 'failed' ? {} : { retryParams: undefined })
+              ...(status === 'synced' ? { retryParams: undefined } : {})
             };
           }
           return item;
@@ -601,6 +615,8 @@ const List = () => {
 
   // 重试同步
   const handleRetrySync = async (localId: string) => {
+    if (cancelledLocalIdsRef.current.has(localId)) return;
+
     // 找到对应的账单项
     let targetItem: SubItem | undefined;
     for (const group of data) {
@@ -610,7 +626,7 @@ const List = () => {
         break;
       }
     }
-
+    console.log(targetItem?.retryParams, '-> targetItem')
     if (!targetItem?.retryParams) return;
 
     // 更新状态为同步中
@@ -618,18 +634,23 @@ const List = () => {
 
     try {
       const res = await addBill(targetItem.retryParams);
+      if (cancelledLocalIdsRef.current.has(localId)) return;
+
       if (res.code === 200) {
         await updateLocalBillStatus(localId, 'synced');
         if (res.data) {
           const serverId = res.data.id;
+          if (cancelledLocalIdsRef.current.has(localId)) return;
           upsertLocalDataItem(buildSubItemFromServer(res.data), item => item.localId === localId || item.id === serverId);
         }
         showToast('同步成功');
       } else {
+        if (cancelledLocalIdsRef.current.has(localId)) return;
         await updateLocalBillStatus(localId, 'failed');
         showToast('同步失败,请重试');
       }
     } catch (error) {
+      if (cancelledLocalIdsRef.current.has(localId)) return;
       await updateLocalBillStatus(localId, 'failed');
       showToast('同步失败,请重试');
     }
@@ -646,20 +667,27 @@ const List = () => {
     for (const bill of failedBills) {
       if (!bill.localId || !bill.retryParams) continue;
 
+      if (cancelledLocalIdsRef.current.has(bill.localId)) continue;
+
       await updateLocalBillStatus(bill.localId, 'syncing');
       try {
         const res = await addBill(bill.retryParams);
+        if (cancelledLocalIdsRef.current.has(bill.localId)) continue;
+
         if (res.code === 200) {
           await updateLocalBillStatus(bill.localId, 'synced');
           if (res.data) {
             const serverId = res.data.id;
+            if (cancelledLocalIdsRef.current.has(bill.localId)) continue;
             upsertLocalDataItem(buildSubItemFromServer(res.data), item => item.localId === bill.localId || item.id === serverId);
           }
           hasSynced = true;
         } else {
+          if (cancelledLocalIdsRef.current.has(bill.localId)) continue;
           await updateLocalBillStatus(bill.localId, 'failed');
         }
       } catch (error) {
+        if (cancelledLocalIdsRef.current.has(bill.localId)) continue;
         await updateLocalBillStatus(bill.localId, 'failed');
       }
     }
@@ -769,26 +797,84 @@ const List = () => {
     }));
 
     try {
+      const localId = localBill.localId!;
       const res = await addBill({ ...params, client_local_id: localBill.localId });
+      if (cancelledLocalIdsRef.current.has(localId)) return;
+
       if (res.code === 200) {
-        await updateLocalBillStatus(localBill.localId!, 'synced');
+        if (cancelledLocalIdsRef.current.has(localId)) return;
+        await updateLocalBillStatus(localId, 'synced');
 
         if (res.data) {
           const matchedLocalId = res.data.client_local_id || localBill.localId;
           const serverId = res.data.id;
-          upsertLocalDataItem(buildSubItemFromServer(res.data), item => item.localId === matchedLocalId || item.localId === localBill.localId || item.id === serverId);
+          if (!cancelledLocalIdsRef.current.has(localId)) {
+            upsertLocalDataItem(
+              buildSubItemFromServer(res.data),
+              item => item.localId === matchedLocalId || item.localId === localBill.localId || item.id === serverId
+            );
+          }
         }
       } else {
-        await updateLocalBillStatus(localBill.localId!, 'failed');
+        if (cancelledLocalIdsRef.current.has(localId)) return;
+        await updateLocalBillStatus(localId, 'failed');
         showToast('账单保存失败,点击可重试');
       }
     } catch (error) {
+      if (cancelledLocalIdsRef.current.has(localBill.localId!)) return;
       await updateLocalBillStatus(localBill.localId!, 'failed');
       showToast('账单保存失败,点击可重试');
     }
 
     setEditingId(null);
   };
+
+  // 乐观新增（本地 localId）删除：从本地列表 + 待同步列表彻底移除
+  const handleDeleteOptimisticBill = useCallback(
+    async ({ localId }: { id: number; localId?: string }) => {
+      if (!localId) return;
+
+      // 标记取消：避免后续 addBill 回写把它插回列表
+      cancelledLocalIdsRef.current.add(localId);
+
+      // 从待同步队列移除
+      await removePendingBillFromStorage(localId);
+
+      // 从当前 UI 列表移除
+      setData(prevData => {
+        let removedItem: SubItem | undefined;
+
+        const nextGroups: DailyBillGroup[] = prevData
+          .map(group => {
+            const filteredItems = group.items.filter(item => {
+              if (item.localId === localId) {
+                removedItem = item;
+                return false;
+              }
+              return true;
+            });
+
+            if (filteredItems.length === 0) return null;
+            return recalculateGroup(group.date, filteredItems);
+          })
+          .filter((g): g is DailyBillGroup => g !== null);
+
+        if (removedItem) {
+          const removedPayType = removedItem.payType;
+          const amountAbs = Math.abs(removedItem.rawAmount ?? removedItem.amount);
+
+          // 提前把值“拍扁”到闭包里，避免 TS 在 setSummary 回调中认为 removedItem 可能为 undefined
+          setSummary(prev => ({
+            totalExpense: prev.totalExpense - (removedPayType === 1 ? amountAbs : 0),
+            totalIncome: prev.totalIncome - (removedPayType === 2 ? amountAbs : 0),
+          }));
+        }
+
+        return nextGroups;
+      });
+    },
+    [recalculateGroup, removePendingBillFromStorage]
+  );
 
   const renderBillItem = ({ item }: { item: DailyBillGroup }) => (
     <View style={styles.section}>
@@ -801,6 +887,7 @@ const List = () => {
           key={subItem.localId || subItem.id}
           {...subItem}
           onDeleteSuccess={onRefresh}
+          onDelete={handleDeleteOptimisticBill}
           onEdit={handleEdit}
           onRetry={handleRetrySync}
           isLast={index === item.items.length - 1}
