@@ -17,9 +17,9 @@ import type { KeyboardEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCategory } from '../context/CategoryContext';
-import IconFont from '../components/IconFont'; // 根据实际路径引入
 import CategoryIcon from './CategoryIcon';
 import DatePicker from './DatePicker';
+import Keypad from './Keypad';
 import { theme } from '@/theme';
 import { navigate } from '../utils/navigationRef';
 
@@ -163,7 +163,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
         const defaultCat = categories.find(c => c.type === activeType) || categories[0];
         setCategory(defaultCat);
         setRemark('');
-        
+
         // Try to load last used date
          AsyncStorage.getItem('LAST_BILL_DATE').then(lastDate => {
            if (lastDate) {
@@ -176,7 +176,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
                setDate(new Date(year, month - 1, day));
                return;
              }
-             
+
              const d = new Date(lastDate);
              if (!isNaN(d.getTime())) {
                setDate(d);
@@ -191,33 +191,6 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
       setShowDatePicker(false);
     }
   }, [visible, editData, categories, activeType]);
-
-  const handlePressKey = (key: string) => {
-    if (key === 'delete') {
-      setAmountStr(prev => {
-        if (prev.length <= 1) return '0';
-        return prev.slice(0, -1);
-      });
-      return;
-    }
-
-    if (key === '.') {
-      if (amountStr.includes('.')) return;
-      setAmountStr(prev => prev + '.');
-      return;
-    }
-
-    // Number
-    setAmountStr(prev => {
-      if (prev === '0') return key;
-      // Limit decimal places to 2
-      if (prev.includes('.')) {
-        const [, decimal] = prev.split('.');
-        if (decimal && decimal.length >= 2) return prev;
-      }
-      return prev + key;
-    });
-  };
 
   const handleSubmit = () => {
     const amount = parseFloat(amountStr);
@@ -243,23 +216,6 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
     };
     onSubmit?.(data);
     setVisible(false);
-  };
-
-  const renderKeypad = () => {
-    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'delete'];
-    return (
-      <View style={styles.keypad}>
-        {keys.map(key => (
-          <TouchableOpacity
-            key={key}
-            style={styles.key}
-            onPress={() => handlePressKey(key)}
-          >
-            <Text style={styles.keyText}>{key === 'delete' ?  <IconFont name="Backspace" size={30} color="#000" /> : key}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    );
   };
 
   // Date picker was extracted to components/DatePicker.tsx
@@ -424,7 +380,9 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
                 onClose={() => setShowDatePicker(false)}
                 onSwitchToKeypad={() => setShowDatePicker(false)}
               />
-            ) : renderKeypad()}
+            ) : (
+              <Keypad amountStr={amountStr} onChange={setAmountStr} />
+            )}
           </View>
 
         </Animated.View>
@@ -589,21 +547,6 @@ const styles = StyleSheet.create({
   bottomAreaFocused: {
     display: 'none',
   },
-  keypad: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  key: {
-    width: '33.33%',
-    height: '25%', // 4 rows
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 0.5,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background.paper,
-  },
-  keyText: { fontSize: 24, color: theme.colors.text.primary },
 
   // Date Picker Styles
   datePickerContainer: {
