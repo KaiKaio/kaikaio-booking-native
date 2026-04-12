@@ -43,6 +43,16 @@ const Keypad: React.FC<KeypadProps> = ({ amountStr, onChange }) => {
   };
 
   const handlePressKey = (key: string) => {
+    if (key === '清零') {
+      // 重置所有状态
+      setDisplayValue('0');
+      setPendingValue(null);
+      setOperator(null);
+      setIsNewInput(false);
+      onChange('0');
+      return;
+    }
+
     if (key === 'delete') {
       updateDisplay((prev: string) => {
         if (prev.length <= 1) return '0';
@@ -123,7 +133,7 @@ const Keypad: React.FC<KeypadProps> = ({ amountStr, onChange }) => {
     ['1', '2', '3', '+'],
     ['4', '5', '6', '-'],
     ['7', '8', '9', '='],
-    ['.', '0', 'delete', '']
+    ['.', '0', 'delete', '清零'],
   ];
 
   return (
@@ -168,7 +178,7 @@ const styles = StyleSheet.create({
   operatorKey: {
     backgroundColor: theme.colors.background.neutral,
   },
-  keyText: { fontSize: 24, color: theme.colors.text.primary },
+  keyText: { fontSize: 20, color: theme.colors.text.primary, fontWeight: 400 },
   operatorKeyText: {
     color: theme.colors.primary,
     fontWeight: 'bold',
