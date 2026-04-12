@@ -37,7 +37,7 @@ export interface BillData {
   categoryName: string;
   date: string; // YYYY-MM-DD
   remark: string;
-  type: number; // 1: expense, 2: income
+  type: '1' | '2'; // '1': expense, '2': income
 }
 
 const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
@@ -54,7 +54,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   const [date, setDate] = useState(new Date());
   const [remark, setRemark] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [activeType, setActiveType] = useState<1 | 2>(1); // 1: expense, 2: income
+  const [activeType, setActiveType] = useState<'1' | '2'>('1'); // '1': expense, '2': income
 
   const [isRemarkInputFocused, setIsRemarkInputFocused] = useState(false);
 
@@ -145,6 +145,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
 
   // Filter categories by active type
   const filteredCategories = categories.filter(cat => cat.type === activeType);
+  console.log('Filtered categories for type', activeType, categories);
 
   // Reset form when opening
   useEffect(() => {
@@ -152,9 +153,9 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
       if (editData) {
         setAmountStr(editData.amount.toString());
         // Find category by ID if possible, otherwise name
-        const cat = categories.find(c => c.id === editData.category || c.name === editData.categoryName) || categories[0];
+        const cat = categories.find(c => `${c.id}` === editData.category || c.name === editData.categoryName) || categories[0];
         setCategory(cat);
-        setActiveType(cat.type as 1 | 2);
+        setActiveType(cat.type);
         setDate(new Date(editData.date));
         setRemark(editData.remark);
       } else {
@@ -208,7 +209,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
 
     const data: BillData = {
       amount,
-      category: category.id,
+      category: `${category.id}`,
       categoryName: category.name,
       date: dateStr,
       remark,
@@ -284,24 +285,24 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
             {/* Type Tab */}
             <View style={styles.typeTabContainer}>
               <TouchableOpacity 
-                style={[styles.typeTab, activeType === 1 && styles.typeTabActive]}
+                style={[styles.typeTab, activeType === '1' && styles.typeTabActive]}
                 onPress={() => {
-                  setActiveType(1);
-                  const firstExpense = categories.find(c => c.type === 1);
+                  setActiveType('1');
+                  const firstExpense = categories.find(c => c.type === '1');
                   if (firstExpense) setCategory(firstExpense);
                 }}
               >
-                <Text style={[styles.typeTabText, activeType === 1 && styles.typeTabTextActive]}>支出</Text>
+                <Text style={[styles.typeTabText, activeType === '1' && styles.typeTabTextActive]}>支出</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.typeTab, activeType === 2 && styles.typeTabActive]}
+                style={[styles.typeTab, activeType === '2' && styles.typeTabActive]}
                 onPress={() => {
-                  setActiveType(2);
-                  const firstIncome = categories.find(c => c.type === 2);
+                  setActiveType('2');
+                  const firstIncome = categories.find(c => c.type === '2');
                   if (firstIncome) setCategory(firstIncome);
                 }}
               >
-                <Text style={[styles.typeTabText, activeType === 2 && styles.typeTabTextActive]}>收入</Text>
+                <Text style={[styles.typeTabText, activeType === '2' && styles.typeTabTextActive]}>收入</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -320,7 +321,11 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
                     setCategory(cat);
                   }}
                 >
-                  <View style={[styles.catIconWrap, category?.id === cat.id && styles.selectedCatIconWrap]}>
+                  <View style={[
+                    styles.catIconWrap,
+                    cat?.background_color && { backgroundColor: cat.background_color },
+                    category?.id === cat.id && styles.selectedCatIconWrap
+                  ]}>
                     <CategoryIcon icon={cat.icon} size={22} color={category?.id === cat.id ? theme.colors.text.inverse : theme.colors.text.primary} />
                   </View>
                   <Text style={[styles.catName, category?.id === cat.id && styles.selectedCatName]}>{cat.name}</Text>

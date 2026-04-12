@@ -1,5 +1,6 @@
 import request from '@/request';
 import { Category } from '../types/category';
+import { ApiResponse } from '../types/common';
 
 // 创建分类
 export async function createCategory(data: Omit<Category, 'id' | 'user_id'>): Promise<Category> {
@@ -42,4 +43,11 @@ export async function deleteCategory(data: { id: string }): Promise<void> {
   
   // 模拟
   // console.log('Delete category:', id);
+}
+
+// 获取分类列表
+export async function listCategories(): Promise<ApiResponse<{
+  list: Category[];
+}>> {
+  return request('/api/type/list', { method: 'GET' });
 }

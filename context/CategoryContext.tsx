@@ -1,14 +1,14 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Category } from '../types/category';
-import request from '../request';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LoadingScreen } from '../components/LoadingScreen';
+import { listCategories } from '@/services/category'
 import { CATEGORIES_CACHE_STORAGE_KEY, TOKEN_STORAGE_KEY } from '@/utils/storage';
 
 interface CategoryContextType {
   categories: Category[];
   getCategoryIcon: (name: string) => string;
-  getCategoryName: (id: string) => string;
+  getCategoryName: (id: number) => string;
   refreshCategories: () => Promise<void>;
   resetCategories: () => void;
   isReady: boolean;
@@ -31,13 +31,16 @@ export const CategoryProvider: React.FC<{ children: ReactNode }> = ({ children }
         return;
       }
 
-      const res = await request('/api/type/list', { method: 'GET' });
-      if (res.code === 200 && res.data && res.data.list) {
-        const mappedList = res.data.list.map((item: any) => ({
-          id: String(item.id),
+      const res = await listCategories();
+      const list = res?.data?.list || [];
+      if (res.code === 200 && list?.length) {
+        const mappedList = list.map((item: Category) => ({
+          id: item.id,
           name: item.name,
-          type: Number(item.type),
-          icon: item.icon
+          type: item.type,
+          background_color: item?.background_color,
+          icon: item.icon,
+          user_id: item.user_id,
         }));
         setCategories(mappedList);
         // 缓存到本地存储
@@ -84,7 +87,7 @@ export const CategoryProvider: React.FC<{ children: ReactNode }> = ({ children }
     return category ? category.icon : '💰';
   };
 
-  const getCategoryName = (id: string) => {
+  const getCategoryName = (id: number) => {
     const category = categories.find(c => c.id === id);
     return category ? category.name : '其他';
   };
