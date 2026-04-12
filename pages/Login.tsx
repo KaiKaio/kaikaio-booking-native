@@ -37,6 +37,8 @@ const Login = () => {
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [publicKeyReady, setPublicKeyReady] = useState(false);
+  const [_publicKeyLoading, setPublicKeyLoading] = useState(true);
 
   const isAccountValid = account.trim().length > 0;
   const isPasswordValid = password.length > 0;
@@ -44,19 +46,56 @@ const Login = () => {
   const isFormValid = isAccountValid && isPasswordValid && isConfirmPasswordValid;
 
   useEffect(() => {
-    const fetchPublicKey = async () => {
+    let mounted = true;
+
+    const fetchPublicKey = async (retryCount = 0) => {
+      const maxRetries = 3;
+      setPublicKeyLoading(true);
+      
       try {
         const data = await request(PUBLIC_KEY_URL, { method: 'GET' });
-        if (data?.msg) {
+        if (data?.msg && mounted) {
           encrypt.setPublicKey(data.msg);
-        } else {
-          Alert.alert('获取公钥失败', data?.message || '未获取到公钥');
+          setPublicKeyReady(true);
+          setPublicKeyLoading(false);
+        } else if (mounted) {
+          throw new Error(data?.message || '未获取到公钥');
         }
       } catch (err) {
+        if (!mounted) return;
+        
         const errorMsg = err instanceof Error ? err.message : '网络错误';
-        Alert.alert('获取公钥失败', errorMsg);
+        console.warn(`获取公钥失败 (尝试 ${retryCount + 1}/${maxRetries}):`, errorMsg);
+        
+        if (retryCount < maxRetries) {
+          // 指数退避重试：1s, 2s, 4s
+          const delay = Math.pow(2, retryCount) * 1000;
+          setTimeout(() => {
+            if (mounted) {
+              fetchPublicKey(retryCount + 1);
+            }
+          }, delay);
+        } else {
+          setPublicKeyReady(false);
+          setPublicKeyLoading(false);
+          Alert.alert(
+            '获取公钥失败',
+            '网络连接异常，无法获取加密密钥。您可以稍后重试，或检查网络后重新登录。',
+            [
+              { 
+                text: '重试', 
+                onPress: () => fetchPublicKey(0) 
+              },
+              { 
+                text: '取消', 
+                style: 'cancel' 
+              }
+            ]
+          );
+        }
       }
     };
+    
     fetchPublicKey();
 
     // Load saved credentials
@@ -74,13 +113,69 @@ const Login = () => {
       }
     };
     loadCredentials();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  // 确保公钥可用的辅助函数
+  const ensurePublicKey = async (): Promise<boolean> => {
+    if (publicKeyReady) return true;
+    
+    return new Promise((resolve) => {
+      const fetchWithRetry = async (retryCount = 0) => {
+        const maxRetries = 3;
+        setPublicKeyLoading(true);
+        
+        try {
+          const data = await request(PUBLIC_KEY_URL, { method: 'GET' });
+          if (data?.msg) {
+            encrypt.setPublicKey(data.msg);
+            setPublicKeyReady(true);
+            setPublicKeyLoading(false);
+            resolve(true);
+          } else {
+            throw new Error(data?.message || '未获取到公钥');
+          }
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : '网络错误';
+          console.warn(`获取公钥失败 (尝试 ${retryCount + 1}/${maxRetries}):`, errorMsg);
+          
+          if (retryCount < maxRetries) {
+            const delay = Math.pow(2, retryCount) * 1000;
+            setTimeout(() => fetchWithRetry(retryCount + 1), delay);
+          } else {
+            setPublicKeyLoading(false);
+            Alert.alert('获取公钥失败', errorMsg);
+            resolve(false);
+          }
+        }
+      };
+      
+      fetchWithRetry(0);
+    });
+  };
 
   const handleLogin = async () => {
     if (!isFormValid) {
       console.log('Form is not valid')
       return;
     }
+    
+    // 如果公钥未就绪，先获取公钥
+    if (!publicKeyReady) {
+      setLoading(true);
+      const success = await ensurePublicKey();
+      setLoading(false);
+      
+      if (!success) {
+        return; // 公钥获取失败，终止登录流程
+      }
+      
+      // 公钥获取成功，继续登录
+    }
+    
     setLoading(true);
     try {
       const data = await request(LOGIN_URL, {
@@ -135,6 +230,20 @@ const Login = () => {
       Alert.alert('注册', '两次密码输入不一致');
       return;
     }
+    
+    // 如果公钥未就绪，先获取公钥
+    if (!publicKeyReady) {
+      setLoading(true);
+      const success = await ensurePublicKey();
+      setLoading(false);
+      
+      if (!success) {
+        return; // 公钥获取失败，终止注册流程
+      }
+      
+      // 公钥获取成功，继续注册
+    }
+    
     setLoading(true);
     try {
       const res: { data: { user_id: string; msg: string } } = await request(REGISTER_URL, {
@@ -285,7 +394,11 @@ const Login = () => {
           activeOpacity={isFormValid && !loading ? 0.7 : 1}
           disabled={!isFormValid || loading}
         >
-          <Text style={styles.buttonText}>{loading ? (isRegister ? '注册中...' : '登录中...') : (isRegister ? '注册' : '登录')}</Text>
+          <Text style={styles.buttonText}>
+            {loading 
+              ? (isRegister ? '注册中...' : '登录中...') 
+              : (isRegister ? '注册' : '登录')}
+          </Text>
         </TouchableOpacity>
       
         <TouchableOpacity
