@@ -2,11 +2,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from './config';
 import { navigate } from './utils/navigationRef';
-import { clearUserLocalData, TOKEN_STORAGE_KEY } from './utils/storage';
+import {
+  TOKEN_STORAGE_KEY,
+  CATEGORIES_CACHE_STORAGE_KEY,
+  LAST_SELECTED_DATE_STORAGE_KEY,
+  // ACTIVE_ACCOUNT_STORAGE_KEY,
+  USER_CREDENTIALS_STORAGE_KEY,
+  BILL_MONTH_CACHE_PREFIX,
+} from './utils/storage';
 
 export default async function request(url: string, options: any = {}) {
   const token = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
-  
+
   const defaultHeaders = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: token } : {}),
@@ -16,9 +23,9 @@ export default async function request(url: string, options: any = {}) {
     ...options,
     headers: defaultHeaders,
   };
-  
+
   const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`;
-  
+
   const timeout = options.timeout || 5000; // 默认超时时间 10 秒
   const controller = new AbortController();
   finalOptions.signal = controller.signal;
@@ -45,7 +52,27 @@ export default async function request(url: string, options: any = {}) {
           statusText: response.statusText,
         });
       }
-      await clearUserLocalData();
+
+      // 401 时不清除离线账单数据,只清除认证相关数据
+      // 离线账单会在用户重新登录后继续同步
+      const keysToRemove = [
+        TOKEN_STORAGE_KEY,
+        USER_CREDENTIALS_STORAGE_KEY,
+        CATEGORIES_CACHE_STORAGE_KEY,
+        LAST_SELECTED_DATE_STORAGE_KEY,
+      ];
+
+      // 清除月度缓存(避免数据过大)
+      const allKeys = await AsyncStorage.getAllKeys();
+      const monthCacheKeys = allKeys.filter(key =>
+        key.startsWith(BILL_MONTH_CACHE_PREFIX)
+      );
+      keysToRemove.push(...monthCacheKeys);
+
+      await AsyncStorage.multiRemove(keysToRemove);
+
+      console.log('401: 已清除认证数据,保留离线账单数据');
+
       navigate('Login');
       throw new Error(msg);
     }
@@ -85,4 +112,4 @@ export default async function request(url: string, options: any = {}) {
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
   }
-} 
+}

@@ -13,7 +13,11 @@ import CategoryIcon from '@/components/CategoryIcon';
 import { useCategory } from '../context/CategoryContext';
 import { theme } from '@/theme';
 import { MainTabParamList } from '../types/navigation';
-import { PENDING_BILLS_STORAGE_KEY } from '@/utils/storage';
+import { 
+  getUserPendingBills,
+  saveUserPendingBills,
+  getActiveAccount,
+} from '@/utils/storage';
 
 // 同步状态类型
 type SyncStatus = 'syncing' | 'synced' | 'failed';
@@ -30,7 +34,7 @@ type SubItem = {
   // Extended fields for editing
   typeId: string;
   date: string;
-  payType: number;
+  payType: '1' | '2'; // '1'=支出，'2'=收入
   rawAmount: number;
   // 同步状态相关
   syncStatus?: SyncStatus; // 'syncing' | 'synced' | 'failed'
@@ -115,7 +119,7 @@ const List = () => {
           remark: bill.remark,
           amount: displayAmount,
           typeId: bill.type_id,
-          payType: parseInt(bill.pay_type, 10),
+          payType: bill.pay_type,
           date: bill.date,
           rawAmount: amount,
         };
@@ -152,7 +156,7 @@ const List = () => {
         const totals = sortedItems.reduce(
           (acc, item) => {
             const absAmount = Math.abs(item.rawAmount ?? item.amount);
-            if (item.payType === 1) {
+            if (item.payType === '1') {
               acc.total += absAmount;
             } else {
               acc.income += absAmount;
@@ -172,13 +176,14 @@ const List = () => {
       .filter(group => group.items.length > 0);
   }, [orderBy, selectedTypeId]);
 
-  // 加载待同步账单列表
+  // 加载待同步账单列表(用户隔离)
   const loadPendingBillsFromStorage = useCallback(async (): Promise<SubItem[]> => {
     try {
-      const raw = await AsyncStorage.getItem(PENDING_BILLS_STORAGE_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
+      const account = await getActiveAccount();
+      if (!account) return [];
+      
+      const pendingBills = await getUserPendingBills(account);
+      return Array.isArray(pendingBills) ? pendingBills : [];
     } catch (error) {
       console.error('Failed to load pending bills', error);
       return [];
@@ -187,11 +192,13 @@ const List = () => {
 
   const savePendingBillsToStorage = useCallback(async (pendingBills: SubItem[]) => {
     try {
-      if (pendingBills.length === 0) {
-        await AsyncStorage.removeItem(PENDING_BILLS_STORAGE_KEY);
-      } else {
-        await AsyncStorage.setItem(PENDING_BILLS_STORAGE_KEY, JSON.stringify(pendingBills));
+      const account = await getActiveAccount();
+      if (!account) {
+        console.warn('No active account, cannot save pending bills');
+        return;
       }
+
+      await saveUserPendingBills(account, pendingBills);
     } catch (error) {
       console.error('Failed to save pending bills', error);
     }
@@ -261,7 +268,7 @@ const List = () => {
         if (!dateStr.startsWith(monthPrefix)) return;
 
         const group = merged.find(g => g.date === dateStr);
-        const isExpense = pending.payType === 1;
+        const isExpense = pending.payType === '1';
         const amountAbs = Math.abs(pending.rawAmount ?? pending.amount);
 
         if (group) {
@@ -439,7 +446,7 @@ const List = () => {
           categoryName: '餐饮', // 默认分类名
           date: new Date().toISOString().split('T')[0],
           remark: `[自动识别] ${autoBill.merchant || ''} - ${autoBill.rawText.substring(0, 10)}...`,
-          type: autoBill.type === 'expense' ? 1 : 2
+          type: autoBill.type === 'expense' ? '1' : '2'
         });
       }, 500);
       
@@ -501,8 +508,8 @@ const List = () => {
   // 乐观更新: 立即添加本地账单
   const optimisticAddBill = (billData: BillData): SubItem => {
     const localId = generateLocalId();
-    const isExpense = billData.type === 1;
-    const category = categories.find(c => c.id === billData.category);
+    const isExpense = billData.type === '1';
+    const category = categories.find(c => `${c.id}` === billData.category);
     
     return {
       id: -Date.now(), // 临时负ID
@@ -532,7 +539,7 @@ const List = () => {
     const totals = items.reduce(
       (acc, item) => {
         const amountAbs = Math.abs(item.rawAmount ?? item.amount);
-        if (item.payType === 1) {
+        if (item.payType === '1') {
           acc.total += amountAbs;
         } else {
           acc.income += amountAbs;
@@ -559,7 +566,7 @@ const List = () => {
   }, [data]);
 
   const buildSubItemFromServer = useCallback((bill: BillDetail): SubItem => {
-    const payType = parseInt(String(bill.pay_type), 10);
+    const payType = bill.pay_type;
     const amountAbs = parseFloat(String(bill.amount));
 
     return {
@@ -567,7 +574,7 @@ const List = () => {
       type: bill.type_name,
       icon: getCategoryIcon(bill.type_name),
       remark: bill.remark,
-      amount: payType === 1 ? -amountAbs : amountAbs,
+      amount: payType === '1' ? -amountAbs : amountAbs,
       typeId: String(bill.type_id),
       date: String(bill.date),
       payType,
@@ -812,13 +819,13 @@ const List = () => {
       const previousData = data;
       const previousSummary = summary;
       const oldItem = findSubItemById(editingId);
-      const category = categories.find(c => c.id === billData.category);
+      const category = categories.find(c => `${c.id}` === billData.category);
       const optimisticEditedItem: SubItem = {
         id: editingId,
         type: billData.categoryName,
         icon: category?.icon || 'icon-qianming',
         remark: billData.remark,
-        amount: billData.type === 1 ? -billData.amount : billData.amount,
+        amount: billData.type === '1' ? -billData.amount : billData.amount,
         typeId: billData.category,
         date: timestamp.toString(),
         payType: billData.type,
@@ -826,10 +833,10 @@ const List = () => {
       };
 
       if (oldItem) {
-        const oldExpense = oldItem.payType === 1 ? Math.abs(oldItem.rawAmount ?? oldItem.amount) : 0;
-        const oldIncome = oldItem.payType === 2 ? Math.abs(oldItem.rawAmount ?? oldItem.amount) : 0;
-        const newExpense = billData.type === 1 ? billData.amount : 0;
-        const newIncome = billData.type === 2 ? billData.amount : 0;
+        const oldExpense = oldItem.payType === '1' ? Math.abs(oldItem.rawAmount ?? oldItem.amount) : 0;
+        const oldIncome = oldItem.payType === '2' ? Math.abs(oldItem.rawAmount ?? oldItem.amount) : 0;
+        const newExpense = billData.type === '1' ? billData.amount : 0;
+        const newIncome = billData.type === '2' ? billData.amount : 0;
 
         setSummary(prev => ({
           totalExpense: prev.totalExpense - oldExpense + newExpense,
@@ -878,8 +885,8 @@ const List = () => {
         upsertLocalDataItem(localBill, item => item.localId === localBill.localId);
         // 更新统计
         setSummary(prev => ({
-          totalExpense: billData.type === 1 ? prev.totalExpense + billData.amount : prev.totalExpense,
-          totalIncome: billData.type === 2 ? prev.totalIncome + billData.amount : prev.totalIncome,
+          totalExpense: billData.type === '1' ? prev.totalExpense + billData.amount : prev.totalExpense,
+          totalIncome: billData.type === '2' ? prev.totalIncome + billData.amount : prev.totalIncome,
         }));
       }
 
@@ -1006,8 +1013,8 @@ const List = () => {
 
           // 提前把值“拍扁”到闭包里，避免 TS 在 setSummary 回调中认为 removedItem 可能为 undefined
           setSummary(prev => ({
-            totalExpense: prev.totalExpense - (removedPayType === 1 ? amountAbs : 0),
-            totalIncome: prev.totalIncome - (removedPayType === 2 ? amountAbs : 0),
+            totalExpense: prev.totalExpense - (removedPayType === '1' ? amountAbs : 0),
+            totalIncome: prev.totalIncome - (removedPayType === '2' ? amountAbs : 0),
           }));
         }
 
@@ -1073,7 +1080,7 @@ const List = () => {
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerBtn} onPress={() => setShowTypePicker(true)}>
             <Text style={styles.headerBtnText}>
-              {selectedTypeId ? categories.find(c => c.id === selectedTypeId)?.name || '全部类型' : '全部类型'}
+              {selectedTypeId ? categories.find(c => `${c.id}` === selectedTypeId)?.name || '全部类型' : '全部类型'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerBtn} onPress={() => setShowPicker(true)}>

@@ -13,6 +13,10 @@ import {
   TOKEN_STORAGE_KEY,
   USER_CREDENTIALS_STORAGE_KEY,
   clearUserLocalData,
+  // getActiveAccount,
+  // getUserPendingBills,
+  // removeUserPendingBills,
+  // clearAllUserPendingBills,
 } from '@/utils/storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '@/theme';
@@ -188,12 +192,29 @@ const Login = () => {
       if (data.token) {
         const previousAccount = await AsyncStorage.getItem(ACTIVE_ACCOUNT_STORAGE_KEY);
         const oldToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
-        const shouldClearOldData =
-          (previousAccount && previousAccount !== account) ||
-          (!previousAccount && !!oldToken);
+        const isSwitchingAccount = previousAccount && previousAccount !== account;
+        const isFirstLogin = !previousAccount && !!oldToken;
+        const shouldClearOldData = isSwitchingAccount || isFirstLogin;
 
         if (shouldClearOldData) {
-          await clearUserLocalData();
+          // 如果是切换账号,保留旧用户的离线账单(不删除也不加载)
+          // 旧用户的离线数据会在其重新登录时自动恢复
+          if (isSwitchingAccount) {
+            console.log(`检测到切换账号: ${previousAccount} -> ${account}`);
+            console.log('旧用户的离线数据已保留,等待其重新登录时自动恢复');
+            
+            // 只清除认证相关数据,不清除离线账单
+            const keysToRemove = [
+              TOKEN_STORAGE_KEY,
+              USER_CREDENTIALS_STORAGE_KEY,
+              ACTIVE_ACCOUNT_STORAGE_KEY,
+            ];
+            await AsyncStorage.multiRemove(keysToRemove);
+          } else {
+            // 首次登录或有旧 token,清除所有数据
+            await clearUserLocalData();
+          }
+          
           resetUserInfo();
           resetCategories();
         }

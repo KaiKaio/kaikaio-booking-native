@@ -9,7 +9,7 @@ export interface BillParams {
 
 export interface BillDetail {
   id: number;
-  pay_type: string; // "1" might be expense, "2" income? The user example shows "1" for expense items like "Entertainment"
+  pay_type: '1' | '2'; // "1" might be expense, "2" income? The user example shows "1" for expense items like "Entertainment"
   amount: string;
   date: string;
   type_id: string;
@@ -42,7 +42,7 @@ export interface AddBillParams {
   type_id: number;
   type_name: string;
   date: number;
-  pay_type: number;
+  pay_type: '1' | '2';
   remark?: string;
   client_local_id?: string; // 本地生成的唯一 ID，用于同步后匹配
 }

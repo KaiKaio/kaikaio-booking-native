@@ -27,7 +27,10 @@ import { updateUsername, updatePassword, updateAvatar, uploadAvatar } from '../s
 import JSEncrypt from 'jsencrypt';
 import { theme } from '@/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { clearUserLocalData } from '@/utils/storage';
+import {
+  // clearUserLocalData,
+  getActiveAccount
+} from '@/utils/storage';
 
 const encrypt = new JSEncrypt();
 
@@ -64,7 +67,34 @@ const Account = () => {
 
   const handleLogout = async () => {
     try {
-      await clearUserLocalData();
+      // 获取当前账号,以便保留其离线数据
+      const currentAccount = await getActiveAccount();
+      
+      // 清除认证相关数据,但保留当前用户的离线账单
+      const keysToRemove = [
+        'token',
+        'user_credentials',
+        'categories_cache',
+        'lastSelectedDate',
+      ];
+
+      // 清除月度缓存
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const allKeys = await AsyncStorage.getAllKeys();
+      const BILL_MONTH_CACHE_PREFIX = 'bills_month_cache_';
+      const monthCacheKeys = allKeys.filter(key =>
+        key.startsWith(BILL_MONTH_CACHE_PREFIX)
+      );
+      keysToRemove.push(...monthCacheKeys);
+
+      await AsyncStorage.multiRemove(keysToRemove);
+
+      // 注意: 不清除 pending_bills_user:{account} 的数据
+      // 用户重新登录时会自动恢复
+      if (currentAccount) {
+        console.log(`已退出登录,保留了 ${currentAccount} 的离线账单数据`);
+      }
+
       resetUserInfo();
       resetCategories();
       navigation.reset({

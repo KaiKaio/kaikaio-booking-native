@@ -22,7 +22,7 @@ export interface BillItemProps {
   icon: string;
   remark: string;
   amount: number;
-  payType?: number;  // 1=支出, 2=收入
+  payType?: '1' | '2';  // '1'=支出, '2'=收入
   onDeleteSuccess?: () => void;
   // 删除回调：用于处理“本地乐观数据”删除（避免误调用真实删除接口）
   onDelete?: (payload: { id: number; localId?: string; syncStatus?: 'syncing' | 'synced' | 'failed' }) => Promise<void> | void;
@@ -65,7 +65,7 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, pay
   };
 
   // 根据 payType 判断颜色：1=支出（绿色），2=收入（红色）
-  const amountColor = payType === 1 ? theme.colors.status.success : theme.colors.status.error;
+  const amountColor = payType === '1' ? theme.colors.status.success : theme.colors.status.error;
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -203,7 +203,7 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, pay
           {remark ? <Text style={styles.itemRemark}>{remark}</Text> : null}
         </View>
         {renderSyncIndicator()}
-        <Text style={[styles.itemAmount, { color: amountColor }]}>{ payType !== 1 && '+' }{amount.toFixed(2)}</Text>
+        <Text style={[styles.itemAmount, { color: amountColor }]}>{ payType !== '1' && '+' }{amount.toFixed(2)}</Text>
       </Animated.View>
     </Swipeable>
   );
