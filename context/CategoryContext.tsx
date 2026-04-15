@@ -9,6 +9,7 @@ interface CategoryContextType {
   categories: Category[];
   getCategoryIcon: (name: string) => string;
   getCategoryName: (id: number) => string;
+  getCategoryItem: (id: number) => Category | null;
   refreshCategories: () => Promise<void>;
   resetCategories: () => void;
   isReady: boolean;
@@ -92,13 +93,18 @@ export const CategoryProvider: React.FC<{ children: ReactNode }> = ({ children }
     return category ? category.name : '其他';
   };
 
+  const getCategoryItem = (id: number) => {
+    const category = categories.find(c => c.id === id);
+    return category ? category : null;
+  };
+
   const resetCategories = () => {
     setCategories(DEFAULT_CATEGORIES);
     setIsReady(true);
   };
 
   return (
-    <CategoryContext.Provider value={{ categories, getCategoryIcon, getCategoryName, refreshCategories, resetCategories, isReady }}>
+    <CategoryContext.Provider value={{ categories, getCategoryIcon, getCategoryName, getCategoryItem, refreshCategories, resetCategories, isReady }}>
       {isReady ? children : <LoadingScreen />}
     </CategoryContext.Provider>
   );

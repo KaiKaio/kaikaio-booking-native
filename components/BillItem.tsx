@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,10 +15,12 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import CategoryIcon from './CategoryIcon';
 import { deleteBill } from '../services/bill';
 import { theme } from '@/theme';
+import { useCategory } from '../context/CategoryContext';
 
 export interface BillItemProps {
   id: number;
   type: string;
+  typeId: string;
   icon: string;
   remark: string;
   amount: number;
@@ -35,10 +37,16 @@ export interface BillItemProps {
   isHighlighted?: boolean;
 }
 
-const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, payType, onDeleteSuccess, onDelete, onEdit, isLast, syncStatus, localId, onRetry, isHighlighted }) => {
+const BillItem: React.FC<BillItemProps> = ({ id, type, typeId, icon, remark, amount, payType, onDeleteSuccess, onDelete, onEdit, isLast, syncStatus, localId, onRetry, isHighlighted }) => {
   const [deleting, setDeleting] = useState(false);
   const swipeableRef = useRef<Swipeable>(null);
   const flashAnim = useRef(new Animated.Value(0)).current;
+
+  const { getCategoryItem } = useCategory();
+
+  const categoryBgColor = useMemo(() => {
+    return getCategoryItem(Number(typeId))?.background_color || theme.colors.background.primaryLight;
+  }, [getCategoryItem, typeId]); // 依赖 getCategoryItem，确保更新时能获取最新分类数据
 
   useEffect(() => {
     if (isHighlighted) {
@@ -195,7 +203,10 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, icon, remark, amount, pay
       overshootRight={false}
     >
       <Animated.View style={[styles.item, isLast && styles.lastItem, animatedStyle]}>
-        <View style={styles.itemIconWrap}>
+        <View style={[
+          styles.itemIconWrap,
+          { backgroundColor: categoryBgColor }
+        ]}>
           <CategoryIcon icon={icon} size={22} />
         </View>
         <View style={styles.itemInfo}>

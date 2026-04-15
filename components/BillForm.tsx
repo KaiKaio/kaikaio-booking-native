@@ -145,7 +145,6 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
 
   // Filter categories by active type
   const filteredCategories = categories.filter(cat => cat.type === activeType);
-  console.log('Filtered categories for type', activeType, categories);
 
   // Reset form when opening
   useEffect(() => {
