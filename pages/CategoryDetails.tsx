@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -6,6 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import CategoryIcon from '@/components/CategoryIcon.tsx';
 import { RootStackParamList } from '@/types/navigation';
 import { useCategory } from '../context/CategoryContext';
+import MonthSelector from '@/components/MonthSelector';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@/theme';
 
@@ -21,6 +22,11 @@ const CategoryDetails: React.FC<CategoryDetailsProps> = ({ navigation, route }) 
   const { type_id, type_name } = route.params;
   const insets = useSafeAreaInsets();
   const { getCategoryItem } = useCategory();
+
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   const getCategoryItemMemo = React.useMemo(() => {
     return getCategoryItem(type_id);
@@ -51,6 +57,12 @@ const CategoryDetails: React.FC<CategoryDetailsProps> = ({ navigation, route }) 
           </View>
           <Text style={styles.value}>{type_name}</Text>
         </View>
+
+        <MonthSelector
+          type_id={type_id}
+          currentMonth={currentMonth} 
+          onCurrentMonthChange={setCurrentMonth} 
+        />
 
         <View style={styles.placeholderBox}>
           <Text style={styles.placeholderText}>详细内容区域</Text>
