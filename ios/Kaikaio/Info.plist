@@ -52,12 +52,12 @@
 	<string>我们需要访问您的相册以便您可以选择并上传照片。</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
-	<key>UILaunchStoryboardName</key>
-	<string>SplashScreen</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>iconfont.ttf</string>
 	</array>
+	<key>UILaunchStoryboardName</key>
+	<string>SplashScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>arm64</string>

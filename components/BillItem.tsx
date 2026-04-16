@@ -20,7 +20,7 @@ import { useCategory } from '../context/CategoryContext';
 export interface BillItemProps {
   id: number;
   type: string;
-  typeId: string;
+  typeId: number;
   icon: string;
   remark: string;
   amount: number;

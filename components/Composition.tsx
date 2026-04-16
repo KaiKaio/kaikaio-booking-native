@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
 import { MaterialIcons } from '@expo/vector-icons';
+import { Category } from '@/types/category';
 import { StatisticsData } from '../types/bill';
 import CategoryIcon from './CategoryIcon';
 import { useCategory } from '../context/CategoryContext';
@@ -30,11 +31,15 @@ interface CompositionProps {
 
 
 
-const getCenterLabelComponent = (currentItem: StatisticsData & { icon: string }, totalAmount: number) => () => {
+const getCenterLabelComponent = (currentItem: StatisticsData & { originType: Category | null }, totalAmount: number) => () => {
+  const originType = currentItem.originType;
   return (
     <View style={styles.chartCenter}>
-      <View style={styles.chartCenterLabel}>
-        <CategoryIcon icon={currentItem.icon} size={22} />
+      <View style={[
+        styles.chartCenterLabel,
+        originType?.background_color && { backgroundColor: originType.background_color },
+      ]}>
+        <CategoryIcon icon={originType?.icon || 'question'} size={22} />
       </View>
       <Text style={styles.chartCenterValue}>{((currentItem.number / totalAmount) * 100).toFixed(2)}%</Text>
     </View>
@@ -45,7 +50,7 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const { getCategoryIcon } = useCategory();
+  const { getCategoryItem } = useCategory();
 
   // 1 for expense, 2 for income
   const targetType = type === 'expense' ? '1' : '2';
@@ -112,6 +117,27 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
     return transAngle;
   }, [pieData, selectedIndex]);
 
+  const renderPieChart = () => {
+    const selectedItem = sortedData[selectedIndex];
+    const computedSelType = getCategoryItem(Number(selectedItem.type_id))
+    return (
+      <PieChart
+        data={pieData}
+        donut
+        innerRadius={70}
+        radius={90}
+        innerCircleColor={theme.colors.background.paper}
+        centerLabelComponent={getCenterLabelComponent({
+          ...selectedItem,
+          originType: computedSelType
+        }, totalAmount)}
+        initialAngle={rotationAngle}
+        isAnimated={true}
+        animationDuration={500}
+      />
+    )
+  }
+
   const handlePrev = () => {
     setSelectedIndex((prev) => (prev - 1 + pieData.length) % pieData.length);
   };
@@ -160,20 +186,8 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
             </View>
 
             <View style={styles.chartContainer}>
-              <PieChart
-                  data={pieData}
-                  donut
-                  innerRadius={70}
-                  radius={90}
-                  innerCircleColor={theme.colors.background.paper}
-                  centerLabelComponent={getCenterLabelComponent({
-                    ...sortedData[selectedIndex],
-                    icon: getCategoryIcon(sortedData[selectedIndex].type_name)
-                  }, totalAmount)}
-                  initialAngle={rotationAngle}
-                  isAnimated={true}
-                  animationDuration={500}
-                />
+              {/* 饼图组件，传入数据和旋转角度 */}
+              {renderPieChart()}
             </View>
           </View>
 
@@ -187,7 +201,7 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
         {sortedData.map((item, index) => {
           const amount = Number(item.number);
           const percentage = totalAmount > 0 ? (amount / totalAmount * 100) : 0;
-          const icon = getCategoryIcon(item.type_name);
+          const curCategoryItem = getCategoryItem(Number(item.type_id));
 
           const maxItemAmount = sortedData?.[0]?.number || 0;
           // 以最大金额为基准，计算当前项的相对宽度，最小宽度为5%，最大宽度为100%
@@ -200,8 +214,8 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
             <View key={`${item.pay_type}-${item.type_id}`} style={styles.item}>
               <View style={[styles.colorDot, { backgroundColor: itemColor }]} />
 
-              <View style={styles.iconWrapper}>
-                 <CategoryIcon icon={icon} size={22} />
+              <View style={[styles.iconWrapper, curCategoryItem?.background_color && { backgroundColor: curCategoryItem.background_color }]}>
+                 <CategoryIcon icon={curCategoryItem?.icon || 'question'} size={22} />
               </View>
 
               <View style={styles.info}>

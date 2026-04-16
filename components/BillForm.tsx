@@ -33,7 +33,7 @@ interface BillFormProps {
 
 export interface BillData {
   amount: number;
-  category: string; // id
+  category: number; // id
   categoryName: string;
   date: string; // YYYY-MM-DD
   remark: string;
@@ -152,7 +152,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
       if (editData) {
         setAmountStr(editData.amount.toString());
         // Find category by ID if possible, otherwise name
-        const cat = categories.find(c => `${c.id}` === editData.category || c.name === editData.categoryName) || categories[0];
+        const cat = categories.find(c => c.id === editData.category || c.name === editData.categoryName) || categories[0];
         setCategory(cat);
         setActiveType(cat.type);
         setDate(new Date(editData.date));
@@ -208,7 +208,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
 
     const data: BillData = {
       amount,
-      category: `${category.id}`,
+      category: category.id,
       categoryName: category.name,
       date: dateStr,
       remark,

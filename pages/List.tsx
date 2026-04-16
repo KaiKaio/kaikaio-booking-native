@@ -31,8 +31,7 @@ type SubItem = {
   icon: string;
   remark: string;
   amount: number;
-  // Extended fields for editing
-  typeId: string;
+  typeId: number;
   date: string;
   payType: '1' | '2'; // '1'=支出，'2'=收入
   rawAmount: number;
@@ -84,7 +83,7 @@ const List = () => {
 
   const [orderBy, setOrderBy] = useState<'ASC' | 'DESC'>('DESC');
   const [showTypePicker, setShowTypePicker] = useState(false);
-  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
+  const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null);
 
   const formatBillDate = useCallback((dateValue: string) => {
     const dateObj = /^\d+$/.test(dateValue) ? new Date(parseInt(dateValue, 10)) : new Date(dateValue);
@@ -442,7 +441,7 @@ const List = () => {
         billFormRef.current?.open({
           amount: autoBill.amount,
           // 暂时使用默认分类，或者你可以根据 autoBill.category 尝试匹配
-          category: '1', // 默认分类ID，需根据实际情况调整
+          category: 1, // 默认分类ID，需根据实际情况调整
           categoryName: '餐饮', // 默认分类名
           date: new Date().toISOString().split('T')[0],
           remark: `[自动识别] ${autoBill.merchant || ''} - ${autoBill.rawText.substring(0, 10)}...`,
@@ -509,7 +508,7 @@ const List = () => {
   const optimisticAddBill = (billData: BillData): SubItem => {
     const localId = generateLocalId();
     const isExpense = billData.type === '1';
-    const category = categories.find(c => `${c.id}` === billData.category);
+    const category = categories.find(c => c.id === billData.category);
     
     return {
       id: -Date.now(), // 临时负ID
@@ -525,7 +524,7 @@ const List = () => {
       localId,
       retryParams: {
         amount: billData.amount.toFixed(2),
-        type_id: parseInt(billData.category, 10),
+        type_id: billData.category,
         type_name: billData.categoryName,
         date: new Date(billData.date).getTime(),
         pay_type: billData.type,
@@ -575,7 +574,7 @@ const List = () => {
       icon: getCategoryIcon(bill.type_name),
       remark: bill.remark,
       amount: payType === '1' ? -amountAbs : amountAbs,
-      typeId: String(bill.type_id),
+      typeId: bill.type_id,
       date: String(bill.date),
       payType,
       rawAmount: amountAbs,
@@ -808,7 +807,7 @@ const List = () => {
     const timestamp = new Date(billData.date).getTime();
     const params = {
       amount: billData.amount.toFixed(2),
-      type_id: parseInt(billData.category, 10),
+      type_id: billData.category,
       type_name: billData.categoryName,
       date: timestamp,
       pay_type: billData.type,
@@ -819,7 +818,7 @@ const List = () => {
       const previousData = data;
       const previousSummary = summary;
       const oldItem = findSubItemById(editingId);
-      const category = categories.find(c => `${c.id}` === billData.category);
+      const category = categories.find(c => c.id === billData.category);
       const optimisticEditedItem: SubItem = {
         id: editingId,
         type: billData.categoryName,
@@ -1033,13 +1032,13 @@ const List = () => {
       {item.items.map((subItem: SubItem, index: number) => (
         <BillItem
           key={subItem.localId || subItem.id}
-          {...subItem}
           isHighlighted={subItem.localId === highlightedLocalId}
           onDeleteSuccess={onRefresh}
           onDelete={handleDeleteOptimisticBill}
           onEdit={handleEdit}
           onRetry={handleRetrySync}
           isLast={index === item.items.length - 1}
+          {...subItem}
         />
       ))}
     </View>
@@ -1080,7 +1079,7 @@ const List = () => {
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerBtn} onPress={() => setShowTypePicker(true)}>
             <Text style={styles.headerBtnText}>
-              {selectedTypeId ? categories.find(c => `${c.id}` === selectedTypeId)?.name || '全部类型' : '全部类型'}
+              {selectedTypeId ? categories.find(c => c.id === selectedTypeId)?.name || '全部类型' : '全部类型'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerBtn} onPress={() => setShowPicker(true)}>

@@ -6,11 +6,11 @@ import { Category } from '@/types/category';
 
 interface TypePickerProps {
   visible: boolean;
-  selectedTypeId: string | null;
+  selectedTypeId: number | null;
   categories: Category[];
   getCategoryIcon: (name: string) => string;
   onClose: () => void;
-  onSelect: (typeId: string | null) => void;
+  onSelect: (typeId: number | null) => void;
   footerHeight: number;
 }
 
@@ -23,7 +23,7 @@ const TypePicker: React.FC<TypePickerProps> = ({
   onSelect,
   footerHeight,
 }) => {
-  const handleSelect = (typeId: string | null) => {
+  const handleSelect = (typeId: number | null) => {
     onSelect(typeId);
     onClose();
   };
