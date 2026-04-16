@@ -35,7 +35,7 @@ export async function updateCategory(data: Partial<Category> & Pick<Category, 'i
 }
 
 // 删除分类
-export async function deleteCategory(data: { id: string }): Promise<void> {
+export async function deleteCategory(data: { id: number }): Promise<void> {
   await request(`/api/type/delete`, {
     method: 'POST',
     body: JSON.stringify(data),

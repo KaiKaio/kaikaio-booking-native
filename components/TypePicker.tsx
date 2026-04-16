@@ -8,7 +8,6 @@ interface TypePickerProps {
   visible: boolean;
   selectedTypeId: number | null;
   categories: Category[];
-  getCategoryIcon: (name: string) => string;
   onClose: () => void;
   onSelect: (typeId: number | null) => void;
   footerHeight: number;
@@ -18,7 +17,6 @@ const TypePicker: React.FC<TypePickerProps> = ({
   visible,
   selectedTypeId,
   categories,
-  getCategoryIcon,
   onClose,
   onSelect,
   footerHeight,
@@ -102,10 +100,11 @@ const TypePicker: React.FC<TypePickerProps> = ({
                 >
                   <View style={[
                     styles.iconWrap,
+                    { backgroundColor: category.background_color || theme.colors.background.primaryLight },
                     isSelected && styles.iconWrapSelected
                   ]}>
                     <CategoryIcon
-                      icon={getCategoryIcon(category.name)}
+                      icon={category.icon}
                       size={22}
                       color={isSelected ? theme.colors.primary : theme.colors.text.primary}
                     />

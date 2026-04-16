@@ -25,40 +25,78 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CategoryEdit'>;
 
 // 常用图标列表
 const COMMON_ICONS = [
-  'icon-canyin',
-  'icon-jiaotongxinxi',
-  'icon-kouhong',
-  'icon-fushi',
-  'icon-riyongpin',
-  'icon-yule',
-  'icon-xiyanqu',
-  'icon-cunkuan_o',
-  'icon-yiliao',
-  'icon-shuidiantu',
-  'icon-jiushui',
-  'icon-tongxun',
-  'icon-qiche',
-  'icon-aixin',
-  'icon-lvyou',
-  'icon-chongwu',
-  'icon-lingshi',
-  'icon-shumajiadianleimu',
-  'icon-fangzi',
-  'icon-jiajujiafang',
-  'icon-huluobu',
-  'icon-xingxing',
-  'icon-xuexi',
-  'icon-jianzhi',
-  'icon-ticket_money',
-  'icon-shuiguo',
-  'icon-huankuan',
-  'icon-gongzitiao',
+  "icon-sad",
+  "icon-gift",
+  "icon-chifanzhong",
+  "icon-snacks",
+  "icon-ic_gold",
+  "icon-huabeizhangdan",
+  "icon-bags",
+  "icon-red_packet",
+  "icon-keji",
+  "icon-Supermarket",
+  "icon-jiangjin",
+  "icon-fuqin",
+  "icon-VIP",
+  "icon-social",
+  "icon-ziyuan",
+  "icon-milk-tea",
+  "icon-normal",
+  "icon-money-finance-buyer",
+  "icon-a-butie1",
+  "icon-Backspace",
+  "icon-suningshangpin",
+  "icon-regular-mahjong",
+  "icon-waikuai",
+  "icon-Cat",
+  "icon-business-trip",
+  "icon-accountbook",
+  "icon-qianming",
+  "icon-rili",
+  "icon-guanyu_o",
+  "icon-zhongzhi",
+  "icon-print",
+  "icon-password",
+  "icon-wode",
+  "icon-shanchu",
+  "icon-wj-zd",
+  "icon-bianji",
+  "icon-bianjiwenzhang_huaban",
+  "icon-tongji",
+  "icon-jiajujiafang",
+  "icon-shumajiadianleimu",
+  "icon-jiushui",
+  "icon-huankuan",
+  "icon-jianzhi",
+  "icon-tongxun",
+  "icon-shuiguo",
+  "icon-lvyou",
+  "icon-lingshi",
+  "icon-xuexi",
+  "icon-fangzi",
+  "icon-huluobu",
+  "icon-chongwu",
+  "icon-riyongpin",
+  "icon-cunkuan_o",
+  "icon-qiche",
+  "icon-ticket_money",
+  "icon-xingxing",
+  "icon-yiliao",
+  "icon-gongzitiao",
+  "icon-shuidiantu",
+  "icon-aixin",
+  "icon-fushi",
+  "icon-yule",
+  "icon-xiyanqu",
+  "icon-kouhong",
+  "icon-jiaotongxinxi",
+  "icon-canyin"
 ];
 
 export default function CategoryEdit({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { categories, refreshCategories } = useCategory();
-  const [activeType, setActiveType] = useState<1 | 2>(route.params?.type || 1);
+  const [activeType, setActiveType] = useState<'1' | '2'>(route.params?.type || '1');
   const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
   
   // 编辑模态框状态
@@ -154,7 +192,7 @@ export default function CategoryEdit({ route, navigation }: Props) {
   const renderItem = ({ item }: { item: Category }) => (
     <View style={styles.itemContainer}>
       <View style={styles.itemLeft}>
-        <View style={styles.iconWrap}>
+        <View style={[styles.iconWrap, { backgroundColor: item.background_color || theme.colors.background.primaryLight }]}>
           <CategoryIcon icon={item.icon} size={24} />
         </View>
         <Text style={styles.itemName}>{item.name}</Text>
@@ -230,8 +268,9 @@ export default function CategoryEdit({ route, navigation }: Props) {
                   style={[styles.iconItem, inputIcon === icon && styles.iconItemActive]}
                   onPress={() => setInputIcon(icon)}
                 >
-                  <CategoryIcon icon={icon} size={28} />
+                  <CategoryIcon color={inputIcon === icon ? theme.colors.text.inverse : theme.colors.text.primary} icon={icon} size={28} />
                 </TouchableOpacity>
+
               ))}
             </ScrollView>
           </View>
@@ -259,23 +298,23 @@ export default function CategoryEdit({ route, navigation }: Props) {
       {/* Type Tab */}
       <View style={styles.typeTabContainer}>
         <TouchableOpacity
-          style={[styles.typeTab, activeType === 1 && styles.typeTabActive]}
-          onPress={() => setActiveType(1)}
+          style={[styles.typeTab, activeType === '1' && styles.typeTabActive]}
+          onPress={() => setActiveType('1')}
         >
-          <Text style={[styles.typeTabText, activeType === 1 && styles.typeTabTextActive]}>支出</Text>
+          <Text style={[styles.typeTabText, activeType === '1' && styles.typeTabTextActive]}>支出</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.typeTab, activeType === 2 && styles.typeTabActive]}
-          onPress={() => setActiveType(2)}
+          style={[styles.typeTab, activeType === '2' && styles.typeTabActive]}
+          onPress={() => setActiveType('2')}
         >
-          <Text style={[styles.typeTabText, activeType === 2 && styles.typeTabTextActive]}>收入</Text>
+          <Text style={[styles.typeTabText, activeType === '2' && styles.typeTabTextActive]}>收入</Text>
         </TouchableOpacity>
       </View>
 
       {/* Category List */}
       <FlatList
         data={filteredCategories}
-        keyExtractor={item => item.id}
+        keyExtractor={item => `${item.id}`}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={

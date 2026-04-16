@@ -1131,7 +1131,6 @@ const List = () => {
         visible={showTypePicker}
         selectedTypeId={selectedTypeId}
         categories={categories}
-        getCategoryIcon={getCategoryIcon}
         onClose={() => setShowTypePicker(false)}
         onSelect={setSelectedTypeId}
         footerHeight={insets.bottom > 0 ? insets.bottom : 16}

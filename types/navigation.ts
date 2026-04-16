@@ -12,6 +12,6 @@ export type RootStackParamList = {
   AuthLoading: undefined;
   Login: undefined;
   Main: NavigatorScreenParams<MainTabParamList>;
-  CategoryEdit: { type?: 1 | 2 }; // 1: expense, 2: income, optional filter
+  CategoryEdit: { type?: '1' | '2' }; // '1': expense, '2': income, optional filter
   // 若有其他路由，可在此添加
 };
