@@ -8,23 +8,6 @@ import CategoryIcon from './CategoryIcon';
 import { useCategory } from '../context/CategoryContext';
 import { theme } from '../theme';
 
-// 饼图配色方案
-const CHART_COLORS = [
-  '#0090FF', // primary blue
-  '#5CBBF2', // secondary
-  '#1BC47D', // success green
-  '#FF9F43', // orange
-  '#A55EEA', // purple
-  '#FC5C7D', // pink
-  '#45AAF2', // sky blue
-  '#26DE81', // mint
-  '#FD9644', // coral
-  '#4ECDC4', // teal
-  '#F7B731', // sunflower
-  '#20BF6B', // emerald
-  '#2B2B2B', // dark gray
-];
-
 interface CompositionProps {
   data: StatisticsData[];
 }
@@ -72,12 +55,15 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
 
   // 饼图数据
   const pieData = useMemo(() => {
-    return sortedData.slice(0, 10).map((item, index) => ({
-      value: Number(item.number),
-      color: CHART_COLORS[index % CHART_COLORS.length],
-      text: `${((Number(item.number) / totalAmount) * 100).toFixed(1)}%`,
-    }));
-  }, [sortedData, totalAmount]);
+    return sortedData.slice(0, 10).map((item) => {
+      const color = getCategoryItem(Number(item.type_id))?.background_color || '#C5C5C5';
+      return {
+        value: Number(item.number),
+        color,
+        text: `${((Number(item.number) / totalAmount) * 100).toFixed(1)}%`,
+      }
+    });
+  }, [sortedData, totalAmount, getCategoryItem]);
 
   // 计算当前旋转角度，使选中的扇形位于顶部中心
   const rotationAngle = useMemo(() => {
@@ -198,7 +184,7 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
       )}
 
       <View style={styles.list}>
-        {sortedData.map((item, index) => {
+        {sortedData.map((item) => {
           const amount = Number(item.number);
           const percentage = totalAmount > 0 ? (amount / totalAmount * 100) : 0;
           const curCategoryItem = getCategoryItem(Number(item.type_id));
@@ -208,12 +194,10 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
 
           // Bar width calculation
           const barWidth = maxItemAmount > 0 ? Math.max(5, (amount / maxItemAmount) * 100) : 5; // 最小宽度为5%
-          const itemColor = CHART_COLORS[index % CHART_COLORS.length];
+          const itemColor = curCategoryItem?.background_color || '#C5C5C5';
 
           return (
             <View key={`${item.pay_type}-${item.type_id}`} style={styles.item}>
-              <View style={[styles.colorDot, { backgroundColor: itemColor }]} />
-
               <View style={[styles.iconWrapper, curCategoryItem?.background_color && { backgroundColor: curCategoryItem.background_color }]}>
                  <CategoryIcon icon={curCategoryItem?.icon || 'question'} size={22} />
               </View>
@@ -356,12 +340,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
     boxSizing: 'border-box',
-  },
-  colorDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: theme.spacing.sm,
   },
   iconWrapper: {
     width: 36,
