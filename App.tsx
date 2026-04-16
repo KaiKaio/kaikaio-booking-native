@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Login from './pages/Login';
 import Main from './pages/Main';
 import CategoryEdit from './pages/CategoryEdit';
+import CategoryDetails from './pages/CategoryDetails';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -55,6 +56,14 @@ function App() {
               <Stack.Screen 
                 name="CategoryEdit" 
                 component={CategoryEdit}
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                }}
+              />
+              <Stack.Screen 
+                name="CategoryDetails" 
+                component={CategoryDetails}
                 options={{
                   headerShown: false,
                   animation: 'slide_from_right',

@@ -2,11 +2,16 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Category } from '@/types/category';
 import { StatisticsData } from '../types/bill';
+import { RootStackParamList } from '../types/navigation';
 import CategoryIcon from './CategoryIcon';
 import { useCategory } from '../context/CategoryContext';
 import { theme } from '../theme';
+
+type CompositionNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Main'>;
 
 interface CompositionProps {
   data: StatisticsData[];
@@ -34,6 +39,7 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const { getCategoryItem } = useCategory();
+  const navigation = useNavigation<CompositionNavigationProp>();
 
   // 1 for expense, 2 for income
   const targetType = type === 'expense' ? '1' : '2';
@@ -56,7 +62,7 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
   // 饼图数据
   const pieData = useMemo(() => {
     return sortedData.slice(0, 10).map((item) => {
-      const color = getCategoryItem(Number(item.type_id))?.background_color || '#C5C5C5';
+      const color = getCategoryItem(item.type_id)?.background_color || '#C5C5C5';
       return {
         value: Number(item.number),
         color,
@@ -105,7 +111,7 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
 
   const renderPieChart = () => {
     const selectedItem = sortedData[selectedIndex];
-    const computedSelType = getCategoryItem(Number(selectedItem.type_id))
+    const computedSelType = getCategoryItem(selectedItem.type_id)
     return (
       <PieChart
         data={pieData}
@@ -187,7 +193,7 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
         {sortedData.map((item) => {
           const amount = Number(item.number);
           const percentage = totalAmount > 0 ? (amount / totalAmount * 100) : 0;
-          const curCategoryItem = getCategoryItem(Number(item.type_id));
+          const curCategoryItem = getCategoryItem(item.type_id);
 
           const maxItemAmount = sortedData?.[0]?.number || 0;
           // 以最大金额为基准，计算当前项的相对宽度，最小宽度为5%，最大宽度为100%
@@ -196,8 +202,20 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
           const barWidth = maxItemAmount > 0 ? Math.max(5, (amount / maxItemAmount) * 100) : 5; // 最小宽度为5%
           const itemColor = curCategoryItem?.background_color || '#C5C5C5';
 
+          const handleCategoryPress = () => {
+            navigation.navigate('CategoryDetails', {
+              type_id: item.type_id,
+              type_name: item.type_name,
+              pay_type: targetType as '1' | '2',
+            });
+          };
+
           return (
-            <View key={`${item.pay_type}-${item.type_id}`} style={styles.item}>
+            <TouchableOpacity 
+              key={`${item.pay_type}-${item.type_id}`} 
+              style={styles.item}
+              onPress={handleCategoryPress}
+            >
               <View style={[styles.iconWrapper, curCategoryItem?.background_color && { backgroundColor: curCategoryItem.background_color }]}>
                  <CategoryIcon icon={curCategoryItem?.icon || 'question'} size={22} />
               </View>
@@ -209,7 +227,7 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
               </View>
 
               <Text style={styles.percentageText}>{percentage.toFixed(2)}%</Text>
-            </View>
+            </TouchableOpacity>
           );
         })}
 
