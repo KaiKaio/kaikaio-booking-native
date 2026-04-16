@@ -325,7 +325,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
                     cat?.background_color && { backgroundColor: cat.background_color },
                     category?.id === cat.id && styles.selectedCatIconWrap
                   ]}>
-                    <CategoryIcon icon={cat.icon} size={22} color={category?.id === cat.id ? theme.colors.text.inverse : theme.colors.text.primary} />
+                    <CategoryIcon icon={cat.icon} size={22} color={theme.colors.text.inverse} />
                   </View>
                   <Text style={[styles.catName, category?.id === cat.id && styles.selectedCatName]}>{cat.name}</Text>
                 </TouchableOpacity>
