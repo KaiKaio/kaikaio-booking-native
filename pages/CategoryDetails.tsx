@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -9,6 +9,9 @@ import { useCategory } from '../context/CategoryContext';
 import MonthSelector from '@/components/MonthSelector';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@/theme';
+import { getBillList } from '../services/bill';
+import { DailyBill, BillDetail } from '../types/bill';
+import BillGroupItem, { DailyBillGroup, SubItem } from '@/components/BillGroupItem';
 
 type CategoryDetailsNavigationProp = NativeStackNavigationProp<RootStackParamList, 'CategoryDetails'>;
 type CategoryDetailsRouteProp = RouteProp<RootStackParamList, 'CategoryDetails'>;
@@ -21,12 +24,16 @@ interface CategoryDetailsProps {
 const CategoryDetails: React.FC<CategoryDetailsProps> = ({ navigation, route }) => {
   const { type_id, type_name } = route.params;
   const insets = useSafeAreaInsets();
-  const { getCategoryItem } = useCategory();
+  const { getCategoryItem, getCategoryIcon } = useCategory();
 
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  const [data, setData] = useState<DailyBillGroup[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [summary, setSummary] = useState({ totalExpense: 0, totalIncome: 0 });
 
   const getCategoryItemMemo = React.useMemo(() => {
     return getCategoryItem(type_id);
@@ -35,6 +42,102 @@ const CategoryDetails: React.FC<CategoryDetailsProps> = ({ navigation, route }) 
   const handleGoBack = () => {
     navigation.goBack();
   };
+
+  // 转换数据格式
+  const transformDailyBills = useCallback((list: DailyBill[]): DailyBillGroup[] => {
+    return list.map((daily: DailyBill) => {
+      let dailyTotal = 0;
+      let dailyIncome = 0;
+
+      const items: SubItem[] = daily.bills.map((bill: BillDetail) => {
+        const amount = parseFloat(bill.amount);
+        const isExpense = bill.pay_type === '1';
+        const displayAmount = isExpense ? -amount : amount;
+
+        if (isExpense) {
+          dailyTotal += amount;
+        } else {
+          dailyIncome += amount;
+        }
+
+        return {
+          id: bill.id,
+          type: bill.type_name,
+          icon: getCategoryIcon(bill.type_name),
+          remark: bill.remark,
+          amount: displayAmount,
+          typeId: bill.type_id,
+          payType: bill.pay_type,
+          date: bill.date,
+          rawAmount: amount,
+        };
+      });
+
+      return {
+        date: daily.date,
+        total: dailyTotal,
+        income: dailyIncome,
+        items,
+      };
+    });
+  }, [getCategoryIcon]);
+
+  // 获取账单数据
+  const fetchBills = useCallback(async () => {
+    if (!currentMonth) return;
+
+    setRefreshing(true);
+
+    try {
+      const [year, month] = currentMonth.split('-');
+      const lastDay = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
+
+      const start = `${currentMonth}-01 00:00:00`;
+      const end = `${currentMonth}-${lastDay} 23:59:59`;
+
+      const res = await getBillList({
+        start,
+        end,
+        page: 1,
+        page_size: 1000,
+        orderBy: 'DESC',
+        type_id,
+      });
+
+      if (res.code === 200) {
+        const transformedData = transformDailyBills(res.data.list);
+        setData(transformedData);
+        setSummary({
+          totalExpense: res.data.totalExpense,
+          totalIncome: res.data.totalIncome,
+        });
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [currentMonth, type_id, transformDailyBills]);
+
+  useEffect(() => {
+    fetchBills();
+  }, [fetchBills]);
+
+  const onRefresh = async () => {
+    await fetchBills();
+  };
+
+  // 渲染账单项
+  const renderBillItem = ({ item }: { item: DailyBillGroup }) => (
+    <BillGroupItem
+      item={item}
+      highlightedLocalId={null}
+      onDeleteSuccess={onRefresh}
+      onDelete={async () => {}}
+      onEdit={() => {}}
+      onRetry={async () => {}}
+    />
+  );
 
   return (
     <View style={styles.container}>
@@ -60,14 +163,43 @@ const CategoryDetails: React.FC<CategoryDetailsProps> = ({ navigation, route }) 
 
         <MonthSelector
           type_id={type_id}
-          currentMonth={currentMonth} 
-          onCurrentMonthChange={setCurrentMonth} 
+          currentMonth={currentMonth}
+          onCurrentMonthChange={setCurrentMonth}
         />
 
-        <View style={styles.placeholderBox}>
-          <Text style={styles.placeholderText}>详细内容区域</Text>
-          <Text style={styles.placeholderDescription}>后续完善具体内容</Text>
+        {/* 统计信息 */}
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>总支出：</Text>
+            <Text style={styles.summaryValue}>¥{summary.totalExpense.toFixed(2)}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>总收入：</Text>
+            <Text style={styles.summaryValue}>¥{summary.totalIncome.toFixed(2)}</Text>
+          </View>
         </View>
+
+        {/* 账单列表 */}
+        <FlatList
+          style={styles.list}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom }]}
+          data={data}
+          renderItem={renderBillItem}
+          keyExtractor={(item) => item.date}
+          showsVerticalScrollIndicator={false}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
+          ListEmptyComponent={!refreshing ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>暂无账单数据</Text>
+            </View>
+          ) : null}
+          ListFooterComponent={refreshing ? (
+            <View style={styles.loaderContainer}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+          ) : null}
+        />
       </View>
     </View>
   );
@@ -121,17 +253,6 @@ const styles = StyleSheet.create({
     color: theme.colors.text.primary,
     fontWeight: theme.typography.weight.bold,
   },
-  placeholderBox: {
-    flex: 1,
-    backgroundColor: theme.colors.background.paper,
-    borderRadius: theme.spacing.radius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: theme.colors.background.default,
-    borderStyle: 'dashed',
-    marginTop: theme.spacing.lg,
-  },
   iconWrapper: {
     width: 36,
     height: 36,
@@ -141,15 +262,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: theme.spacing.md,
   },
-  placeholderText: {
+  summaryCard: {
+    backgroundColor: theme.colors.background.paper,
+    borderRadius: theme.spacing.radius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
+  },
+  summaryLabel: {
     fontSize: theme.typography.size.md,
     color: theme.colors.text.secondary,
-    fontWeight: theme.typography.weight.medium,
   },
-  placeholderDescription: {
-    fontSize: theme.typography.size.sm,
+  summaryValue: {
+    fontSize: theme.typography.size.lg,
+    color: theme.colors.text.primary,
+    fontWeight: theme.typography.weight.bold,
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    paddingBottom: 16,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+  },
+  emptyText: {
     color: theme.colors.text.secondary,
-    marginTop: theme.spacing.xs,
+    fontSize: 14,
+  },
+  loaderContainer: {
+    paddingVertical: 20,
   },
 });
 
