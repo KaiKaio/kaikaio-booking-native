@@ -10,7 +10,7 @@ import {
   Platform,
   Animated
 } from 'react-native';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
+import ReanimatedSwipeable, { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import CategoryIcon from './CategoryIcon';
 import { deleteBill } from '../services/bill';
@@ -39,7 +39,7 @@ export interface BillItemProps {
 
 const BillItem: React.FC<BillItemProps> = ({ id, type, typeId, icon, remark, amount, payType, onDeleteSuccess, onDelete, onEdit, isLast, syncStatus, localId, onRetry, isHighlighted }) => {
   const [deleting, setDeleting] = useState(false);
-  const swipeableRef = useRef<Swipeable>(null);
+  const swipeableRef = useRef<SwipeableMethods>(null);
   const flashAnim = useRef(new Animated.Value(0)).current;
 
   const { getCategoryItem } = useCategory();
@@ -197,7 +197,7 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, typeId, icon, remark, amo
   };
 
   return (
-    <Swipeable
+    <ReanimatedSwipeable
       ref={swipeableRef}
       renderRightActions={renderRightActions}
       overshootRight={false}
@@ -216,7 +216,7 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, typeId, icon, remark, amo
         {renderSyncIndicator()}
         <Text style={[styles.itemAmount, { color: amountColor }]}>{ payType !== '1' && '+' }{amount.toFixed(2)}</Text>
       </Animated.View>
-    </Swipeable>
+    </ReanimatedSwipeable>
   );
 };
 
