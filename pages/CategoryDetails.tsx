@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -9,9 +9,10 @@ import { useCategory } from '../context/CategoryContext';
 import MonthSelector from '@/components/MonthSelector';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@/theme';
-import { getBillList } from '../services/bill';
+import { getBillList, deleteBill, updateBill } from '../services/bill';
 import { DailyBill, BillDetail } from '../types/bill';
 import BillGroupItem, { DailyBillGroup, SubItem } from '@/components/BillGroupItem';
+import BillForm, { BillData, BillFormRef } from '@/components/BillForm';
 
 type CategoryDetailsNavigationProp = NativeStackNavigationProp<RootStackParamList, 'CategoryDetails'>;
 type CategoryDetailsRouteProp = RouteProp<RootStackParamList, 'CategoryDetails'>;
@@ -24,7 +25,7 @@ interface CategoryDetailsProps {
 const CategoryDetails: React.FC<CategoryDetailsProps> = ({ navigation, route }) => {
   const { type_id, type_name } = route.params;
   const insets = useSafeAreaInsets();
-  const { getCategoryItem, getCategoryIcon } = useCategory();
+  const { getCategoryItem, getCategoryIcon, categories } = useCategory();
 
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
@@ -34,6 +35,10 @@ const CategoryDetails: React.FC<CategoryDetailsProps> = ({ navigation, route }) 
   const [data, setData] = useState<DailyBillGroup[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [summary, setSummary] = useState({ totalExpense: 0, totalIncome: 0 });
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const billFormRef = useRef<BillFormRef>(null);
 
   const getCategoryItemMemo = React.useMemo(() => {
     return getCategoryItem(type_id);
@@ -127,15 +132,117 @@ const CategoryDetails: React.FC<CategoryDetailsProps> = ({ navigation, route }) 
     await fetchBills();
   };
 
+  // 编辑账单
+  const handleEdit = (id: number) => {
+    let targetItem: SubItem | undefined;
+    for (const group of data) {
+      const item = group.items.find(i => i.id === id);
+      if (item) {
+        targetItem = item;
+        break;
+      }
+    }
+
+    if (targetItem) {
+      setEditingId(id);
+      // 解析日期
+      let dateObj: Date;
+      const dateVal = String(targetItem.date);
+      if (/^\d+$/.test(dateVal)) {
+        dateObj = new Date(parseInt(dateVal, 10));
+      } else {
+        dateObj = new Date(dateVal);
+      }
+
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+
+      billFormRef.current?.open({
+        amount: targetItem.rawAmount,
+        category: targetItem.typeId,
+        categoryName: targetItem.type,
+        date: dateStr,
+        remark: targetItem.remark,
+        type: targetItem.payType
+      });
+    }
+  };
+
+  // 提交编辑
+  const handleBillSubmit = async (billData: BillData) => {
+    if (isSubmitting || !editingId) return;
+
+    const timestamp = new Date(billData.date).getTime();
+    const params = {
+      id: editingId,
+      amount: billData.amount.toFixed(2),
+      type_id: billData.category,
+      type_name: billData.categoryName,
+      date: timestamp,
+      pay_type: billData.type,
+      remark: billData.remark || ''
+    };
+
+    setIsSubmitting(true);
+    try {
+      const res = await updateBill(params);
+      if (res.code !== 200) {
+        throw new Error(res.msg || '修改失败');
+      }
+      Alert.alert('成功', '账单修改成功');
+      setEditingId(null);
+      await onRefresh();
+    } catch (error: any) {
+      Alert.alert('错误', error.message || '修改失败');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 删除账单
+  const handleDelete = async ({ id }: { id: number; localId?: string }) => {
+    Alert.alert(
+      '确认删除',
+      '确定要删除这条账单吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await deleteBill(id);
+              if (res.code === 200) {
+                Alert.alert('成功', '账单已删除');
+                await onRefresh();
+              } else {
+                throw new Error(res.msg || '删除失败');
+              }
+            } catch (error: any) {
+              Alert.alert('错误', error.message || '删除失败');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // 重试同步（CategoryDetails 不支持离线账单，提供空实现）
+  const handleRetry = async (localId: string) => {
+    Alert.alert('提示', '此页面不支持重试同步操作');
+  };
+
   // 渲染账单项
   const renderBillItem = ({ item }: { item: DailyBillGroup }) => (
     <BillGroupItem
       item={item}
       highlightedLocalId={null}
       onDeleteSuccess={onRefresh}
-      onDelete={async () => {}}
-      onEdit={() => {}}
-      onRetry={async () => {}}
+      onDelete={handleDelete}
+      onEdit={handleEdit}
+      onRetry={handleRetry}
     />
   );
 
@@ -201,6 +308,19 @@ const CategoryDetails: React.FC<CategoryDetailsProps> = ({ navigation, route }) 
           ) : null}
         />
       </View>
+
+      {/* 编辑表单 */}
+      <BillForm ref={billFormRef} onSubmit={handleBillSubmit} />
+
+      {/* 提交中遮罩 */}
+      {isSubmitting && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={styles.loadingText}>正在提交...</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
@@ -304,6 +424,29 @@ const styles = StyleSheet.create({
   },
   loaderContainer: {
     paddingVertical: 20,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  loadingBox: {
+    backgroundColor: theme.colors.background.paper,
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    elevation: 5,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: theme.colors.text.primary,
+    fontSize: 14,
   },
 });
 
