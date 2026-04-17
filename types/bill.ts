@@ -1,3 +1,4 @@
+import { ApiResponse } from './common';
 export interface BillParams {
   start: string; // YYYY-MM-DD 00:00:00
   end: string;   // YYYY-MM-DD 23:59:59
@@ -83,3 +84,5 @@ export interface EarliestItemDateResponse {
   msg: string;
   data: string // "2020-11-10T12:16:59.000Z"
 }
+
+export type MonthListResponse = ApiResponse<string[]>; // ["2020/11", "2020/12", "2021/01", ...]

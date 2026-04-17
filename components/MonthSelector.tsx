@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Text } from 'react-native';
-import { getEarliestItemDate } from '@/services/bill';
+import { getMonthList } from '@/services/bill';
 import { theme } from '@/theme';
 
 interface MonthSelectorProps {
@@ -14,56 +14,32 @@ const MonthSelector: React.FC<MonthSelectorProps> = ({
   onCurrentMonthChange,
   type_id,
 }) => {
-  const [earliestDate, setEarliestDate] = useState<string>('');
+  const [months, setMonths] = useState<string[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // 根据 earliestDate 计算出到当前月的月份列表
-  const months = React.useMemo(() => {
-    if (!earliestDate) return [];
-
-    const monthList = [];
-    const startDate = new Date(earliestDate);
-    const endDate = new Date();
-
-    const startYear = startDate.getFullYear();
-    const startMonth = startDate.getMonth();
-    const endYear = endDate.getFullYear();
-    const endMonth = endDate.getMonth();
-
-    for (let year = startYear; year <= endYear; year++) {
-      const monthStart = year === startYear ? startMonth : 0;
-      const monthEnd = year === endYear ? endMonth : 11;
-
-      for (let month = monthStart; month <= monthEnd; month++) {
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}`;
-        monthList.push(dateStr);
-      }
-    }
-
-    return monthList;
-  }, [earliestDate]);
-
   useEffect(() => {
-    const handleFetchEarliestItemDate = async () => {
-    try {
-      const res = await getEarliestItemDate(type_id);
+    const handleFetchMonthList = async () => {
+      try {
+        const res = await getMonthList(type_id);
 
-      if (res.code !== 200 || !res?.data) {
-        throw new Error(`Failed to fetch earliest item date: ${res.msg}`);
+        if (res.code !== 200 || !res?.data) {
+          throw new Error(`Failed to fetch month list: ${res.msg}`);
+        }
+
+        // 将 API 返回的 "YYYY/MM" 格式转换为 "YYYY-MM" 格式
+        const monthList = res.data.map(month => month.replace('/', '-'));
+        setMonths(monthList);
+
+        // Scroll to end (current month) on mount
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: false });
+        }, 100);
+      } catch (error) {
+        console.error('Error fetching month list:', error);
       }
-      // 处理日期字符串，例如 "2020-11-10T12:16:59.000Z"，转换为 YYYY-MM-DD 格式
-      const formattedDate = new Date(res.data).toISOString().split('T')[0];
-      setEarliestDate(formattedDate);
-      // Scroll to end (current month) on mount
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: false });
-      }, 100);
-    } catch (error) {
-      console.error('Error fetching earliest item dates:', error);
-    }
-  };
+    };
 
-    handleFetchEarliestItemDate();
+    handleFetchMonthList();
   }, [type_id]);
 
   return (
