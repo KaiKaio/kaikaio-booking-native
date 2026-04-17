@@ -7,6 +7,7 @@ import MonthYearPicker from '../components/MonthYearPicker';
 import TypePicker from '../components/TypePicker';
 import BillForm, { BillData, BillFormRef } from '../components/BillForm';
 import BillItem from '../components/BillItem';
+import BillGroupItem, { DailyBillGroup, SubItem } from '../components/BillGroupItem';
 import { getBillList, addBill, updateBill, loadBillMonthCache, saveBillMonthCache } from '../services/bill';
 import { BillDetail, DailyBill } from '../types/bill';
 import CategoryIcon from '@/components/CategoryIcon';
@@ -23,31 +24,6 @@ import {
 type SyncStatus = 'syncing' | 'synced' | 'failed';
 
 type DataState = 'online' | 'offline-cached' | 'empty' | 'error';
-
-// 定义 SubItem 类型
-type SubItem = {
-  id: number;
-  type: string;
-  icon: string;
-  remark: string;
-  amount: number;
-  typeId: number;
-  date: string;
-  payType: '1' | '2'; // '1'=支出，'2'=收入
-  rawAmount: number;
-  // 同步状态相关
-  syncStatus?: SyncStatus; // 'syncing' | 'synced' | 'failed'
-  localId?: string; // 本地唯一标识,用于乐观更新时定位
-  retryParams?: any; // 用于重试的参数
-};
-
-// 定义 BillItem 类型
-type DailyBillGroup = {
-  date: string;
-  total: number;
-  income: number;
-  items: SubItem[];
-};
 
 
 const List = () => {
@@ -1024,24 +1000,14 @@ const List = () => {
   );
 
   const renderBillItem = ({ item }: { item: DailyBillGroup }) => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionDate}>{item.date}</Text>
-        <Text style={styles.sectionStat}>支出: ￥{item.total.toFixed(2)} 收入: ￥{item.income.toFixed(2)}</Text>
-      </View>
-      {item.items.map((subItem: SubItem, index: number) => (
-        <BillItem
-          key={subItem.localId || subItem.id}
-          isHighlighted={subItem.localId === highlightedLocalId}
-          onDeleteSuccess={onRefresh}
-          onDelete={handleDeleteOptimisticBill}
-          onEdit={handleEdit}
-          onRetry={handleRetrySync}
-          isLast={index === item.items.length - 1}
-          {...subItem}
-        />
-      ))}
-    </View>
+    <BillGroupItem
+      item={item}
+      highlightedLocalId={highlightedLocalId}
+      onDeleteSuccess={onRefresh}
+      onDelete={handleDeleteOptimisticBill}
+      onEdit={handleEdit}
+      onRetry={handleRetrySync}
+    />
   );
 
   const onRefresh = async () => {
@@ -1215,10 +1181,6 @@ const styles = StyleSheet.create({
 
   flatListContent: { paddingBottom: 80 },
   scroll: { flex: 1, marginTop: 0 },
-  section: { backgroundColor: theme.colors.background.paper, borderRadius: 12, marginHorizontal: theme.spacing.md, marginTop: 16, paddingBottom: 8, elevation: 2 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
-  sectionDate: { fontWeight: 'bold', fontSize: 16, color: theme.colors.text.primary },
-  sectionStat: { fontSize: 12, color: theme.colors.text.secondary },
   loaderContainer: {
     paddingVertical: 20
   },

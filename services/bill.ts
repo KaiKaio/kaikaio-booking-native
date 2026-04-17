@@ -147,16 +147,22 @@ export const getBillStatistics = async (start: string, end: string): Promise<Sta
 
 // 查询某类型账单最早日期
 export const getEarliestItemDate = async (type_id?: number): Promise<EarliestItemDateResponse> => {
-  return request(`/api/bill/getEarliestItemDate`, {
-    method: 'GET',
-    params: { type_id },
+  const queryString = new URLSearchParams({
+    ...(type_id ? { type_id: type_id?.toString() } : {}),
+  }).toString();
+
+  return request(`/api/bill/getEarliestItemDate?${queryString}`, {
+    method: 'GET'
   });
 };
 
 // 按某类型（或所有类型）查询月份列表
 export const getMonthList = async (type_id?: number): Promise<MonthListResponse> => {
-  return request(`/api/bill/getMonthList`, {
-    method: 'GET',
-    params: { type_id },
+  const queryString = new URLSearchParams({
+    ...(type_id ? { type_id: type_id?.toString() } : {}),
+  }).toString();
+
+  return request(`/api/bill/getMonthList?${queryString}`, {
+    method: 'GET'
   });
 };
