@@ -286,6 +286,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
               <TouchableOpacity 
                 style={[styles.typeTab, activeType === '1' && styles.typeTabActive]}
                 onPress={() => {
+                  Keyboard.dismiss()
                   setActiveType('1');
                   const firstExpense = categories.find(c => c.type === '1');
                   if (firstExpense) setCategory(firstExpense);
@@ -296,6 +297,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
               <TouchableOpacity 
                 style={[styles.typeTab, activeType === '2' && styles.typeTabActive]}
                 onPress={() => {
+                  Keyboard.dismiss()
                   setActiveType('2');
                   const firstIncome = categories.find(c => c.type === '2');
                   if (firstIncome) setCategory(firstIncome);
@@ -311,12 +313,14 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
             <ScrollView 
               showsVerticalScrollIndicator={true}
               contentContainerStyle={styles.categoryScrollContent}
+              keyboardShouldPersistTaps="handled"
             >
               {filteredCategories.map(cat => (
                 <TouchableOpacity 
                   key={cat.id} 
                   style={[styles.catItem, category?.id === cat.id && styles.selectedCat]}
                   onPress={() => {
+                    Keyboard.dismiss();
                     setCategory(cat);
                   }}
                 >
@@ -334,6 +338,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
               <TouchableOpacity 
                 style={styles.catItem}
                 onPress={() => {
+                  Keyboard.dismiss();
                   setVisible(false);
                   setTimeout(() => {
                     navigate('CategoryEdit', { type: activeType });
@@ -352,7 +357,10 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
           <View style={styles.inputsRow}>
               <TouchableOpacity 
                 style={styles.dateInput} 
-                onPress={() => setShowDatePicker(!showDatePicker)}
+                onPress={() => {
+                  Keyboard.dismiss()
+                  setShowDatePicker(!showDatePicker)
+                }}
               >
                 <Text style={styles.label}>日期</Text>
                 <Text style={styles.value}>{date.getFullYear()}-{String(date.getMonth() + 1).padStart(2, '0')}-{String(date.getDate()).padStart(2, '0')}</Text>
@@ -497,7 +505,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   selectedCatIconWrap: {
-    backgroundColor: theme.colors.background.primaryLight
+    backgroundColor: theme.colors.background.primaryLight,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1, 
+    shadowRadius: 3,
   },
   catIcon: { fontSize: 24 },
   catName: { fontSize: 12, color: theme.colors.text.secondary },
