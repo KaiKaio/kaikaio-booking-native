@@ -57,6 +57,9 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   const [activeType, setActiveType] = useState<'1' | '2'>('1'); // '1': expense, '2': income
 
   const [isRemarkInputFocused, setIsRemarkInputFocused] = useState(false);
+  
+  // 防抖：防止重复提交
+  const isSubmittingRef = React.useRef(false);
 
   useImperativeHandle(ref, () => ({
     open: (data?: BillData) => {
@@ -193,11 +196,20 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   }, [visible, editData, categories, activeType]);
 
   const handleSubmit = () => {
+    // 防抖检查：如果正在提交，直接返回
+    if (isSubmittingRef.current) {
+      return;
+    }
+    
     const amount = parseFloat(amountStr);
     if (amount <= 0) {
       Alert.alert('提示', '是不是忘了输入金额？');
       return;
     }
+    
+    // 标记为正在提交
+    isSubmittingRef.current = true;
+    
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -216,6 +228,11 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
     };
     onSubmit?.(data);
     setVisible(false);
+    
+    // 延迟重置提交状态，防止快速重复点击
+    setTimeout(() => {
+      isSubmittingRef.current = false;
+    }, 1000);
   };
 
   // Date picker was extracted to components/DatePicker.tsx
