@@ -109,7 +109,7 @@ const Account = () => {
   // 获取公钥用于密码加密
   const fetchPublicKey = async () => {
     try {
-      const response = await fetch('http://10.242.78.83:4000/api/user/public_key');
+      const response = await fetch('http://10.242.46.156:4000/api/user/public_key');
       const data = await response.json();
       if (data?.msg) {
         encrypt.setPublicKey(data.msg);

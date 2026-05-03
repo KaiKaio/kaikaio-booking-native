@@ -23,9 +23,9 @@ import { theme } from '@/theme';
 
 import { RootStackParamList } from '../types/navigation';
 
-const LOGIN_URL = 'http://10.242.78.83:4000/api/user/login';
-const REGISTER_URL = 'http://10.242.78.83:7009/api/user/register';
-const PUBLIC_KEY_URL = 'http://10.242.78.83:4000/api/user/public_key';
+const LOGIN_URL = 'http://10.242.46.156:4000/api/user/login';
+const REGISTER_URL = 'http://10.242.46.156:7009/api/user/register';
+const PUBLIC_KEY_URL = 'http://10.242.46.156:4000/api/user/public_key';
 const encrypt = new JSEncrypt();
 
 const Login = () => {
