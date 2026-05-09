@@ -13,6 +13,7 @@ const Keypad: React.FC<KeypadProps> = ({ amountStr, onChange }) => {
   const [operator, setOperator] = useState<string | null>(null);
   const [displayValue, setDisplayValue] = useState<string>('0');
   const [isNewInput, setIsNewInput] = useState<boolean>(false);
+  const [isOperatorAction, setIsOperatorAction] = useState<boolean>(false);
 
   const pendingValueRef = useRef(pendingValue);
   const operatorRef = useRef(operator);
@@ -32,6 +33,10 @@ const Keypad: React.FC<KeypadProps> = ({ amountStr, onChange }) => {
 
   // 同步外部 amountStr 变化
   useEffect(() => {
+    if (isOperatorAction) {
+      setIsOperatorAction(false);
+      return;
+    }
     setDisplayValue(amountStr);
     setIsNewInput(false);
   }, [amountStr]);
@@ -101,6 +106,7 @@ const Keypad: React.FC<KeypadProps> = ({ amountStr, onChange }) => {
         }
         // Round to 2 decimal places
         result = Math.round(result * 100) / 100;
+        setIsOperatorAction(true);
         updateDisplay(result.toString());
         setPendingValue(result);
       } else {
