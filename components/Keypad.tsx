@@ -39,6 +39,7 @@ const Keypad: React.FC<KeypadProps> = ({ amountStr, onChange }) => {
     }
     setDisplayValue(amountStr);
     setIsNewInput(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [amountStr]);
 
   const updateDisplay = (value: string | ((prev: string) => string)) => {
