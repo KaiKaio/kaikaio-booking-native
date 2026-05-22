@@ -2,6 +2,8 @@
 #
 .DS_Store
 
+.codeartsdoer/
+
 # Xcode
 #
 build/

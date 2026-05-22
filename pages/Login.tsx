@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Image } from 'expo-image';
 import request from '../request';
-import JSEncrypt from 'jsencrypt';
+import { setPublicKey, encryptWithOAEP } from '@/utils/encryption';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -26,7 +26,6 @@ import { RootStackParamList } from '../types/navigation';
 const LOGIN_URL = 'http://10.242.46.156:4000/api/user/login';
 const REGISTER_URL = 'http://10.242.46.156:7009/api/user/register';
 const PUBLIC_KEY_URL = 'http://10.242.46.156:4000/api/user/public_key';
-const encrypt = new JSEncrypt();
 
 const Login = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -59,9 +58,13 @@ const Login = () => {
       try {
         const data = await request(PUBLIC_KEY_URL, { method: 'GET' });
         if (data?.msg && mounted) {
-          encrypt.setPublicKey(data.msg);
-          setPublicKeyReady(true);
-          setPublicKeyLoading(false);
+          const success = setPublicKey(data.msg);
+          if (success) {
+            setPublicKeyReady(true);
+            setPublicKeyLoading(false);
+          } else {
+            throw new Error('公钥解析失败');
+          }
         } else if (mounted) {
           throw new Error(data?.message || '未获取到公钥');
         }
@@ -135,10 +138,14 @@ const Login = () => {
         try {
           const data = await request(PUBLIC_KEY_URL, { method: 'GET' });
           if (data?.msg) {
-            encrypt.setPublicKey(data.msg);
-            setPublicKeyReady(true);
-            setPublicKeyLoading(false);
-            resolve(true);
+            const success = setPublicKey(data.msg);
+            if (success) {
+              setPublicKeyReady(true);
+              setPublicKeyLoading(false);
+              resolve(true);
+            } else {
+              throw new Error('公钥解析失败');
+            }
           } else {
             throw new Error(data?.message || '未获取到公钥');
           }
@@ -182,11 +189,18 @@ const Login = () => {
     
     setLoading(true);
     try {
+      const encryptedPassword = encryptWithOAEP(password);
+      if (!encryptedPassword) {
+        Alert.alert('错误', '密码加密失败');
+        setLoading(false);
+        return;
+      }
+
       const data = await request(LOGIN_URL, {
         method: 'POST',
         body: JSON.stringify({
           userName: account,
-          password: encrypt.encrypt(password),
+          password: encryptedPassword,
         }),
       });
       if (data.token) {
@@ -267,11 +281,18 @@ const Login = () => {
     
     setLoading(true);
     try {
+      const encryptedPassword = encryptWithOAEP(password);
+      if (!encryptedPassword) {
+        Alert.alert('错误', '密码加密失败');
+        setLoading(false);
+        return;
+      }
+
       const res: { data: { user_id: string; msg: string } } = await request(REGISTER_URL, {
         method: 'POST',
         body: JSON.stringify({
           username: account,
-          password: encrypt.encrypt(password),
+          password: encryptedPassword,
         }),
       });
       if (res?.data?.user_id) {

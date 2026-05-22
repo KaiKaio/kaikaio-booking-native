@@ -24,15 +24,13 @@ import { RootStackParamList } from '../types/navigation';
 import { useUser } from '../context/UserContext';
 import { useCategory } from '../context/CategoryContext';
 import { updateUsername, updatePassword, updateAvatar, uploadAvatar } from '../services/user';
-import JSEncrypt from 'jsencrypt';
+import { setPublicKey, encryptWithOAEP } from '@/utils/encryption';
 import { theme } from '@/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   // clearUserLocalData,
   getActiveAccount
 } from '@/utils/storage';
-
-const encrypt = new JSEncrypt();
 
 const Account = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -112,8 +110,7 @@ const Account = () => {
       const response = await fetch('http://10.242.46.156:4000/api/user/public_key');
       const data = await response.json();
       if (data?.msg) {
-        encrypt.setPublicKey(data.msg);
-        return true;
+        return setPublicKey(data.msg);
       }
       return false;
     } catch (error) {
@@ -237,14 +234,16 @@ const Account = () => {
       const hasPublicKey = await fetchPublicKey();
       if (!hasPublicKey) {
         Alert.alert('错误', '获取加密公钥失败');
+        setSubmitting(false);
         return;
       }
 
-      const encryptedOldPassword = encrypt.encrypt(oldPassword);
-      const encryptedNewPassword = encrypt.encrypt(newPassword);
+      const encryptedOldPassword = encryptWithOAEP(oldPassword);
+      const encryptedNewPassword = encryptWithOAEP(newPassword);
 
       if (!encryptedOldPassword || !encryptedNewPassword) {
         Alert.alert('错误', '密码加密失败');
+        setSubmitting(false);
         return;
       }
 
