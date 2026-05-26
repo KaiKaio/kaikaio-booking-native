@@ -150,7 +150,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   const filteredCategories = categories.filter(cat => cat.type === activeType);
   
   // Paginate categories for carousel (15 items per page)
-  const ITEMS_PER_PAGE = 15;
+  const ITEMS_PER_PAGE = 18;
   const categoryPages = useMemo(() => {
     const pages = [];
     const itemsWithManage = [...filteredCategories, { id: 'manage', isManageButton: true }];
@@ -345,7 +345,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
             {categoryPages.length > 0 && (
               <Carousel
                 width={windowWidth}
-                height={200}
+                height={240}
                 data={categoryPages}
                 renderItem={({ item: pageItems }) => (
                   <View style={styles.categoryPage}>
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
   amount: { fontSize: 24, fontWeight: 'bold', color: theme.colors.text.primary },
 
   categoryContainer: {
-    height: 200,
+    height: 240,
     paddingVertical: 0,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
   },
   catItem: {
     alignItems: 'center',
-    width: '20%',
+    width: '16.666666%',
     marginBottom: 16,
   },
   selectedCat: {
