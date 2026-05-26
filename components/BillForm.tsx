@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
-  ScrollView,
   Keyboard,
   Platform,
   Alert,
@@ -16,6 +15,7 @@ import {
 import type { KeyboardEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Carousel from 'react-native-reanimated-carousel';
 import { useCategory } from '../context/CategoryContext';
 import CategoryIcon from './CategoryIcon';
 import DatePicker from './DatePicker';
@@ -148,6 +148,21 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
 
   // Filter categories by active type
   const filteredCategories = categories.filter(cat => cat.type === activeType);
+  
+  // Paginate categories for carousel (15 items per page)
+  const ITEMS_PER_PAGE = 15;
+  const categoryPages = useMemo(() => {
+    const pages = [];
+    const itemsWithManage = [...filteredCategories, { id: 'manage', isManageButton: true }];
+    
+    for (let i = 0; i < itemsWithManage.length; i += ITEMS_PER_PAGE) {
+      pages.push(itemsWithManage.slice(i, i + ITEMS_PER_PAGE));
+    }
+    
+    return pages;
+  }, [filteredCategories]);
+  
+  const windowWidth = Dimensions.get('window').width;
 
   // Reset form when opening
   useEffect(() => {
@@ -327,47 +342,58 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
 
           {/* Category Selection */}
           <View style={styles.categoryContainer}>
-            <ScrollView 
-              showsVerticalScrollIndicator={true}
-              contentContainerStyle={styles.categoryScrollContent}
-              keyboardShouldPersistTaps="handled"
-            >
-              {filteredCategories.map(cat => (
-                <TouchableOpacity 
-                  key={cat.id} 
-                  style={[styles.catItem, category?.id === cat.id && styles.selectedCat]}
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    setCategory(cat);
-                  }}
-                >
-                  <View style={[
-                    styles.catIconWrap,
-                    cat?.background_color && { backgroundColor: cat.background_color },
-                    category?.id === cat.id && styles.selectedCatIconWrap
-                  ]}>
-                    <CategoryIcon icon={cat.icon} size={22} color={theme.colors.text.inverse} />
+            {categoryPages.length > 0 && (
+              <Carousel
+                width={windowWidth}
+                height={200}
+                data={categoryPages}
+                renderItem={({ item: pageItems }) => (
+                  <View style={styles.categoryPage}>
+                    {pageItems.map((cat: any) => (
+                      <TouchableOpacity 
+                        key={cat.id} 
+                        style={[styles.catItem, category?.id === cat.id && styles.selectedCat]}
+                        onPress={() => {
+                          Keyboard.dismiss();
+                          if (cat.isManageButton) {
+                            setVisible(false);
+                            setTimeout(() => {
+                              navigate('CategoryEdit', { type: activeType });
+                            }, 300);
+                          } else {
+                            setCategory(cat);
+                          }
+                        }}
+                      >
+                        {cat.isManageButton ? (
+                          <>
+                            <View style={styles.addCatIconWrap}>
+                              <Text style={styles.addCatIcon}>+</Text>
+                            </View>
+                            <Text style={styles.catName}>管理</Text>
+                          </>
+                        ) : (
+                          <>
+                            <View style={[
+                              styles.catIconWrap,
+                              cat?.background_color && { backgroundColor: cat.background_color },
+                              category?.id === cat.id && styles.selectedCatIconWrap
+                            ]}>
+                              <CategoryIcon icon={cat.icon} size={22} color={theme.colors.text.inverse} />
+                            </View>
+                            <Text style={[styles.catName, category?.id === cat.id && styles.selectedCatName]}>{cat.name}</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    ))}
                   </View>
-                  <Text style={[styles.catName, category?.id === cat.id && styles.selectedCatName]}>{cat.name}</Text>
-                </TouchableOpacity>
-              ))}
-              {/* Add Category Button */}
-              <TouchableOpacity 
-                style={styles.catItem}
-                onPress={() => {
-                  Keyboard.dismiss();
-                  setVisible(false);
-                  setTimeout(() => {
-                    navigate('CategoryEdit', { type: activeType });
-                  }, 300);
-                }}
-              >
-                <View style={styles.addCatIconWrap}>
-                  <Text style={styles.addCatIcon}>+</Text>
-                </View>
-                <Text style={styles.catName}>管理</Text>
-              </TouchableOpacity>
-            </ScrollView>
+                )}
+                loop={false}
+                autoPlay={false}
+                pagingEnabled
+                snapEnabled
+              />
+            )}
           </View>
 
           {/* Inputs Row */}
@@ -472,6 +498,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
+  categoryPage: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
   typeTabContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -499,14 +531,9 @@ const styles = StyleSheet.create({
     color: theme.colors.text.inverse,
     fontWeight: '600',
   },
-  categoryScrollContent: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingBottom: 20,
-  },
   catItem: {
     alignItems: 'center',
-    width: '16.66%',
+    width: '20%',
     marginBottom: 16,
   },
   selectedCat: {
