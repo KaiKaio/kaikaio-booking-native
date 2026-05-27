@@ -6,6 +6,7 @@
   "scripts": {
     "android": "npm run link-fonts && cross-env CMAKE_VERSION=3.31.6 expo run:android",
     "build:android": "npm run link-fonts && cd android && ./gradlew assembleRelease",
+    "prebuild:android": "cross-env NODE_ENV=production expo prebuild --clean && npm run link-fonts",
     "ios": "npm run link-fonts && npx expo run:ios",
     "reset-cache": "expo start --dev-client -c",
     "lint": "eslint .",
@@ -23,6 +24,7 @@
     "@react-navigation/native-stack": "^7.3.21",
     "expo": "^54.0.27",
     "expo-asset": "~12.0.12",
+    "expo-build-properties": "^56.0.15",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "^18.0.11",
     "expo-image": "~3.0.11",

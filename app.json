@@ -16,6 +16,14 @@
         "cameraPermission": "我们需要访问您的相机以便您可以拍摄并上传照片。",
         "microphonePermission": "我们需要访问您的麦克风以便您可以录制带有声音的视频。"
       }
+    ],
+    [
+      "expo-build-properties",
+      {
+        "android": {
+          "usesCleartextTraffic": true
+        }
+      }
     ]
   ],
   "ios": {
@@ -25,6 +33,11 @@
     "adaptiveIcon": {
       "foregroundImage": "./assets/icon.png",
       "backgroundColor": "#ffffff"
-    }
+    },
+    "permissions": [
+      "android.permission.RECORD_AUDIO",
+      "android.permission.RECORD_AUDIO"
+    ],
+    "package": "com.anonymous.kaikaio"
   }
 }
