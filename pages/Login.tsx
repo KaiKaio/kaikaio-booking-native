@@ -22,10 +22,11 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '@/theme';
 
 import { RootStackParamList } from '../types/navigation';
+import { BASE_URL } from '@/config';
 
-const LOGIN_URL = 'http://10.242.46.156:4000/api/user/login';
-const REGISTER_URL = 'http://10.242.46.156:7009/api/user/register';
-const PUBLIC_KEY_URL = 'http://10.242.46.156:4000/api/user/public_key';
+const LOGIN_URL = `${BASE_URL}/api/user/login`;
+const REGISTER_URL = `${BASE_URL}/api/user/register`;
+const PUBLIC_KEY_URL = `${BASE_URL}/api/user/public_key`;
 
 const Login = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -56,9 +57,9 @@ const Login = () => {
       setPublicKeyLoading(true);
       
       try {
-        const data = await request(PUBLIC_KEY_URL, { method: 'GET' });
-        if (data?.msg && mounted) {
-          const success = setPublicKey(data.msg);
+        const res = await request(PUBLIC_KEY_URL, { method: 'GET' });
+        if (res?.data?.publicKey && mounted) {
+          const success = setPublicKey(res.data.publicKey);
           if (success) {
             setPublicKeyReady(true);
             setPublicKeyLoading(false);
@@ -66,7 +67,7 @@ const Login = () => {
             throw new Error('公钥解析失败');
           }
         } else if (mounted) {
-          throw new Error(data?.message || '未获取到公钥');
+          throw new Error(res?.msg || '未获取到公钥');
         }
       } catch (err) {
         if (!mounted) return;
@@ -136,9 +137,9 @@ const Login = () => {
         setPublicKeyLoading(true);
         
         try {
-          const data = await request(PUBLIC_KEY_URL, { method: 'GET' });
-          if (data?.msg) {
-            const success = setPublicKey(data.msg);
+          const res = await request(PUBLIC_KEY_URL, { method: 'GET' });
+          if (res?.data?.publicKey) {
+            const success = setPublicKey(res.data.publicKey);
             if (success) {
               setPublicKeyReady(true);
               setPublicKeyLoading(false);
@@ -147,7 +148,7 @@ const Login = () => {
               throw new Error('公钥解析失败');
             }
           } else {
-            throw new Error(data?.message || '未获取到公钥');
+            throw new Error(res?.msg || '未获取到公钥');
           }
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : '网络错误';
@@ -199,7 +200,7 @@ const Login = () => {
       const data = await request(LOGIN_URL, {
         method: 'POST',
         body: JSON.stringify({
-          userName: account,
+          username: account,
           password: encryptedPassword,
         }),
       });
