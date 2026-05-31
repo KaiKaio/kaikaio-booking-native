@@ -7,13 +7,14 @@
     "android": "npm run link-fonts && cross-env CMAKE_VERSION=3.31.6 expo run:android",
     "build:android": "npm run link-fonts && cd android && ./gradlew assembleRelease",
     "prebuild:android": "cross-env NODE_ENV=production expo prebuild --clean && npm run link-fonts",
-    "ios": "npm run link-fonts && npx expo run:ios",
+    "ios": "node scripts/update-ats.js && npm run link-fonts && npx expo run:ios",
     "reset-cache": "expo start --dev-client -c",
     "lint": "eslint .",
     "start": "expo start --dev-client",
     "test": "jest",
     "sync-version": "node scripts/sync-version.js",
-    "link-fonts": "node scripts/link-fonts.js"
+    "link-fonts": "node scripts/link-fonts.js",
+    "update-ats": "node scripts/update-ats.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
@@ -64,6 +65,7 @@
     "babel-plugin-module-resolver": "^5.0.2",
     "babel-preset-expo": "^55.0.13",
     "cross-env": "^10.1.0",
+    "dotenv": "^16.3.1",
     "eslint": "^8.19.0",
     "jest": "^29.6.3",
     "prettier": "2.8.8",
