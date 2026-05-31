@@ -4,12 +4,71 @@ import { BASE_URL } from './config';
 import { navigate } from './utils/navigationRef';
 import {
   TOKEN_STORAGE_KEY,
+  REFRESH_TOKEN_STORAGE_KEY,
   CATEGORIES_CACHE_STORAGE_KEY,
   LAST_SELECTED_DATE_STORAGE_KEY,
   // ACTIVE_ACCOUNT_STORAGE_KEY,
   USER_CREDENTIALS_STORAGE_KEY,
   BILL_MONTH_CACHE_PREFIX,
 } from './utils/storage';
+
+const REFRESH_URL = `${BASE_URL}/api/user/refresh`;
+
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
+
+async function refreshAccessToken(): Promise<boolean> {
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+      if (!refreshToken) {
+        console.log('没有 refreshToken，无法刷新');
+        return false;
+      }
+
+      console.log('开始刷新 token...');
+      const response = await fetch(REFRESH_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          refreshToken
+        })
+      });
+
+      if (!response.ok) {
+        console.log('刷新 token 失败:', response.status);
+        return false;
+      }
+
+      const data = await response.json();
+      if (data.accessToken) {
+        await AsyncStorage.setItem(TOKEN_STORAGE_KEY, data.accessToken);
+        if (data.refreshToken) {
+          await AsyncStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, data.refreshToken);
+        }
+        console.log('token 刷新成功');
+        return true;
+      }
+
+      return false;
+    } catch (err) {
+      console.error('刷新 token 异常:', err);
+      return false;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
 
 export default async function request(url: string, options: any = {}) {
   const token = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
@@ -39,6 +98,43 @@ export default async function request(url: string, options: any = {}) {
     clearTimeout(timeoutId);
 
     if (response.status === 401) {
+      const isRefreshRequest = url === REFRESH_URL;
+      
+      if (!isRefreshRequest) {
+        const refreshed = await refreshAccessToken();
+        if (refreshed) {
+          const newToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
+          const retryHeaders = {
+            ...defaultHeaders,
+            ...(newToken ? { Authorization: newToken } : {}),
+          };
+          console.log('Token 已刷新，重试请求:', fullUrl);
+          const retryResponse = await fetch(fullUrl, {
+            ...finalOptions,
+            headers: retryHeaders,
+          });
+          
+          if (!retryResponse.ok) {
+            if (retryResponse.status === 401) {
+              console.log('重试仍然 401，跳转登录');
+            } else {
+              let msg = '服务器错误';
+              try {
+                const errData = await retryResponse.json();
+                msg = errData.msg || msg;
+              } catch (err: any) {
+                console.error(err, 'retry response parse error');
+              }
+              throw new Error(msg);
+            }
+          } else {
+            const data = await retryResponse.json();
+            console.log('Request Success (Retry):', fullUrl, data);
+            return data;
+          }
+        }
+      }
+
       let msg = '登录过期，请重新登录';
       try {
         const errData = await response.json();
@@ -53,16 +149,14 @@ export default async function request(url: string, options: any = {}) {
         });
       }
 
-      // 401 时不清除离线账单数据,只清除认证相关数据
-      // 离线账单会在用户重新登录后继续同步
       const keysToRemove = [
         TOKEN_STORAGE_KEY,
+        REFRESH_TOKEN_STORAGE_KEY,
         USER_CREDENTIALS_STORAGE_KEY,
         CATEGORIES_CACHE_STORAGE_KEY,
         LAST_SELECTED_DATE_STORAGE_KEY,
       ];
 
-      // 清除月度缓存(避免数据过大)
       const allKeys = await AsyncStorage.getAllKeys();
       const monthCacheKeys = allKeys.filter(key =>
         key.startsWith(BILL_MONTH_CACHE_PREFIX)

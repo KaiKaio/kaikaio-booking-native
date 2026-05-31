@@ -41,12 +41,22 @@
     <string>12.0</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
-    <key>NSAppTransportSecurity</key>
+        <key>NSAppTransportSecurity</key>
     <dict>
       <key>NSAllowsArbitraryLoads</key>
-      <false/>
+      <true/>
       <key>NSAllowsLocalNetworking</key>
       <true/>
+      <key>NSExceptionDomains</key>
+      <dict>
+        <key>127.0.0.1</key>
+        <dict>
+          <key>NSExceptionAllowsInsecureHTTPLoads</key>
+          <true/>
+          <key>NSIncludesSubdomains</key>
+          <true/>
+        </dict>
+      </dict>
     </dict>
     <key>NSCameraUsageDescription</key>
     <string>我们需要访问您的相机以便您可以拍摄并上传照片。</string>

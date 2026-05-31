@@ -11,6 +11,7 @@ import { useUser } from '../context/UserContext';
 import {
   ACTIVE_ACCOUNT_STORAGE_KEY,
   TOKEN_STORAGE_KEY,
+  REFRESH_TOKEN_STORAGE_KEY,
   USER_CREDENTIALS_STORAGE_KEY,
   clearUserLocalData,
   // getActiveAccount,
@@ -197,14 +198,19 @@ const Login = () => {
         return;
       }
 
-      const data = await request(LOGIN_URL, {
+      const data: {
+        code: number,
+        msg: string,
+        accessToken: string
+        refreshToken: string
+      } = await request(LOGIN_URL, {
         method: 'POST',
         body: JSON.stringify({
           username: account,
           password: encryptedPassword,
         }),
       });
-      if (data.token) {
+      if (data.accessToken) {
         const previousAccount = await AsyncStorage.getItem(ACTIVE_ACCOUNT_STORAGE_KEY);
         const oldToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
         const isSwitchingAccount = previousAccount && previousAccount !== account;
@@ -234,7 +240,10 @@ const Login = () => {
           resetCategories();
         }
 
-        await AsyncStorage.setItem(TOKEN_STORAGE_KEY, data.token);
+        await AsyncStorage.setItem(TOKEN_STORAGE_KEY, data.accessToken);
+        if (data.refreshToken) {
+          await AsyncStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, data.refreshToken);
+        }
         await AsyncStorage.setItem(ACTIVE_ACCOUNT_STORAGE_KEY, account);
 
         // Handle Remember Password
@@ -248,7 +257,7 @@ const Login = () => {
         await refreshUserInfo();
         navigation.replace('Main', { screen: 'List' });
       } else {
-        Alert.alert('登录', data.message || '未获取到Token');
+        Alert.alert('登录', data.msg || '未获取到Token');
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : '网络错误';

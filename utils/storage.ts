@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const TOKEN_STORAGE_KEY = 'token';
+export const REFRESH_TOKEN_STORAGE_KEY = 'refresh_token';
 export const USER_CREDENTIALS_STORAGE_KEY = 'user_credentials';
 export const LAST_SELECTED_DATE_STORAGE_KEY = 'lastSelectedDate';
 export const PENDING_BILLS_STORAGE_KEY = 'pendingOptimisticBills';
@@ -82,6 +83,7 @@ export async function clearUserLocalData() {
 
   const fixedKeys = [
     TOKEN_STORAGE_KEY,
+    REFRESH_TOKEN_STORAGE_KEY,
     USER_CREDENTIALS_STORAGE_KEY,
     LAST_SELECTED_DATE_STORAGE_KEY,
     PENDING_BILLS_STORAGE_KEY, // 保留旧的兼容,后续会清理
