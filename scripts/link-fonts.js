@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const srcDir = path.join(__dirname, '../assets/fonts');
 const androidDestDir = path.join(__dirname, '../android/app/src/main/assets/fonts');
@@ -53,6 +54,15 @@ if (fs.existsSync(infoPlistPath)) {
   fs.writeFileSync(infoPlistPath, plist, 'utf8');
 } else {
   console.warn(`Info.plist not found at ${infoPlistPath}. You'll need to add UIAppFonts entries manually in Xcode.`);
+}
+
+// Use react-native-asset to properly link fonts in Xcode project
+try {
+  console.log('\nRunning react-native-asset to link fonts in Xcode...');
+  execSync('npx react-native-asset', { stdio: 'inherit', cwd: path.join(__dirname, '..') });
+  console.log('Successfully linked fonts in Xcode project.');
+} catch (error) {
+  console.warn('Failed to run react-native-asset. You may need to manually add fonts to Xcode project.');
 }
 
 console.log('\nDone.');
