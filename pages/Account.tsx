@@ -407,9 +407,18 @@ const Account = () => {
         </TouchableOpacity>
       </View>
 
+      {/* 关于按钮 */}
+      <TouchableOpacity
+        style={styles.aboutButton}
+        onPress={() => navigation.navigate('About')}
+      >
+        <Icon name="info-outline" size={20} color={theme.colors.text.primary} />
+        <Text style={styles.aboutText}>关于</Text>
+      </TouchableOpacity>
+
       {/* 退出登录按钮 */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Icon name="logout" size={20} color={theme.colors.active} />
+        <Icon name="logout" size={20} color={theme.colors.text.primary} />
         <Text style={styles.logoutText}>退出登录</Text>
       </TouchableOpacity>
       </ScrollView>
@@ -697,6 +706,20 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     marginRight: 8,
   },
+  aboutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.background.paper,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  aboutText: {
+    fontSize: 16,
+    color: theme.colors.text.primary,
+    marginLeft: 8,
+  },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -708,7 +731,7 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: 16,
-    color: theme.colors.active,
+    color: theme.colors.text.primary,
     marginLeft: 8,
   },
   modalOverlay: {

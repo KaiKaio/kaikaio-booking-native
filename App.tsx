@@ -7,6 +7,8 @@ import Login from './pages/Login';
 import Main from './pages/Main';
 import CategoryEdit from './pages/CategoryEdit';
 import CategoryDetails from './pages/CategoryDetails';
+import About from './pages/About';
+import DebugTools from './pages/DebugTools';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -37,6 +39,10 @@ function AuthLoading({ navigation }: { navigation: NativeStackNavigationProp<any
 function App() {
   console.log('App is running with Expo support!', Constants.deviceName);
 
+  if (__DEV__) {
+    global.storage = AsyncStorage;
+  }
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <SafeAreaProvider>
@@ -64,6 +70,22 @@ function App() {
               <Stack.Screen 
                 name="CategoryDetails" 
                 component={CategoryDetails}
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                }}
+              />
+              <Stack.Screen 
+                name="About" 
+                component={About}
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                }}
+              />
+              <Stack.Screen 
+                name="DebugTools" 
+                component={DebugTools}
                 options={{
                   headerShown: false,
                   animation: 'slide_from_right',

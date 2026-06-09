@@ -14,5 +14,7 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList>;
   CategoryEdit: { type?: '1' | '2' }; // '1': expense, '2': income, optional filter
   CategoryDetails: { type_id: number; type_name: string; pay_type: '1' | '2' };
+  About: undefined;
+  DebugTools: undefined;
   // 若有其他路由，可在此添加
 };
