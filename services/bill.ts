@@ -10,7 +10,6 @@ import {
   StatisticsResponse,
   StatisticsResponseData,
   MonthListResponse,
-  StatisticsData,
   DailyBill,
 } from '../types/bill';
 import { getBillMonthCacheKey } from '@/utils/storage';
@@ -38,6 +37,7 @@ export interface BillMonthCacheData {
     totalIncome: number;
   };
   list: DailyBill[];
+  statistics?: StatisticsResponseData;
   updatedAt: number;
 }
 
@@ -59,11 +59,18 @@ export const computeSummaryFromDailyBills = (list: DailyBill[]) => {
   return { totalExpense, totalIncome };
 };
 
-export const saveBillMonthCache = async (month: string, list: DailyBill[], summary?: { totalExpense: number; totalIncome: number }) => {
+// 保存月度账单到缓存中
+export const saveBillMonthCache = async (
+  month: string,
+  list: DailyBill[],
+  summary: { totalExpense: number; totalIncome: number },
+  statistics?: StatisticsResponseData
+) => {
   const cacheData: BillMonthCacheData = {
     month,
-    summary: summary || computeSummaryFromDailyBills(list),
+    summary,
     list,
+    statistics,
     updatedAt: Date.now(),
   };
 
@@ -86,35 +93,6 @@ export const loadBillMonthCache = async (month: string): Promise<BillMonthCacheD
   }
 };
 
-export const buildStatisticsFromDailyBills = (list: DailyBill[]): StatisticsResponseData => {
-  const summary = computeSummaryFromDailyBills(list);
-  const typeMap = new Map<string, StatisticsData>();
-
-  list.forEach(daily => {
-    daily.bills.forEach(bill => {
-      const key = `${bill.type_id}-${bill.pay_type}`;
-      const amount = parseFloat(bill.amount);
-      const existing = typeMap.get(key);
-
-      if (existing) {
-        existing.number += amount;
-      } else {
-        typeMap.set(key, {
-          type_id: bill.type_id,
-          type_name: bill.type_name,
-          pay_type: bill.pay_type,
-          number: amount,
-        });
-      }
-    });
-  });
-
-  return {
-    total_expense: summary.totalExpense.toFixed(2),
-    total_income: summary.totalIncome.toFixed(2),
-    total_data: Array.from(typeMap.values()),
-  };
-};
 
 export const addBill = async (params: AddBillParams): Promise<AddBillResponse> => {
   return request('/api/bill/add', {

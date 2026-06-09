@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { buildStatisticsFromDailyBills, getBillStatistics, loadBillMonthCache } from '../services/bill';
+import { getBillStatistics, loadBillMonthCache, saveBillMonthCache } from '../services/bill';
 import { StatisticsResponseData } from '../types/bill';
 import Composition from '../components/Composition';
 import MonthSelector from '../components/MonthSelector';
@@ -30,10 +30,10 @@ const Statistics = () => {
 
     try {
       const monthCache = await loadBillMonthCache(monthToFetch);
-      if (monthCache) {
+      if (monthCache && monthCache.statistics) {
         hasCache = true;
-        setData(buildStatisticsFromDailyBills(monthCache.list));
-        finalDataState = 'offline-cached';
+        setData(monthCache.statistics);
+        finalDataState = monthCache.statistics.total_data.length === 0 ? 'empty' : 'offline-cached';
       }
 
       // monthToFetch 格式为 YYYY-MM
@@ -46,6 +46,15 @@ const Statistics = () => {
       if (res.code === 200) {
         setData(res.data);
         finalDataState = res.data.total_data.length === 0 ? 'empty' : 'online';
+        
+        // 缓存统计数据
+        const currentCache = await loadBillMonthCache(monthToFetch);
+        await saveBillMonthCache(
+          monthToFetch,
+          currentCache?.list || [],
+          currentCache?.summary || { totalExpense: 0, totalIncome: 0 },
+          res.data
+        );
       } else if (!hasCache) {
         finalDataState = 'error';
       }

@@ -97,26 +97,39 @@ export default async function request(url: string, options: any = {}) {
     const response = await fetch(fullUrl, finalOptions);
     clearTimeout(timeoutId);
 
+    // 处理 401 Token 过期、未授权等
     if (response.status === 401) {
+
+      // 是否为刷新请求标识 - isRefreshRequest
       const isRefreshRequest = url === REFRESH_URL;
       
+      // 如果不是刷新请求
       if (!isRefreshRequest) {
+        // 尝试刷新 Token
         const refreshed = await refreshAccessToken();
+
+        // 刷新成功
         if (refreshed) {
+          // 更新本地存储 Token
           const newToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
+
+          // 重试构建 - 请求头
           const retryHeaders = {
             ...defaultHeaders,
             ...(newToken ? { Authorization: newToken } : {}),
           };
           console.log('Token 已刷新，重试请求:', fullUrl);
+
+          // 重试请求
           const retryResponse = await fetch(fullUrl, {
             ...finalOptions,
             headers: retryHeaders,
           });
           
+          // 处理重试结果
           if (!retryResponse.ok) {
             if (retryResponse.status === 401) {
-              console.log('重试仍然 401，跳转登录');
+              console.log('重试仍然 401 ');
             } else {
               let msg = '服务器错误';
               try {
@@ -134,8 +147,9 @@ export default async function request(url: string, options: any = {}) {
           }
         }
       }
-
-      let msg = '登录过期，请重新登录';
+  
+      // 到此处表示 刷新请求也失败 401 了
+      let msg = '登录过期，请重新登录'; // 预先构建好默认提示语
       try {
         const errData = await response.json();
         console.log('Request Error Response 401:', fullUrl, errData);
@@ -149,6 +163,7 @@ export default async function request(url: string, options: any = {}) {
         });
       }
 
+      // 以下为 401 需要清除本地存储的 Key
       const keysToRemove = [
         TOKEN_STORAGE_KEY,
         REFRESH_TOKEN_STORAGE_KEY,
@@ -157,16 +172,23 @@ export default async function request(url: string, options: any = {}) {
         LAST_SELECTED_DATE_STORAGE_KEY,
       ];
 
+      // 获取出当前存在的所有 Key
       const allKeys = await AsyncStorage.getAllKeys();
+
+      // 过滤出所有账单月份缓存 Key，例如：bills_month_cache_2026-06
       const monthCacheKeys = allKeys.filter(key =>
         key.startsWith(BILL_MONTH_CACHE_PREFIX)
       );
+
+      // 将账单月份缓存 Key 添加到待移除列表
       keysToRemove.push(...monthCacheKeys);
 
+      // 清除所有待移除的 Key
       await AsyncStorage.multiRemove(keysToRemove);
 
       console.log('401: 已清除认证数据,保留离线账单数据');
 
+      // 跳转到登录页
       navigate('Login');
       throw new Error(msg);
     }

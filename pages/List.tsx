@@ -6,7 +6,6 @@ import { useRoute, RouteProp } from '@react-navigation/native';
 import MonthYearPicker from '../components/MonthYearPicker';
 import TypePicker from '../components/TypePicker';
 import BillForm, { BillData, BillFormRef } from '../components/BillForm';
-import BillItem from '../components/BillItem';
 import BillGroupItem, { DailyBillGroup, SubItem } from '../components/BillGroupItem';
 import { getBillList, addBill, updateBill, loadBillMonthCache, saveBillMonthCache } from '../services/bill';
 import { BillDetail, DailyBill } from '../types/bill';
@@ -540,6 +539,7 @@ const List = () => {
     return undefined;
   }, [data]);
 
+  // 从服务器构建 SubItem
   const buildSubItemFromServer = useCallback((bill: BillDetail): SubItem => {
     const payType = bill.pay_type;
     const amountAbs = parseFloat(String(bill.amount));
@@ -685,25 +685,36 @@ const List = () => {
     }
   };
 
+  // 重试失败待同步账单
   const retryFailedPendingBills = useCallback(async () => {
+    // 从本地加载待同步账单
     const pendingBills = await loadPendingBillsFromStorage();
+
+    // 过滤出失败状态账单、有本地ID账单、有重试参数菜单
     const failedBills = pendingBills.filter(item => item.syncStatus === 'failed' && item.localId && item.retryParams);
 
+    // 如果没有对应数据、跳出函数
     if (failedBills.length === 0) return;
 
+    // 同步结束标识（解决多次同步问题）
     let hasSynced = false;
 
+    // 遍历待同步的账单
     for (const bill of failedBills) {
       if (!bill.localId || !bill.retryParams) continue;
 
+      // cancelledLocalIdsRef 里面是不需要同步的本地数据（已被用户删除），所以跳出
       if (cancelledLocalIdsRef.current.has(bill.localId)) continue;
 
+      // 改变账单状态为 “同步中”
       await updateLocalBillStatus(bill.localId, 'syncing');
       try {
+        // 调用接口添加账单
         const res = await addBill(bill.retryParams);
         if (cancelledLocalIdsRef.current.has(bill.localId)) continue;
 
         if (res.code === 200) {
+          // 改变账单状态为 “已同步”
           await updateLocalBillStatus(bill.localId, 'synced');
           if (res.data) {
             const serverId = res.data.id;
