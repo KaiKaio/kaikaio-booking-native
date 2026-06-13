@@ -7,6 +7,7 @@ export const LAST_SELECTED_DATE_STORAGE_KEY = 'lastSelectedDate';
 export const PENDING_BILLS_STORAGE_KEY = 'pendingOptimisticBills';
 export const CATEGORIES_CACHE_STORAGE_KEY = 'categories_cache';
 export const ACTIVE_ACCOUNT_STORAGE_KEY = 'active_account';
+export const KEEP_LAST_DATE_STORAGE_KEY = 'keepLastDate';
 
 export const BILL_MONTH_CACHE_PREFIX = 'bills_month_cache_';
 const LEGACY_BILL_CACHE_PREFIX = 'bills_cache_';
@@ -95,4 +96,13 @@ export async function clearUserLocalData() {
   if (keysToRemove.length === 0) return;
 
   await AsyncStorage.multiRemove(keysToRemove);
+}
+
+export async function getKeepLastDate(): Promise<boolean> {
+  const value = await AsyncStorage.getItem(KEEP_LAST_DATE_STORAGE_KEY);
+  return value === null ? true : value === 'true';
+}
+
+export async function setKeepLastDate(value: boolean): Promise<void> {
+  await AsyncStorage.setItem(KEEP_LAST_DATE_STORAGE_KEY, String(value));
 }

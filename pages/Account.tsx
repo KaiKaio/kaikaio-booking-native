@@ -407,6 +407,15 @@ const Account = () => {
         </TouchableOpacity>
       </View>
 
+      {/* 个性化按钮 */}
+      <TouchableOpacity
+        style={styles.aboutButton}
+        onPress={() => navigation.navigate('Personalization')}
+      >
+        <Icon name="tune" size={20} color={theme.colors.text.primary} />
+        <Text style={styles.aboutText}>个性化</Text>
+      </TouchableOpacity>
+
       {/* 关于按钮 */}
       <TouchableOpacity
         style={styles.aboutButton}

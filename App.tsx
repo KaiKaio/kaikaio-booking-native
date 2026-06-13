@@ -9,6 +9,7 @@ import CategoryEdit from './pages/CategoryEdit';
 import CategoryDetails from './pages/CategoryDetails';
 import About from './pages/About';
 import DebugTools from './pages/DebugTools';
+import Personalization from './pages/Personalization';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -86,6 +87,14 @@ function App() {
               <Stack.Screen 
                 name="DebugTools" 
                 component={DebugTools}
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                }}
+              />
+              <Stack.Screen 
+                name="Personalization" 
+                component={Personalization}
                 options={{
                   headerShown: false,
                   animation: 'slide_from_right',

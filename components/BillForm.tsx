@@ -1,4 +1,4 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle, useMemo } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import DatePicker from './DatePicker';
 import Keypad from './Keypad';
 import { theme } from '@/theme';
 import { navigate } from '../utils/navigationRef';
+import { getKeepLastDate } from '@/utils/storage';
 
 export interface BillFormRef {
   open: (data?: BillData) => void;
@@ -60,6 +61,9 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   
   // 防抖：防止重复提交
   const isSubmittingRef = React.useRef(false);
+  
+  // 标记是否是首次打开 App
+  const isFirstOpenRef = useRef(true);
 
   useImperativeHandle(ref, () => ({
     open: (data?: BillData) => {
@@ -183,28 +187,60 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
         setRemark('');
 
         // Try to load last used date
-         AsyncStorage.getItem('LAST_BILL_DATE').then(lastDate => {
-           if (lastDate) {
-             // Parse YYYY-MM-DD to local date to avoid timezone issues
-             const parts = lastDate.split('-');
-             if (parts.length === 3) {
-               const year = parseInt(parts[0], 10);
-               const month = parseInt(parts[1], 10);
-               const day = parseInt(parts[2], 10);
-               setDate(new Date(year, month - 1, day));
-               return;
-             }
-
-             const d = new Date(lastDate);
-             if (!isNaN(d.getTime())) {
-               setDate(d);
-               return;
-             }
-           }
-           setDate(new Date());
-         }).catch(() => {
-          setDate(new Date());
-        });
+        const loadDate = async () => {
+          try {
+            // 首次打开 App 时，根据设置决定是否使用上次日期
+            if (isFirstOpenRef.current) {
+              isFirstOpenRef.current = false;
+              const keepLastDate = await getKeepLastDate();
+              
+              if (keepLastDate) {
+                const lastDate = await AsyncStorage.getItem('LAST_BILL_DATE');
+                if (lastDate) {
+                  const parts = lastDate.split('-');
+                  if (parts.length === 3) {
+                    const year = parseInt(parts[0], 10);
+                    const month = parseInt(parts[1], 10);
+                    const day = parseInt(parts[2], 10);
+                    setDate(new Date(year, month - 1, day));
+                    return;
+                  }
+                  const d = new Date(lastDate);
+                  if (!isNaN(d.getTime())) {
+                    setDate(d);
+                    return;
+                  }
+                }
+              }
+              // 如果不保留或没有上次日期，使用今天
+              setDate(new Date());
+              return;
+            }
+            
+            // 非首次打开，按原逻辑使用上次日期
+            const lastDate = await AsyncStorage.getItem('LAST_BILL_DATE');
+            if (lastDate) {
+              const parts = lastDate.split('-');
+              if (parts.length === 3) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10);
+                const day = parseInt(parts[2], 10);
+                setDate(new Date(year, month - 1, day));
+                return;
+              }
+              const d = new Date(lastDate);
+              if (!isNaN(d.getTime())) {
+                setDate(d);
+                return;
+              }
+            }
+            setDate(new Date());
+          } catch (error) {
+            console.error('Failed to load date', error);
+            setDate(new Date());
+          }
+        };
+        loadDate();
       }
       setShowDatePicker(false);
     }

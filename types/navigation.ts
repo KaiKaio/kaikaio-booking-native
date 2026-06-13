@@ -16,5 +16,6 @@ export type RootStackParamList = {
   CategoryDetails: { type_id: number; type_name: string; pay_type: '1' | '2' };
   About: undefined;
   DebugTools: undefined;
+  Personalization: undefined;
   // 若有其他路由，可在此添加
 };
