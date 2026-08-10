@@ -79,7 +79,9 @@ export async function clearUserLocalData() {
     key =>
       key.startsWith(BILL_MONTH_CACHE_PREFIX) ||
       key.startsWith(LEGACY_BILL_CACHE_PREFIX) ||
-      key.startsWith(LEGACY_BILL_META_PREFIX)
+      key.startsWith(LEGACY_BILL_META_PREFIX) ||
+      key.startsWith('category_usage_lru:') ||
+      key.startsWith('clipboard_seen_hashes:')
   );
 
   const fixedKeys = [

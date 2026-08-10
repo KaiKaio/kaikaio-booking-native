@@ -2,12 +2,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Platform, ToastAndroid } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import MonthYearPicker from '../components/MonthYearPicker';
 import TypePicker from '../components/TypePicker';
 import BillForm, { BillData, BillFormRef } from '../components/BillForm';
 import BillGroupItem, { DailyBillGroup, SubItem } from '../components/BillGroupItem';
-import { getBillList, addBill, updateBill, loadBillMonthCache, saveBillMonthCache } from '../services/bill';
+import { getBillList, addBill, updateBill, deleteBill, loadBillMonthCache, saveBillMonthCache } from '../services/bill';
 import { BillDetail, DailyBill } from '../types/bill';
 import CategoryIcon from '@/components/CategoryIcon';
 import { useCategory } from '../context/CategoryContext';
@@ -29,6 +30,12 @@ const List = () => {
   const insets = useSafeAreaInsets();
   const { getCategoryIcon, categories } = useCategory();
   const route = useRoute<RouteProp<MainTabParamList, 'List'>>();
+  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList, 'List'>>();
+  // 保持最新 categories 可在异步回调中访问（自动记账延迟打开表单时）
+  const categoriesRef = useRef(categories);
+  useEffect(() => {
+    categoriesRef.current = categories;
+  }, [categories]);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<DailyBillGroup[]>([]);
   const [currentDate, setCurrentDate] = useState('');
@@ -407,26 +414,40 @@ const List = () => {
     fetchBills();
   }, [fetchBills]);
 
-  // 处理自动记账参数
+  // 处理自动记账参数（剪贴板识别导入）
   useEffect(() => {
-    if (route.params?.autoBill) {
-      const { autoBill } = route.params;
-      // 延迟一点以确保组件已渲染，或者直接打开
-      setTimeout(() => {
-        billFormRef.current?.open({
-          amount: autoBill.amount,
-          // 暂时使用默认分类，或者你可以根据 autoBill.category 尝试匹配
-          category: 1, // 默认分类ID，需根据实际情况调整
-          categoryName: '餐饮', // 默认分类名
-          date: new Date().toISOString().split('T')[0],
-          remark: `[自动识别] ${autoBill.merchant || ''} - ${autoBill.rawText.substring(0, 10)}...`,
-          type: autoBill.type === 'expense' ? '1' : '2'
-        });
-      }, 500);
-      
-      // 清除参数防止重复触发（实际上 React Navigation 的 params 会保留，建议配合 setParams 清除，但这里简单处理）
-    }
-  }, [route.params]);
+    const autoBill = route.params?.autoBill;
+    if (!autoBill) return;
+
+    // 立即清除参数，防止重复触发
+    navigation.setParams({ autoBill: undefined });
+
+    // 延迟一点以确保组件已渲染
+    const timer = setTimeout(() => {
+      const billType: '1' | '2' = autoBill.type === 'expense' ? '1' : '2';
+      // 根据猜测分类名在用户分类库中按名称匹配，匹配不到则回退该类型首个分类
+      const list = categoriesRef.current;
+      const matched = autoBill.category
+        ? list.find(c => c.name === autoBill.category && c.type === billType)
+        : undefined;
+      const fallback = list.find(c => c.type === billType);
+      const cat = matched || fallback;
+
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+      billFormRef.current?.open({
+        amount: autoBill.amount,
+        category: cat?.id ?? 0,
+        categoryName: cat?.name ?? '',
+        date: dateStr,
+        remark: `[自动识别]${autoBill.merchant ? ` ${autoBill.merchant}` : ''}`,
+        type: billType
+      }, { prefill: true });
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [route.params, navigation]);
 
   const handleDateConfirm = (year: number, month: number) => {
     const formattedMonth = month.toString().padStart(2, '0');
@@ -761,6 +782,71 @@ const List = () => {
     }
   };
 
+  // ===== 记账成功轻量 Toast + 撤销 =====
+  const [undoToast, setUndoToast] = useState<{ message: string; onUndo: () => void } | null>(null);
+  const undoToastTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // localId -> 服务端账单 id（撤销已同步的账单时用于补偿删除）
+  const serverIdByLocalIdRef = useRef<Map<string, number>>(new Map());
+
+  const showUndoToast = (message: string, onUndo: () => void) => {
+    if (undoToastTimerRef.current) clearTimeout(undoToastTimerRef.current);
+    setUndoToast({ message, onUndo });
+    undoToastTimerRef.current = setTimeout(() => setUndoToast(null), 4000);
+  };
+
+  // 撤销新增账单：从本地列表与待同步队列移除；若已同步到服务端则补偿删除
+  const undoNewBill = useCallback(async (localBill: SubItem) => {
+    const localId = localBill.localId;
+    if (!localId) return;
+
+    // 标记取消：避免后续 addBill 回写把它插回列表
+    cancelledLocalIdsRef.current.add(localId);
+    await removePendingBillFromStorage(localId);
+
+    const serverId = serverIdByLocalIdRef.current.get(localId);
+    serverIdByLocalIdRef.current.delete(localId);
+
+    setData(prevData => {
+      let removedItem: SubItem | undefined;
+
+      const nextGroups: DailyBillGroup[] = prevData
+        .map(group => {
+          const filteredItems = group.items.filter(item => {
+            const matched = item.localId === localId || (serverId != null && item.id === serverId);
+            if (matched) removedItem = item;
+            return !matched;
+          });
+
+          if (filteredItems.length === 0) return null;
+          return recalculateGroup(group.date, filteredItems);
+        })
+        .filter((g): g is DailyBillGroup => g !== null);
+
+      if (removedItem) {
+        const removedPayType = removedItem.payType;
+        const amountAbs = Math.abs(removedItem.rawAmount ?? removedItem.amount);
+        setSummary(prev => ({
+          totalExpense: prev.totalExpense - (removedPayType === '1' ? amountAbs : 0),
+          totalIncome: prev.totalIncome - (removedPayType === '2' ? amountAbs : 0),
+        }));
+      }
+
+      return nextGroups;
+    });
+
+    if (serverId) {
+      try {
+        const res = await deleteBill(serverId);
+        if (res?.code !== 200) {
+          showToast('撤销失败：云端账单删除出错');
+        }
+      } catch (error) {
+        console.error('Failed to undo synced bill', error);
+        showToast('撤销失败：云端账单删除出错');
+      }
+    }
+  }, [recalculateGroup, removePendingBillFromStorage]);
+
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
     let clearId: NodeJS.Timeout;
@@ -893,15 +979,22 @@ const List = () => {
       try {
         const localId = localBill.localId!;
         const res = await addBill({ ...params, client_local_id: localBill.localId });
-        if (cancelledLocalIdsRef.current.has(localId)) return;
 
         if (res.code === 200) {
-          if (cancelledLocalIdsRef.current.has(localId)) return;
+          // 已撤销：若服务端已创建成功，需要补偿删除
+          if (cancelledLocalIdsRef.current.has(localId)) {
+            if (res.data?.id) {
+              deleteBill(res.data.id).catch(err => console.error('Failed to delete undone bill', err));
+            }
+            return;
+          }
           await updateLocalBillStatus(localId, 'synced');
 
           if (res.data) {
             const matchedLocalId = res.data.client_local_id || localBill.localId;
             const serverId = res.data.id;
+            // 记录服务端 id，供撤销时补偿删除
+            serverIdByLocalIdRef.current.set(localId, serverId);
             if (!cancelledLocalIdsRef.current.has(localId)) {
               // 避免这里触发重新渲染导致原组件销毁：如果 localId 和原本一致，直接复用
               upsertLocalDataItem(
@@ -960,6 +1053,8 @@ const List = () => {
 
     setHighlightedLocalId(localBill.localId!);
     executeAddBill(true);
+    // 轻量 Toast + 撤销，代替二次确认
+    showUndoToast(`已记一笔 ¥${billData.amount.toFixed(2)} · ${billData.categoryName}`, () => undoNewBill(localBill));
     setEditingId(null);
   };
 
@@ -1120,6 +1215,23 @@ const List = () => {
         <BillForm ref={billFormRef} onSubmit={handleBillSubmit} />
       </View>
 
+      {undoToast && (
+        <View style={[styles.undoToastContainer, { bottom: 96 + insets.bottom }]} pointerEvents="box-none">
+          <View style={styles.undoToast}>
+            <Text style={styles.undoToastText} numberOfLines={1}>{undoToast.message}</Text>
+            <TouchableOpacity
+              onPress={() => {
+                if (undoToastTimerRef.current) clearTimeout(undoToastTimerRef.current);
+                setUndoToast(null);
+                undoToast.onUndo();
+              }}
+            >
+              <Text style={styles.undoToastAction}>撤销</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {isSubmitting && (
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingBox}>
@@ -1226,6 +1338,33 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: theme.colors.text.primary,
     fontSize: 14,
+  },
+  undoToastContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 900,
+  },
+  undoToast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    maxWidth: '90%',
+  },
+  undoToastText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    marginRight: 12,
+    flexShrink: 1,
+  },
+  undoToastAction: {
+    color: theme.colors.primary,
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
 

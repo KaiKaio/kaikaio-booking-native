@@ -1,14 +1,17 @@
 import { ParsedBill, ParserStrategy } from './types';
 import { AlipayStrategy } from './strategies/AlipayStrategy';
 import { WeChatStrategy } from './strategies/WeChatStrategy';
+import { GenericStrategy } from './strategies/GenericStrategy';
+import { guessCategoryName } from './categoryGuess';
 
 class BillParser {
   private strategies: ParserStrategy[] = [];
 
   constructor() {
-    // 注册策略
+    // 注册策略（顺序即优先级，通用兜底策略放最后）
     this.strategies.push(new AlipayStrategy());
     this.strategies.push(new WeChatStrategy());
+    this.strategies.push(new GenericStrategy());
   }
 
   /**
@@ -23,12 +26,15 @@ class BillParser {
         console.log(`Using strategy: ${strategy.name}`);
         const result = strategy.parse(text);
         if (result) {
+          // 分类预填：策略未给出分类时，用关键词规则猜测
+          if (!result.category) {
+            result.category = guessCategoryName(result.rawText, result.merchant);
+          }
           return result;
         }
       }
     }
-    
-    // 如果没有特定策略匹配，可以尝试通用正则（此处略）
+
     return null;
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -23,9 +23,14 @@ import Keypad from './Keypad';
 import { theme } from '@/theme';
 import { navigate } from '../utils/navigationRef';
 import { getKeepLastDate } from '@/utils/storage';
+import {
+  getCategoryUsageMap,
+  recordCategoryUsage,
+  sortCategoriesByUsage,
+} from '@/utils/categoryUsage';
 
 export interface BillFormRef {
-  open: (data?: BillData) => void;
+  open: (data?: BillData, options?: { prefill?: boolean }) => void;
 }
 
 interface BillFormProps {
@@ -46,6 +51,10 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   const { categories } = useCategory();
   const [visible, setVisible] = useState(false);
   const [editData, setEditData] = useState<BillData | undefined>(undefined);
+  // 预填模式：只填充表单初始值，不作为编辑（如剪贴板自动识别导入）
+  const [prefillData, setPrefillData] = useState<BillData | undefined>(undefined);
+  // 分类最近使用记录（LRU）：{ categoryId: timestamp }
+  const [usageMap, setUsageMap] = useState<Record<number, number>>({});
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   
@@ -66,8 +75,9 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   const isFirstOpenRef = useRef(true);
 
   useImperativeHandle(ref, () => ({
-    open: (data?: BillData) => {
-      setEditData(data);
+    open: (data?: BillData, options?: { prefill?: boolean }) => {
+      setEditData(options?.prefill ? undefined : data);
+      setPrefillData(options?.prefill ? data : undefined);
       setVisible(true);
     }
   }));
@@ -150,41 +160,57 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
     };
   }, []);
 
-  // Filter categories by active type
-  const filteredCategories = categories.filter(cat => cat.type === activeType);
-  
-  // Paginate categories for carousel (15 items per page)
-  const ITEMS_PER_PAGE = 18;
+  // Filter categories by active type, sorted by LRU (most recently used first)
   const categoryPages = useMemo(() => {
+    const filteredCategories = categories.filter(cat => cat.type === activeType);
+    const sortedCategories = sortCategoriesByUsage(filteredCategories, usageMap);
+
     const pages = [];
-    const itemsWithManage = [...filteredCategories, { id: 'manage', isManageButton: true }];
-    
+    const itemsWithManage = [...sortedCategories, { id: 'manage', isManageButton: true }];
+
+    // Paginate categories for carousel (18 items per page)
+    const ITEMS_PER_PAGE = 18;
     for (let i = 0; i < itemsWithManage.length; i += ITEMS_PER_PAGE) {
       pages.push(itemsWithManage.slice(i, i + ITEMS_PER_PAGE));
     }
-    
+
     return pages;
-  }, [filteredCategories]);
+  }, [categories, activeType, usageMap]);
+
+  // 按 LRU 选出某类型的默认分类（最近使用过的排前）
+  const pickDefaultCategory = useCallback((type: '1' | '2', map: Record<number, number>) => {
+    const list = categories.filter(c => c.type === type);
+    const sorted = sortCategoriesByUsage(list, map);
+    return sorted[0] || categories[0];
+  }, [categories]);
   
   const windowWidth = Dimensions.get('window').width;
 
   // Reset form when opening
   useEffect(() => {
     if (visible) {
-      if (editData) {
-        setAmountStr(editData.amount.toString());
+      const initData = editData || prefillData;
+      if (initData) {
+        setAmountStr(initData.amount.toString());
         // Find category by ID if possible, otherwise name
-        const cat = categories.find(c => c.id === editData.category || c.name === editData.categoryName) || categories[0];
+        const cat = categories.find(c => c.id === initData.category || c.name === initData.categoryName) || categories[0];
         setCategory(cat);
-        setActiveType(cat.type);
-        setDate(new Date(editData.date));
-        setRemark(editData.remark);
+        setActiveType(cat?.type || initData.type);
+        setDate(new Date(initData.date));
+        setRemark(initData.remark);
       } else {
         setAmountStr('0');
-        // Set default category based on active type
-        const defaultCat = categories.find(c => c.type === activeType) || categories[0];
-        setCategory(defaultCat);
         setRemark('');
+
+        // 加载分类使用记录（LRU），默认选中最近使用的分类
+        getCategoryUsageMap()
+          .then(map => {
+            setUsageMap(map);
+            setCategory(pickDefaultCategory(activeType, map));
+          })
+          .catch(() => {
+            setCategory(pickDefaultCategory(activeType, {}));
+          });
 
         // Try to load last used date
         const loadDate = async () => {
@@ -244,7 +270,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
       }
       setShowDatePicker(false);
     }
-  }, [visible, editData, categories, activeType]);
+  }, [visible, editData, prefillData, categories, activeType, pickDefaultCategory]);
 
   const handleSubmit = () => {
     // 防抖检查：如果正在提交，直接返回
@@ -268,6 +294,9 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
 
     // Save last used date（保存本次使用日期，便于下次再次打开Form时快速填写）
     AsyncStorage.setItem('LAST_BILL_DATE', dateStr).catch(err => console.warn('Failed to save date', err));
+
+    // 记录分类使用（LRU），下次打开时高频分类置顶
+    recordCategoryUsage(category.id).catch(err => console.warn('Failed to record category usage', err));
 
     const data: BillData = {
       amount,
@@ -356,7 +385,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
                 onPress={() => {
                   Keyboard.dismiss()
                   setActiveType('1');
-                  const firstExpense = categories.find(c => c.type === '1');
+                  const firstExpense = pickDefaultCategory('1', usageMap);
                   if (firstExpense) setCategory(firstExpense);
                 }}
               >
@@ -367,7 +396,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
                 onPress={() => {
                   Keyboard.dismiss()
                   setActiveType('2');
-                  const firstIncome = categories.find(c => c.type === '2');
+                  const firstIncome = pickDefaultCategory('2', usageMap);
                   if (firstIncome) setCategory(firstIncome);
                 }}
               >
