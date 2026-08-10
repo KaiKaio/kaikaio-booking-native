@@ -10,6 +10,7 @@ import CategoryDetails from './pages/CategoryDetails';
 import About from './pages/About';
 import DebugTools from './pages/DebugTools';
 import Personalization from './pages/Personalization';
+import RecurringBills from './pages/RecurringBills';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,6 +20,7 @@ import { RootStackParamList } from './types/navigation';
 import { navigationRef } from './utils/navigationRef';
 import { CategoryProvider } from './context/CategoryContext';
 import { UserProvider } from './context/UserContext';
+import { useReminderScheduler } from './hooks/useReminderScheduler';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -39,6 +41,9 @@ function AuthLoading({ navigation }: { navigation: NativeStackNavigationProp<any
 
 function App() {
   console.log('App is running with Expo support!', Constants.deviceName);
+
+  // 同步每晚记账提醒的本地通知计划
+  useReminderScheduler();
 
   if (__DEV__) {
     global.storage = AsyncStorage;
@@ -95,6 +100,14 @@ function App() {
               <Stack.Screen 
                 name="Personalization" 
                 component={Personalization}
+                options={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                }}
+              />
+              <Stack.Screen 
+                name="RecurringBills" 
+                component={RecurringBills}
                 options={{
                   headerShown: false,
                   animation: 'slide_from_right',

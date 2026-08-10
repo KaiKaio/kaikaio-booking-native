@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Platform, ToastAndroid } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Platform, ToastAndroid, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
@@ -19,6 +19,15 @@ import {
   saveUserPendingBills,
   getActiveAccount,
 } from '@/utils/storage';
+import {
+  BillTemplate,
+  loadTemplates,
+  addTemplate,
+  removeTemplate,
+  touchTemplate,
+} from '../services/billTemplates';
+import { recordBookkeeping } from '../utils/bookkeepingHabit';
+import { billRefreshBus } from '../utils/refreshBus';
 
 // 同步状态类型
 type SyncStatus = 'syncing' | 'synced' | 'failed';
@@ -66,6 +75,20 @@ const List = () => {
   const [orderBy, setOrderBy] = useState<'ASC' | 'DESC'>('DESC');
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null);
+
+  // ===== 快捷模板（一键记账） =====
+  const [templates, setTemplates] = useState<BillTemplate[]>([]);
+
+  const reloadTemplates = useCallback(async () => {
+    const account = await getActiveAccount();
+    if (!account) return;
+    const list = await loadTemplates(account);
+    setTemplates(list);
+  }, []);
+
+  useEffect(() => {
+    reloadTemplates();
+  }, [reloadTemplates]);
 
   const formatBillDate = useCallback((dateValue: string) => {
     const dateObj = /^\d+$/.test(dateValue) ? new Date(parseInt(dateValue, 10)) : new Date(dateValue);
@@ -449,6 +472,26 @@ const List = () => {
     return () => clearTimeout(timer);
   }, [route.params, navigation]);
 
+  // 处理「漏记提示等场景」跳转过来直接打开记账表单
+  useEffect(() => {
+    if (!route.params?.openForm) return;
+    navigation.setParams({ openForm: undefined });
+    const timer = setTimeout(() => billFormRef.current?.open(), 300);
+    return () => clearTimeout(timer);
+  }, [route.params, navigation]);
+
+  // 外部产生新账单（如周期账单静默生成）时刷新列表
+  useEffect(() => {
+    const unsubscribe = billRefreshBus.subscribe(() => {
+      if (loadingRef.current) {
+        needsRefetchRef.current = true;
+      } else {
+        fetchBills();
+      }
+    });
+    return unsubscribe;
+  }, [fetchBills]);
+
   const handleDateConfirm = (year: number, month: number) => {
     const formattedMonth = month.toString().padStart(2, '0');
     const newDate = `${year}-${formattedMonth}`;
@@ -461,6 +504,63 @@ const List = () => {
     setEditingId(null);
     billFormRef.current?.open();
   };
+
+  // ===== 快捷模板：一键记账 / 删除 / 存模板 =====
+
+  // 一键记账：点一下模板快捷入口，以今天日期直接完成记账
+  const handleTemplatePress = (tpl: BillTemplate) => {
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    handleBillSubmit({
+      amount: tpl.amount,
+      category: tpl.categoryId,
+      categoryName: tpl.categoryName,
+      date: dateStr,
+      remark: tpl.name,
+      type: tpl.type,
+    });
+
+    // 更新最近使用时间，常用模板排最前
+    (async () => {
+      const account = await getActiveAccount();
+      if (!account) return;
+      await touchTemplate(account, tpl.id);
+      reloadTemplates();
+    })();
+  };
+
+  const handleTemplateLongPress = (tpl: BillTemplate) => {
+    Alert.alert('删除模板', `确定删除「${tpl.name}」快捷模板吗？`, [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '删除',
+        style: 'destructive',
+        onPress: async () => {
+          const account = await getActiveAccount();
+          if (!account) return;
+          await removeTemplate(account, tpl.id);
+          reloadTemplates();
+        },
+      },
+    ]);
+  };
+
+  // 将一笔账单保存为快捷模板
+  const saveBillAsTemplate = useCallback(async (billData: BillData) => {
+    const account = await getActiveAccount();
+    if (!account) return;
+    const category = categories.find(c => c.id === billData.category);
+    await addTemplate(account, {
+      name: billData.remark?.trim() || billData.categoryName,
+      amount: billData.amount,
+      categoryId: billData.category,
+      categoryName: billData.categoryName,
+      categoryIcon: category?.icon || 'icon-qianming',
+      type: billData.type,
+    });
+    await reloadTemplates();
+    showToast('已保存为快捷模板');
+  }, [categories, reloadTemplates]);
 
   const handleEdit = (id: number) => {
     let targetItem: SubItem | undefined;
@@ -783,14 +883,22 @@ const List = () => {
   };
 
   // ===== 记账成功轻量 Toast + 撤销 =====
-  const [undoToast, setUndoToast] = useState<{ message: string; onUndo: () => void } | null>(null);
+  const [undoToast, setUndoToast] = useState<{
+    message: string;
+    onUndo: () => void;
+    secondary?: { label: string; onPress: () => void };
+  } | null>(null);
   const undoToastTimerRef = useRef<NodeJS.Timeout | null>(null);
   // localId -> 服务端账单 id（撤销已同步的账单时用于补偿删除）
   const serverIdByLocalIdRef = useRef<Map<string, number>>(new Map());
 
-  const showUndoToast = (message: string, onUndo: () => void) => {
+  const showUndoToast = (
+    message: string,
+    onUndo: () => void,
+    secondary?: { label: string; onPress: () => void }
+  ) => {
     if (undoToastTimerRef.current) clearTimeout(undoToastTimerRef.current);
-    setUndoToast({ message, onUndo });
+    setUndoToast({ message, onUndo, secondary });
     undoToastTimerRef.current = setTimeout(() => setUndoToast(null), 4000);
   };
 
@@ -945,6 +1053,8 @@ const List = () => {
     }
 
     // 新增模式: 乐观更新
+    // 记录记账习惯（用于漏记检测）
+    recordBookkeeping();
     const localBill = optimisticAddBill(billData);
     const shouldShowInCurrentFilter = !selectedTypeId || selectedTypeId === localBill.typeId;
 
@@ -1053,8 +1163,12 @@ const List = () => {
 
     setHighlightedLocalId(localBill.localId!);
     executeAddBill(true);
-    // 轻量 Toast + 撤销，代替二次确认
-    showUndoToast(`已记一笔 ¥${billData.amount.toFixed(2)} · ${billData.categoryName}`, () => undoNewBill(localBill));
+    // 轻量 Toast + 撤销，代替二次确认；附带「存模板」快捷操作
+    showUndoToast(
+      `已记一笔 ¥${billData.amount.toFixed(2)} · ${billData.categoryName}`,
+      () => undoNewBill(localBill),
+      { label: '存模板', onPress: () => saveBillAsTemplate(billData) }
+    );
     setEditingId(null);
   };
 
@@ -1159,6 +1273,29 @@ const List = () => {
           </TouchableOpacity>
         </View>
       </View>
+      {/* 快捷模板：一键记账入口（长按删除） */}
+      {templates.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.templateBar}
+          contentContainerStyle={styles.templateBarContent}
+        >
+          {templates.map(tpl => (
+            <TouchableOpacity
+              key={tpl.id}
+              style={styles.templateChip}
+              onPress={() => handleTemplatePress(tpl)}
+              onLongPress={() => handleTemplateLongPress(tpl)}
+            >
+              <CategoryIcon icon={tpl.categoryIcon} size={14} color={theme.colors.primary} />
+              <Text style={styles.templateChipText} numberOfLines={1}>
+                {tpl.name} ¥{tpl.amount.toFixed(2)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
       {/* 账单列表 */}
       <FlatList
         ref={flatListRef}
@@ -1212,13 +1349,28 @@ const List = () => {
         <TouchableOpacity style={styles.fab} onPress={handleAdd}>
           <CategoryIcon style={styles.fabIcon} icon={'icon-qianming'} size={22} />
         </TouchableOpacity>
-        <BillForm ref={billFormRef} onSubmit={handleBillSubmit} />
+        <BillForm
+          ref={billFormRef}
+          onSubmit={handleBillSubmit}
+          onBatchSubmitted={count => showToast(`已连记 ${count} 笔`)}
+        />
       </View>
 
       {undoToast && (
         <View style={[styles.undoToastContainer, { bottom: 96 + insets.bottom }]} pointerEvents="box-none">
           <View style={styles.undoToast}>
             <Text style={styles.undoToastText} numberOfLines={1}>{undoToast.message}</Text>
+            {undoToast.secondary && (
+              <TouchableOpacity
+                onPress={() => {
+                  if (undoToastTimerRef.current) clearTimeout(undoToastTimerRef.current);
+                  setUndoToast(null);
+                  undoToast.secondary?.onPress();
+                }}
+              >
+                <Text style={styles.undoToastAction}>{undoToast.secondary.label}</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               onPress={() => {
                 if (undoToastTimerRef.current) clearTimeout(undoToastTimerRef.current);
@@ -1365,6 +1517,32 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontSize: 14,
     fontWeight: 'bold',
+    marginRight: 12,
+  },
+  templateBar: {
+    backgroundColor: theme.colors.background.paper,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    flexGrow: 0,
+  },
+  templateBarContent: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  templateChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.primaryLight,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+  },
+  templateChipText: {
+    fontSize: 12,
+    color: theme.colors.primary,
+    marginLeft: 4,
+    maxWidth: 140,
   },
 });
 

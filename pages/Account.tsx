@@ -407,6 +407,15 @@ const Account = () => {
         </TouchableOpacity>
       </View>
 
+      {/* 周期账单入口 */}
+      <TouchableOpacity
+        style={styles.aboutButton}
+        onPress={() => navigation.navigate('RecurringBills')}
+      >
+        <Icon name="repeat" size={20} color={theme.colors.text.primary} />
+        <Text style={styles.aboutText}>周期账单</Text>
+      </TouchableOpacity>
+
       {/* 个性化按钮 */}
       <TouchableOpacity
         style={styles.aboutButton}

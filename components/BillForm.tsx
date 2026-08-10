@@ -35,6 +35,8 @@ export interface BillFormRef {
 
 interface BillFormProps {
   onSubmit?: (data: BillData) => void;
+  // 连记模式：一次连续录多笔，最后统一提交后回调
+  onBatchSubmitted?: (count: number) => void;
 }
 
 export interface BillData {
@@ -46,7 +48,7 @@ export interface BillData {
   type: '1' | '2'; // '1': expense, '2': income
 }
 
-const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
+const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit, onBatchSubmitted }, ref) => {
   const insets = useSafeAreaInsets();
   const { categories } = useCategory();
   const [visible, setVisible] = useState(false);
@@ -57,6 +59,10 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   const [usageMap, setUsageMap] = useState<Record<number, number>>({});
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // ===== 连记模式：一次连续录多笔，最后统一提交 =====
+  const [continuousMode, setContinuousMode] = useState(false);
+  const [batchBills, setBatchBills] = useState<BillData[]>([]);
   
   // Form State
   const [amountStr, setAmountStr] = useState('0');
@@ -189,6 +195,10 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   // Reset form when opening
   useEffect(() => {
     if (visible) {
+      // 每次打开重置连记批次；编辑账单时不进入连记模式
+      setBatchBills([]);
+      if (editData) setContinuousMode(false);
+
       const initData = editData || prefillData;
       if (initData) {
         setAmountStr(initData.amount.toString());
@@ -273,8 +283,8 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
   }, [visible, editData, prefillData, categories, activeType, pickDefaultCategory]);
 
   const handleSubmit = () => {
-    // 防抖检查：如果正在提交，直接返回
-    if (isSubmittingRef.current) {
+    // 防抖检查：如果正在提交，直接返回（连记模式不受限，支持快速连续录入）
+    if (isSubmittingRef.current && !continuousMode) {
       return;
     }
     
@@ -283,10 +293,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
       Alert.alert('提示', '是不是忘了输入金额？');
       return;
     }
-    
-    // 标记为正在提交
-    isSubmittingRef.current = true;
-    
+
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -306,6 +313,17 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
       remark,
       type: category.type
     };
+
+    // 连记模式：先收入批次，重置金额/备注，保留分类与日期继续录入
+    if (continuousMode) {
+      setBatchBills(prev => [...prev, data]);
+      setAmountStr('0');
+      setRemark('');
+      return;
+    }
+
+    // 标记为正在提交
+    isSubmittingRef.current = true;
     onSubmit?.(data);
     setVisible(false);
     
@@ -313,6 +331,33 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
     setTimeout(() => {
       isSubmittingRef.current = false;
     }, 1000);
+  };
+
+  // 连记模式：统一提交批次内全部账单
+  const handleBatchSubmit = () => {
+    if (batchBills.length === 0) return;
+    batchBills.forEach(item => onSubmit?.(item));
+    onBatchSubmitted?.(batchBills.length);
+    setBatchBills([]);
+    setContinuousMode(false);
+    setVisible(false);
+  };
+
+  // 关闭表单：连记批次未提交时先确认，避免误丢
+  const requestClose = () => {
+    Keyboard.dismiss();
+    if (batchBills.length > 0) {
+      Alert.alert(
+        '连记未提交',
+        `已连记 ${batchBills.length} 笔还未提交，如何处理？`,
+        [
+          { text: '放弃', style: 'destructive', onPress: () => { setBatchBills([]); setContinuousMode(false); setVisible(false); } },
+          { text: '统一提交', onPress: handleBatchSubmit },
+        ]
+      );
+      return;
+    }
+    setVisible(false);
   };
 
   // Date picker was extracted to components/DatePicker.tsx
@@ -339,7 +384,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
       visible={modalVisible}
       animationType="none"
       statusBarTranslucent
-      onRequestClose={() => setVisible(false)}
+      onRequestClose={requestClose}
     >
       <View style={styles.avoidView}>
         <Animated.View 
@@ -348,10 +393,7 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
           <TouchableOpacity
             style={styles.avoidView}
             activeOpacity={1} 
-            onPress={() => {
-              setVisible(false);
-              Keyboard.dismiss();
-            }}
+            onPress={requestClose}
           />
         </Animated.View>
 
@@ -362,13 +404,32 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
         ]}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => setVisible(false)}>
+            <TouchableOpacity onPress={requestClose}>
               <Text style={styles.cancelBtn}>取消</Text>
             </TouchableOpacity>
             <Text style={styles.title}>{editData ? '编辑账单' : '记一笔'}</Text>
-            <TouchableOpacity onPress={handleSubmit}>
-              <Text style={styles.submitBtn}>完成</Text>
-            </TouchableOpacity>
+            <View style={styles.headerRight}>
+              {!editData && (
+                <TouchableOpacity
+                  style={[styles.continuousChip, continuousMode && styles.continuousChipActive]}
+                  onPress={() => setContinuousMode(prev => !prev)}
+                >
+                  <Text
+                    style={[
+                      styles.continuousChipText,
+                      continuousMode && styles.continuousChipTextActive,
+                    ]}
+                  >
+                    连记{batchBills.length > 0 ? ` ${batchBills.length}` : ''}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={handleSubmit}>
+                <Text style={styles.submitBtn}>
+                  {continuousMode && !editData ? '记入' : '完成'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.mainHeader}>
@@ -491,6 +552,13 @@ const BillForm = forwardRef<BillFormRef, BillFormProps>(({ onSubmit }, ref) => {
               </View>
           </View>
 
+          {/* 连记批次：统一提交入口 */}
+          {continuousMode && batchBills.length > 0 && (
+            <TouchableOpacity style={styles.batchBar} onPress={handleBatchSubmit}>
+              <Text style={styles.batchBarText}>统一提交 {batchBills.length} 笔</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Bottom Area: Keypad or DatePicker */}
           <View style={[styles.bottomArea, isRemarkInputFocused && styles.bottomAreaFocused]}>
             {showDatePicker ? (
@@ -540,6 +608,40 @@ const styles = StyleSheet.create({
   cancelBtn: { color: theme.colors.text.secondary, fontSize: 16 },
   submitBtn: { color: theme.colors.primary, fontSize: 16, fontWeight: 'bold' },
   title: { fontSize: 18, fontWeight: 'bold', color: theme.colors.text.primary },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  continuousChip: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginRight: 12,
+  },
+  continuousChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  continuousChipText: {
+    fontSize: 13,
+    color: theme.colors.text.secondary,
+  },
+  continuousChipTextActive: {
+    color: theme.colors.text.inverse,
+    fontWeight: '600',
+  },
+  batchBar: {
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  batchBarText: {
+    color: theme.colors.text.inverse,
+    fontSize: 14,
+    fontWeight: '600',
+  },
 
   mainHeader: {
     flexDirection: 'row',

@@ -81,7 +81,12 @@ export async function clearUserLocalData() {
       key.startsWith(LEGACY_BILL_CACHE_PREFIX) ||
       key.startsWith(LEGACY_BILL_META_PREFIX) ||
       key.startsWith('category_usage_lru:') ||
-      key.startsWith('clipboard_seen_hashes:')
+      key.startsWith('clipboard_seen_hashes:') ||
+      key.startsWith('recurring_bills_user:') ||
+      key.startsWith('bill_templates_user:') ||
+      key.startsWith('reminder_settings_user:') ||
+      key.startsWith('bookkeeping_habit:') ||
+      key.startsWith('missed_hint_date:')
   );
 
   const fixedKeys = [

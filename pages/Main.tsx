@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform, ToastAndroid } from 'react-native';
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import TabBar from './TabBar';
 import List from './List';
@@ -7,14 +7,33 @@ import Account from './Account';
 import Statistics from './Statistics';
 import { MainTabParamList } from '../types/navigation';
 import { useAutoBookkeeping } from '../hooks/useAutoBookkeeping';
+import { useRecurringBillRunner } from '../hooks/useRecurringBillRunner';
+import { useMissedRecordReminder } from '../hooks/useMissedRecordReminder';
+import { CYCLE_LABELS } from '../services/recurringBills';
 import { navigate } from '../utils/navigationRef';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const renderTabBar = (props: BottomTabBarProps) => <TabBar {...props} />;
 
+const showToast = (message: string) => {
+  if (Platform.OS === 'android') {
+    ToastAndroid.show(message, ToastAndroid.SHORT);
+  } else {
+    Alert.alert('提示', message);
+  }
+};
+
 const Main = () => {
   const { detectedBill, clearDetectedBill } = useAutoBookkeeping();
+  const {
+    pendingConfirms,
+    confirmAll,
+    skipAll,
+    silentToast,
+    clearSilentToast,
+  } = useRecurringBillRunner();
+  const { missedHintVisible, dismissMissedHint } = useMissedRecordReminder();
 
   useEffect(() => {
     if (!detectedBill) return;
@@ -41,6 +60,62 @@ const Main = () => {
       ]
     );
   }, [detectedBill, clearDetectedBill]);
+
+  // 周期账单（确认模式）：到期账单询问用户是否记账
+  useEffect(() => {
+    if (pendingConfirms.length === 0) return;
+
+    const lines = pendingConfirms
+      .slice(0, 5)
+      .map(item => `· ${item.bill.name} ¥${item.bill.amount.toFixed(2)}（${CYCLE_LABELS[item.bill.cycle]}，账期 ${item.dueDate}）`);
+    const moreLine = pendingConfirms.length > 5 ? `\n等共 ${pendingConfirms.length} 笔` : '';
+
+    Alert.alert(
+      '周期账单到期',
+      `以下周期账单已到期，是否记账？\n${lines.join('\n')}${moreLine}`,
+      [
+        { text: '本次跳过', style: 'cancel', onPress: skipAll },
+        {
+          text: '确认记账',
+          onPress: async () => {
+            await confirmAll();
+            showToast('周期账单已记账');
+          },
+        },
+      ]
+    );
+  }, [pendingConfirms, confirmAll, skipAll]);
+
+  // 周期账单（静默模式）：自动生成后的轻提示
+  useEffect(() => {
+    if (!silentToast) return;
+    showToast(silentToast);
+    const timer = setTimeout(clearSilentToast, 4000);
+    return () => clearTimeout(timer);
+  }, [silentToast, clearSilentToast]);
+
+  // 漏记轻提示：当天零记录且有记账习惯
+  useEffect(() => {
+    if (!missedHintVisible) return;
+
+    Alert.alert(
+      '今天还没记账',
+      '今天还没有账单记录，要不要补一笔？',
+      [
+        { text: '不用了', style: 'cancel', onPress: dismissMissedHint },
+        {
+          text: '记一笔',
+          onPress: () => {
+            dismissMissedHint();
+            navigate('Main', {
+              screen: 'List',
+              params: { openForm: true },
+            });
+          },
+        },
+      ]
+    );
+  }, [missedHintVisible, dismissMissedHint]);
 
   return (
     <Tab.Navigator

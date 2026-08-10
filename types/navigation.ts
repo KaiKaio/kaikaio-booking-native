@@ -2,7 +2,8 @@ import { NavigatorScreenParams } from '@react-navigation/native';
 import { ParsedBill } from '../services/parser/types';
 
 export type MainTabParamList = {
-  List: { autoBill?: ParsedBill } | undefined;
+  // openForm: 打开记账表单（漏记提示等场景跳转用）
+  List: { autoBill?: ParsedBill; openForm?: boolean } | undefined;
   Statistics: undefined;
   Account: undefined;
 };
@@ -17,5 +18,6 @@ export type RootStackParamList = {
   About: undefined;
   DebugTools: undefined;
   Personalization: undefined;
+  RecurringBills: undefined;
   // 若有其他路由，可在此添加
 };
