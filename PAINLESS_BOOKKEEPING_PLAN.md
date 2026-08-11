@@ -79,7 +79,7 @@
 >
 > 本阶段涉及后端新增接口，需求详见 `BACKEND_API_P3.md`。
 >
-> 状态：方案设计、任务拆解与后端接口需求文档已完成（见下方 `[x]` 项）；前端实现与后端接口开发待后端评审排期后推进。
+> 状态：✅ 已完成。后端已按 `BACKEND_API_P3.md` 交付全部接口，前端对接已落地（任务 10/11/12 全部实现，见下方 `[x]` 项与 2026-08-11 开发日志）。
 
 #### 10. 习惯激励
 - [x] **连续记账天数（streak）**：以"自然日有 ≥1 笔账单"计连记，支持一天多笔；展示当前连记 / 历史最长连记，入口在统计页头部轻展示与"我的"页
@@ -137,4 +137,5 @@
 | 2026-08-10 | 新增任务 12「本地配置数据云端同步」作为 P1 已知边界优化点：周期账单/模板/提醒设置仅存本地，存在不跨设备同步与多端配置不一致（可能重复生成账单）两个已知边界，待后端新增配置同步接口后完善。 |
 | 2026-08-10 | 细化 P3 阶段四（任务 10/11/12）实施方案：习惯激励（streak + 断签容错 + 里程碑轻反馈）、预算辅助（月度/分类预算 + 进度展示 + 超支轻提醒）、本地配置云端同步（全量拉取 + 批量 upsert + 软删 + 周期账单幂等生成）。产出后端接口需求文档 `BACKEND_API_P3.md`（激励 2 个接口、预算 4 个接口、配置同步 2 个接口），待后端评审排期。 |
 | 2026-08-11 | 标记 P3 阶段四方案设计与接口文档交付完成（任务 10/11/12 全部 `[x]`，新增任务 13 记录 `BACKEND_API_P3.md` 交付）。后续前端实现（`services/bookkeepingStreak.ts` / `services/budgets.ts` / 配置同步链路）与后端接口开发，待后端评审排期后在开发日志中继续跟踪。 |
+| 2026-08-11 | 完成 P3 阶段四前端对接（后端已按 `BACKEND_API_P3.md` 交付全部接口）。① 任务 10 习惯激励：新增 `services/bookkeepingStreak.ts`（打卡/查询/缓存兜底/激励开关，里程碑 7/30/100/365），`services/postBillEffects.ts` 编排记账成功后的打卡与预算提醒；`List.tsx` 三处成功路径（提交/手动重试/失败批量重试）接入，统计页头部与"我的"页展示连记/最长/累计。② 任务 11 预算辅助：新增 `services/budgets.ts`（CRUD + 进度 + 80%/100% 双阈值超支检测纯函数 + 同档位每月去重），个性化页预算设置卡片与编辑弹窗、预算提醒开关（`reminderSettings` 新增 `budgetHintEnabled`），统计页预算进度卡片（变色预警）。③ 任务 12 配置同步：新增 `services/configSync.ts`（类型化 KV + 增量 pull/push + LWW + 软删墓碑 + `configDirtyBus`）与 `hooks/useConfigSync.ts`（挂载/回前台/脏事件防抖触发，首次同步推全量），周期账单/模板/提醒设置埋同步点；周期账单 remark 结构化 `[周期]{name}|cfg:{id}|due:{账期}` 防重，`BillItem` 展示层 `cleanRecurringRemark` 剥离标记。`utils/storage.ts` 退出清理新增 9 个 key 前缀。新增单测 `__tests__/PainlessBookkeepingP3.test.ts` 18 用例（全量 81 用例通过；`App.test.tsx` 套件失败为存量 worklets jest 环境问题，与本次无关）。 |
 | 2026-08-10 | 完成 P1 阶段二全部任务。依赖选型：本地通知采用 `expo-notifications` 0.32.17（经 `npx expo install` 安装，SDK 54 兼容），用 `SchedulableTriggerInputTypes.DAILY` 每日定时。① 任务 4 周期账单：`services/recurringBills.ts`（数据模型 + 周期推进 `advanceCycle` 月末/闰日收敛 + 到期收集 + `addBill` 参数构建，key `recurring_bills_user:{account}`）、`pages/RecurringBills.tsx` 管理页（查看/暂停/删除/编辑，入口在"我的"页）、`hooks/useRecurringBillRunner.ts`（App 启动/回前台自动检查；静默模式直接生成并经 `utils/refreshBus.ts` 轻量事件总线通知列表刷新；确认模式弹窗批量确认/跳过；生成失败降级进离线待同步队列复用现有重试链路）。② 任务 5 快捷模板：`services/billTemplates.ts`（key `bill_templates_user:{account}`，上限 30，按最近使用排序），账单页顶部模板快捷条（点击一键记账、长按删除），记账成功 Toast 增加"存模板"次级按钮。③ 任务 6 漏记提醒与补账：`services/reminderSettings.ts` + `hooks/useReminderScheduler.ts`（每晚定时本地通知，开关与时点可在个性化页配置）、`hooks/useMissedRecordReminder.ts` + `utils/bookkeepingHabit.ts`（晚 8 点后当天零记录且有近 7 天记账习惯时轻提示，每天最多一次，可直接跳转记账）、`components/BillForm.tsx` 连记模式（头部开关，连续录多笔后统一提交，关闭时批次保护）。`utils/storage.ts` 退出清理新增对应 key 前缀。新增单测 `__tests__/PainlessBookkeepingP1.test.ts` 15 用例通过（全量 63 用例通过；`App.test.tsx` 套件失败为存量 worklets jest 环境问题，与本次无关）。 |

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -31,6 +31,11 @@ import {
   // clearUserLocalData,
   getActiveAccount
 } from '@/utils/storage';
+import {
+  StreakData,
+  isMotivationEnabled,
+  loadStreakWithCache,
+} from '../services/bookkeepingStreak';
 
 const Account = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -51,11 +56,28 @@ const Account = () => {
   const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // P3：连续记账天数（激励开关开启时展示）
+  const [streak, setStreak] = useState<StreakData | null>(null);
+
+  const loadStreak = useCallback(async () => {
+    const account = await getActiveAccount();
+    if (!account) return;
+    if (!(await isMotivationEnabled(account))) {
+      setStreak(null);
+      return;
+    }
+    setStreak(await loadStreakWithCache(account));
+  }, []);
+
+  useEffect(() => {
+    loadStreak();
+  }, [loadStreak]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
       await refreshUserInfo(true);
+      await loadStreak();
     } catch (error) {
       console.error('刷新用户数据失败', error);
     } finally {
@@ -407,6 +429,26 @@ const Account = () => {
         </TouchableOpacity>
       </View>
 
+      {/* P3：记账习惯激励（连记天数轻展示） */}
+      {!!streak && (streak.currentStreak > 0 || streak.totalDays > 0) && (
+        <View style={styles.streakCard}>
+          <View style={styles.streakItem}>
+            <Text style={styles.streakValue}>🔥 {streak.currentStreak}</Text>
+            <Text style={styles.streakLabel}>连续记账(天)</Text>
+          </View>
+          <View style={styles.streakDivider} />
+          <View style={styles.streakItem}>
+            <Text style={styles.streakValue}>{streak.longestStreak}</Text>
+            <Text style={styles.streakLabel}>最长连记(天)</Text>
+          </View>
+          <View style={styles.streakDivider} />
+          <View style={styles.streakItem}>
+            <Text style={styles.streakValue}>{streak.totalDays}</Text>
+            <Text style={styles.streakLabel}>累计记账(天)</Text>
+          </View>
+        </View>
+      )}
+
       {/* 周期账单入口 */}
       <TouchableOpacity
         style={styles.aboutButton}
@@ -723,6 +765,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.text.secondary,
     marginRight: 8,
+  },
+  streakCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.paper,
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginBottom: 12,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  streakItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  streakDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: theme.colors.border,
+  },
+  streakValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.primary,
+    marginBottom: 4,
+  },
+  streakLabel: {
+    fontSize: 12,
+    color: theme.colors.text.placeholder,
   },
   aboutButton: {
     flexDirection: 'row',

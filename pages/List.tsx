@@ -27,6 +27,7 @@ import {
   touchTemplate,
 } from '../services/billTemplates';
 import { recordBookkeeping } from '../utils/bookkeepingHabit';
+import { runPostBillEffects, PostBillInfo } from '../services/postBillEffects';
 import { billRefreshBus } from '../utils/refreshBus';
 
 // 同步状态类型
@@ -752,6 +753,22 @@ const List = () => {
   }, [updatePendingBillStatusInStorage]);
 
   // 重试同步
+  // 离线/重试账单补同步成功后，同样触发 streak 打卡与预算轻提醒（均幂等/去重）
+  const runPostBillEffectsWithRetryParams = (retryParams: any) => {
+    if (!retryParams?.date) return;
+    const d = new Date(retryParams.date);
+    if (isNaN(d.getTime())) return;
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const info: PostBillInfo = {
+      amount: parseFloat(retryParams.amount),
+      category: retryParams.type_id,
+      categoryName: retryParams.type_name,
+      date: dateStr,
+      type: String(retryParams.pay_type) === '2' ? '2' : '1',
+    };
+    runPostBillEffects(info, showToast);
+  };
+
   const handleRetrySync = async (localId: string) => {
     if (cancelledLocalIdsRef.current.has(localId)) return;
 
@@ -786,6 +803,7 @@ const List = () => {
           needsRefetchRef.current = true;
         }
         showToast('同步成功');
+        runPostBillEffectsWithRetryParams(targetItem.retryParams);
       } else {
         if (cancelledLocalIdsRef.current.has(localId)) return;
         await updateLocalBillStatus(localId, 'failed');
@@ -843,6 +861,7 @@ const List = () => {
             upsertLocalDataItem(buildSubItemFromServer(res.data), item => item.localId === bill.localId || item.id === serverId);
           }
           hasSynced = true;
+          runPostBillEffectsWithRetryParams(bill.retryParams);
           
           if (loadingRef.current) {
             needsRefetchRef.current = true;
@@ -1099,6 +1118,8 @@ const List = () => {
             return;
           }
           await updateLocalBillStatus(localId, 'synced');
+          // P3：记账成功后打卡（streak/里程碑）+ 预算超支轻提醒，不阻塞主流程
+          runPostBillEffects(billData, showToast);
 
           if (res.data) {
             const matchedLocalId = res.data.client_local_id || localBill.localId;

@@ -80,14 +80,15 @@ describe('周期账单：到期收集', () => {
 });
 
 describe('周期账单：记账参数构建', () => {
-  it('应复用 addBill 参数结构并带上周期备注', () => {
+  it('应复用 addBill 参数结构并带上周期备注（含结构化防重标记）', () => {
     const bill = makeRecurringBill();
     const params = buildAddBillParams(bill, '2026-08-01');
     expect(params.amount).toBe('2000.00');
     expect(params.type_id).toBe(5);
     expect(params.type_name).toBe('居住');
     expect(params.pay_type).toBe('1');
-    expect(params.remark).toBe('[周期]房租');
+    // [周期]{name}|cfg:{id}|due:{账期}：后端据此幂等去重
+    expect(params.remark).toBe('[周期]房租|cfg:r1|due:2026-08-01');
     expect(params.date).toBe(new Date('2026-08-01').getTime());
   });
 });

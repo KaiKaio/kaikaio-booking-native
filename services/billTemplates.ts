@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { markConfigChanged, markConfigRemoved } from './configSync';
 
 // ===== 快捷模板（一键记账） =====
 
@@ -63,6 +64,7 @@ export async function addTemplate(
     lastUsedAt: 0,
   };
   await saveTemplates(account, [created, ...templates]);
+  await markConfigChanged(account, 'bill_template', created.id);
   return created;
 }
 
@@ -73,6 +75,7 @@ export async function removeTemplate(
   const templates = await loadTemplates(account);
   const next = templates.filter(t => t.id !== id);
   await saveTemplates(account, next);
+  await markConfigRemoved(account, 'bill_template', id);
   return next;
 }
 
@@ -88,4 +91,5 @@ export async function touchTemplate(
   if (!target) return;
   target.lastUsedAt = Date.now();
   await saveTemplates(account, templates);
+  await markConfigChanged(account, 'bill_template', id);
 }

@@ -14,6 +14,7 @@ import ReanimatedSwipeable, { SwipeableMethods } from 'react-native-gesture-hand
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import CategoryIcon from './CategoryIcon';
 import { deleteBill } from '../services/bill';
+import { cleanRecurringRemark } from '../services/recurringBills';
 import { theme } from '@/theme';
 import { useCategory } from '../context/CategoryContext';
 
@@ -41,6 +42,8 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, typeId, icon, remark, amo
   const [deleting, setDeleting] = useState(false);
   const swipeableRef = useRef<SwipeableMethods>(null);
   const flashAnim = useRef(new Animated.Value(0)).current;
+  // 周期账单 remark 携带的防重结构化标记（cfg/due）不展示给用户
+  const displayRemark = cleanRecurringRemark(remark || '');
 
   const { getCategoryItem } = useCategory();
 
@@ -211,7 +214,7 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, typeId, icon, remark, amo
         </View>
         <View style={styles.itemInfo}>
           <Text style={styles.itemType}>{type}</Text>
-          {remark ? <Text style={styles.itemRemark}>{remark}</Text> : null}
+          {displayRemark ? <Text style={styles.itemRemark}>{displayRemark}</Text> : null}
         </View>
         {renderSyncIndicator()}
         <Text style={[styles.itemAmount, { color: amountColor }]}>{ payType !== '1' && '+' }{amount.toFixed(2)}</Text>

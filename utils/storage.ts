@@ -86,7 +86,16 @@ export async function clearUserLocalData() {
       key.startsWith('bill_templates_user:') ||
       key.startsWith('reminder_settings_user:') ||
       key.startsWith('bookkeeping_habit:') ||
-      key.startsWith('missed_hint_date:')
+      key.startsWith('missed_hint_date:') ||
+      key.startsWith('streak_cache_user:') ||
+      key.startsWith('motivation_enabled_user:') ||
+      key.startsWith('budget_list_cache_user:') ||
+      key.startsWith('budget_progress_cache_user:') ||
+      key.startsWith('budget_hint_user:') ||
+      key.startsWith('config_sync_since_user:') ||
+      key.startsWith('config_sync_meta_user:') ||
+      key.startsWith('config_sync_tombstones_user:') ||
+      key.startsWith('config_sync_dirty_user:')
   );
 
   const fixedKeys = [

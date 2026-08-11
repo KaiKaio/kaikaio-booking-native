@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AddBillParams } from '../types/bill';
+import { markConfigChanged, markConfigRemoved } from './configSync';
 
 // ===== 类型定义 =====
 
@@ -119,7 +120,9 @@ export function collectDueDates(bill: RecurringBill, today: string): string[] {
 }
 
 /**
- * 生成某账期对应的记账参数（复用现有 addBill 链路）
+ * 生成某账期对应的记账参数（复用现有 addBill 链路）。
+ * remark 携带结构化标记 `[周期]{name}|cfg:{id}|due:{账期}`，
+ * 后端据此按 (用户, 配置 id, 账期) 维度幂等去重（见 BACKEND_API_P3.md 3.3）。
  */
 export function buildAddBillParams(bill: RecurringBill, dueDate: string): AddBillParams {
   return {
@@ -128,8 +131,20 @@ export function buildAddBillParams(bill: RecurringBill, dueDate: string): AddBil
     type_name: bill.categoryName,
     date: new Date(dueDate).getTime(),
     pay_type: bill.type,
-    remark: `[周期]${bill.name}`,
+    remark: `[周期]${bill.name}|cfg:${bill.id}|due:${dueDate}`,
   };
+}
+
+/**
+ * 展示层清理：去除 remark 中的结构化防重标记（cfg/due 段），
+ * 兼容无标记的历史数据与手动记账。
+ */
+export function cleanRecurringRemark(remark: string): string {
+  if (!remark) return remark;
+  return remark
+    .split('|')
+    .filter(segment => !/^cfg:/.test(segment) && !/^due:/.test(segment))
+    .join('|');
 }
 
 export function generateRecurringId(): string {
@@ -169,6 +184,7 @@ export async function upsertRecurringBill(
     bills.unshift(bill);
   }
   await saveRecurringBills(account, bills);
+  await markConfigChanged(account, 'recurring_bill', bill.id);
 }
 
 export async function deleteRecurringBill(
@@ -177,4 +193,5 @@ export async function deleteRecurringBill(
 ): Promise<void> {
   const bills = await loadRecurringBills(account);
   await saveRecurringBills(account, bills.filter(b => b.id !== id));
+  await markConfigRemoved(account, 'recurring_bill', id);
 }

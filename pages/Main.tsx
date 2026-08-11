@@ -9,6 +9,7 @@ import { MainTabParamList } from '../types/navigation';
 import { useAutoBookkeeping } from '../hooks/useAutoBookkeeping';
 import { useRecurringBillRunner } from '../hooks/useRecurringBillRunner';
 import { useMissedRecordReminder } from '../hooks/useMissedRecordReminder';
+import { useConfigSync } from '../hooks/useConfigSync';
 import { CYCLE_LABELS } from '../services/recurringBills';
 import { navigate } from '../utils/navigationRef';
 
@@ -25,6 +26,8 @@ const showToast = (message: string) => {
 };
 
 const Main = () => {
+  // P3 本地配置云端同步：周期账单/模板/提醒设置（启动/回前台/变更时同步）
+  useConfigSync();
   const { detectedBill, clearDetectedBill } = useAutoBookkeeping();
   const {
     pendingConfirms,
