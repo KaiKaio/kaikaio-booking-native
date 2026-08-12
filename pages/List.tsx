@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Platform, ToastAndroid, ScrollView } from 'react-native';
+import Animated, { FadeIn, FadeInDown, FadeOut, FadeOutDown, LinearTransition, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import MonthYearPicker from '../components/MonthYearPicker';
 import TypePicker from '../components/TypePicker';
+import AnimatedNumber from '../components/AnimatedNumber';
 import BillForm, { BillData, BillFormRef } from '../components/BillForm';
 import BillGroupItem, { DailyBillGroup, SubItem } from '../components/BillGroupItem';
 import { getBillList, addBill, updateBill, deleteBill, loadBillMonthCache, saveBillMonthCache } from '../services/bill';
@@ -48,6 +50,11 @@ const List = () => {
   }, [categories]);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<DailyBillGroup[]>([]);
+  // 保持最新 data 可在稳定回调（handleEdit/handleRetrySync）中访问，避免回调依赖 data 频繁重建
+  const dataRef = useRef(data);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
   const [currentDate, setCurrentDate] = useState('');
   const currentDateRef = useRef(currentDate);
   useEffect(() => {
@@ -76,6 +83,12 @@ const List = () => {
   const [orderBy, setOrderBy] = useState<'ASC' | 'DESC'>('DESC');
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null);
+
+  // FAB 按压缩放反馈
+  const fabScale = useSharedValue(1);
+  const fabAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: fabScale.value }],
+  }));
 
   // ===== 快捷模板（一键记账） =====
   const [templates, setTemplates] = useState<BillTemplate[]>([]);
@@ -329,7 +342,7 @@ const List = () => {
     loadLastDate();
   }, []);
 
-  const fetchBills = useCallback(async () => {
+  const fetchBills = useCallback(async (isPullRefresh = false) => {
     // 无currentDate时不发请求，避免重复请求和错误展示；
     if (!currentDate) return;
 
@@ -337,7 +350,8 @@ const List = () => {
     if (loadingRef.current) return;
 
     loadingRef.current = true;
-    setRefreshing(true);
+    // 仅下拉刷新时展示原生刷新指示器；切月/排序/筛选等静默刷新不打断节奏
+    if (isPullRefresh) setRefreshing(true);
 
     // 先尝试加载离线缓存和待同步账单，确保无论网络状态如何都能展示数据，提升用户体验
     // 但为了避免 UI 跳动：只在最终确定数据源后，统一 setData 一次
@@ -563,9 +577,9 @@ const List = () => {
     showToast('已保存为快捷模板');
   }, [categories, reloadTemplates]);
 
-  const handleEdit = (id: number) => {
+  const handleEdit = useCallback((id: number) => {
     let targetItem: SubItem | undefined;
-    for (const group of data) {
+    for (const group of dataRef.current) {
       const item = group.items.find(i => i.id === id);
       if (item) {
         targetItem = item;
@@ -599,7 +613,7 @@ const List = () => {
         type: targetItem.payType
       });
     }
-  };
+  }, []);
 
   // 乐观更新: 立即添加本地账单
   const optimisticAddBill = (billData: BillData): SubItem => {
@@ -769,12 +783,12 @@ const List = () => {
     runPostBillEffects(info, showToast);
   };
 
-  const handleRetrySync = async (localId: string) => {
+  const handleRetrySync = useCallback(async (localId: string) => {
     if (cancelledLocalIdsRef.current.has(localId)) return;
 
     // 找到对应的账单项
     let targetItem: SubItem | undefined;
-    for (const group of data) {
+    for (const group of dataRef.current) {
       const item = group.items.find(i => i.localId === localId);
       if (item) {
         targetItem = item;
@@ -822,7 +836,7 @@ const List = () => {
         needsRefetchRef.current = true;
       }
     }
-  };
+  }, [buildSubItemFromServer, updateLocalBillStatus, upsertLocalDataItem]);
 
   // 重试失败待同步账单
   const retryFailedPendingBills = useCallback(async () => {
@@ -893,13 +907,13 @@ const List = () => {
     retryFailedPendingBills();
   }, [currentDate, retryFailedPendingBills]);
 
-  const showToast = (message: string) => {
+  const showToast = useCallback((message: string) => {
     if (Platform.OS === 'android') {
       ToastAndroid.show(message, ToastAndroid.SHORT);
     } else {
       Alert.alert('提示', message);
     }
-  };
+  }, []);
 
   // ===== 记账成功轻量 Toast + 撤销 =====
   const [undoToast, setUndoToast] = useState<{
@@ -1240,7 +1254,12 @@ const List = () => {
     [recalculateGroup, removePendingBillFromStorage]
   );
 
-  const renderBillItem = ({ item }: { item: DailyBillGroup }) => (
+  const onRefresh = useCallback(async () => {
+    await fetchBills(true);
+    await retryFailedPendingBills();
+  }, [fetchBills, retryFailedPendingBills]);
+
+  const renderBillItem = useCallback(({ item }: { item: DailyBillGroup }) => (
     <BillGroupItem
       item={item}
       highlightedLocalId={highlightedLocalId}
@@ -1249,28 +1268,27 @@ const List = () => {
       onEdit={handleEdit}
       onRetry={handleRetrySync}
     />
-  );
-
-  const onRefresh = async () => {
-    await fetchBills();
-    await retryFailedPendingBills();
-  };
+  ), [highlightedLocalId, onRefresh, handleDeleteOptimisticBill, handleEdit, handleRetrySync]);
 
   return (
     <View style={styles.root}>
       {dataState === 'offline-cached' && (
-        <View style={[styles.offlineBanner, { paddingTop: insets.top + 6 }]}>
+        <Animated.View
+          style={[styles.offlineBanner, { paddingTop: insets.top + 6 }]}
+          entering={FadeInDown.duration(200)}
+          exiting={FadeOut.duration(200)}
+        >
           <Text style={styles.offlineBannerText}>当前离线，展示缓存账单</Text>
-        </View>
+        </Animated.View>
       )}
 
       {/* 顶部统计栏 */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <Animated.View style={[styles.header, { paddingTop: insets.top + 12 }]} layout={LinearTransition.springify().damping(26).stiffness(260)}>
         <View style={styles.headerRow}>
           <Text style={styles.headerLabel}>总支出：</Text>
-          <Text style={styles.headerValue}>{summary.totalExpense.toFixed(2)}</Text>
+          <AnimatedNumber style={styles.headerValue} value={summary.totalExpense} />
           <Text style={styles.headerLabel}>总收入：</Text>
-          <Text style={styles.headerValue}>{summary.totalIncome.toFixed(2)}</Text>
+          <AnimatedNumber style={styles.headerValue} value={summary.totalIncome} />
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity 
@@ -1293,29 +1311,41 @@ const List = () => {
             <Text style={styles.headerBtnText}>{currentDate}</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
       {/* 快捷模板：一键记账入口（长按删除） */}
       {templates.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.templateBar}
-          contentContainerStyle={styles.templateBarContent}
+        <Animated.View
+          entering={FadeInDown.duration(250)}
+          exiting={FadeOut.duration(200)}
+          layout={LinearTransition.springify().damping(26).stiffness(260)}
         >
-          {templates.map(tpl => (
-            <TouchableOpacity
-              key={tpl.id}
-              style={styles.templateChip}
-              onPress={() => handleTemplatePress(tpl)}
-              onLongPress={() => handleTemplateLongPress(tpl)}
-            >
-              <CategoryIcon icon={tpl.categoryIcon} size={14} color={theme.colors.primary} />
-              <Text style={styles.templateChipText} numberOfLines={1}>
-                {tpl.name} ¥{tpl.amount.toFixed(2)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.templateBar}
+            contentContainerStyle={styles.templateBarContent}
+          >
+            {templates.map(tpl => (
+              <Animated.View
+                key={tpl.id}
+                style={styles.templateChipWrap}
+                entering={FadeIn.duration(200)}
+                exiting={FadeOut.duration(150)}
+              >
+                <TouchableOpacity
+                  style={styles.templateChip}
+                  onPress={() => handleTemplatePress(tpl)}
+                  onLongPress={() => handleTemplateLongPress(tpl)}
+                >
+                  <CategoryIcon icon={tpl.categoryIcon} size={14} color={theme.colors.primary} />
+                  <Text style={styles.templateChipText} numberOfLines={1}>
+                    {tpl.name} ¥{tpl.amount.toFixed(2)}
+                  </Text>
+                </TouchableOpacity>
+              </Animated.View>
+            ))}
+          </ScrollView>
+        </Animated.View>
       )}
       {/* 账单列表 */}
       <FlatList
@@ -1326,6 +1356,9 @@ const List = () => {
         renderItem={renderBillItem}
         keyExtractor={(item) => item.date}
         showsVerticalScrollIndicator={false}
+        initialNumToRender={8}
+        windowSize={11}
+        // 注意：不开启 removeClippedSubviews，会干扰 reanimated 的 entering/exiting 动画
         onScrollToIndexFailed={(info) => {
           const wait = new Promise(resolve => setTimeout(resolve, 500));
           wait.then(() => {
@@ -1341,7 +1374,7 @@ const List = () => {
             </Text>
           </View>
         ) : null}
-        // 使用三元运算符，refreshing 为 true 时显示加载指示器，否则返回 null
+        // 使用三元运算符，下拉刷新时展示加载指示器；静默刷新不展示，避免大转圈闪烁
         ListFooterComponent={refreshing ? (
           <View style={styles.loaderContainer}>
             <ActivityIndicator size="large" color="#0090FF" />
@@ -1367,9 +1400,16 @@ const List = () => {
       />
 
       <View style={[styles.fabContainer, { bottom: 40 + insets.bottom }]}>
-        <TouchableOpacity style={styles.fab} onPress={handleAdd}>
-          <CategoryIcon style={styles.fabIcon} icon={'icon-qianming'} size={22} />
-        </TouchableOpacity>
+        <Animated.View style={fabAnimatedStyle} entering={FadeInDown.duration(300)}>
+          <TouchableOpacity
+            style={styles.fab}
+            onPress={handleAdd}
+            onPressIn={() => { fabScale.value = withSpring(0.92, { damping: 15, stiffness: 300 }); }}
+            onPressOut={() => { fabScale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
+          >
+            <CategoryIcon style={styles.fabIcon} icon={'icon-qianming'} size={22} />
+          </TouchableOpacity>
+        </Animated.View>
         <BillForm
           ref={billFormRef}
           onSubmit={handleBillSubmit}
@@ -1378,7 +1418,12 @@ const List = () => {
       </View>
 
       {undoToast && (
-        <View style={[styles.undoToastContainer, { bottom: 96 + insets.bottom }]} pointerEvents="box-none">
+        <Animated.View
+          style={[styles.undoToastContainer, { bottom: 96 + insets.bottom }]}
+          pointerEvents="box-none"
+          entering={FadeInDown.duration(250)}
+          exiting={FadeOutDown.duration(200)}
+        >
           <View style={styles.undoToast}>
             <Text style={styles.undoToastText} numberOfLines={1}>{undoToast.message}</Text>
             {undoToast.secondary && (
@@ -1402,16 +1447,20 @@ const List = () => {
               <Text style={styles.undoToastAction}>撤销</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       )}
 
       {isSubmitting && (
-        <View style={styles.loadingOverlay}>
+        <Animated.View
+          style={styles.loadingOverlay}
+          entering={FadeIn.duration(150)}
+          exiting={FadeOut.duration(200)}
+        >
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={styles.loadingText}>正在提交...</Text>
           </View>
-        </View>
+        </Animated.View>
       )}
     </View>
   );
@@ -1549,6 +1598,9 @@ const styles = StyleSheet.create({
   templateBarContent: {
     paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+  templateChipWrap: {
+    flexDirection: 'row',
   },
   templateChip: {
     flexDirection: 'row',

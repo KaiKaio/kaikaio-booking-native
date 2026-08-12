@@ -7,9 +7,18 @@ import {
   Alert,
   ActivityIndicator,
   ToastAndroid,
-  Platform,
-  Animated
+  Platform
 } from 'react-native';
+import Animated, {
+  FadeInDown,
+  FadeOutDown,
+  LinearTransition,
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming
+} from 'react-native-reanimated';
 import ReanimatedSwipeable, { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import CategoryIcon from './CategoryIcon';
@@ -41,7 +50,8 @@ export interface BillItemProps {
 const BillItem: React.FC<BillItemProps> = ({ id, type, typeId, icon, remark, amount, payType, onDeleteSuccess, onDelete, onEdit, isLast, syncStatus, localId, onRetry, isHighlighted }) => {
   const [deleting, setDeleting] = useState(false);
   const swipeableRef = useRef<SwipeableMethods>(null);
-  const flashAnim = useRef(new Animated.Value(0)).current;
+  // 高亮闪烁进度（0=正常背景，1=高亮背景），由 reanimated 在 UI 线程驱动
+  const flash = useSharedValue(0);
   // 周期账单 remark 携带的防重结构化标记（cfg/due）不展示给用户
   const displayRemark = cleanRecurringRemark(remark || '');
 
@@ -53,27 +63,28 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, typeId, icon, remark, amo
 
   useEffect(() => {
     if (isHighlighted) {
-      flashAnim.setValue(0);
-      // 每秒闪 1 次（500ms 亮，500ms 灭），持续 3 秒（共 3 次循环）
-      Animated.sequence([
-        Animated.timing(flashAnim, { toValue: 1, duration: 500, useNativeDriver: false }),
-        Animated.timing(flashAnim, { toValue: 0, duration: 500, useNativeDriver: false }),
-        Animated.timing(flashAnim, { toValue: 1, duration: 500, useNativeDriver: false }),
-        Animated.timing(flashAnim, { toValue: 0, duration: 500, useNativeDriver: false }),
-        Animated.timing(flashAnim, { toValue: 1, duration: 500, useNativeDriver: false }),
-        Animated.timing(flashAnim, { toValue: 0, duration: 500, useNativeDriver: false })
-      ]).start();
+      // 每秒闪 1 次（500ms 亮，500ms 灭），持续 3 秒（共 3 次循环），结束后回到正常背景
+      flash.value = 0;
+      flash.value = withSequence(
+        withTiming(1, { duration: 500 }),
+        withTiming(0, { duration: 500 }),
+        withTiming(1, { duration: 500 }),
+        withTiming(0, { duration: 500 }),
+        withTiming(1, { duration: 500 }),
+        withTiming(0, { duration: 500 })
+      );
     } else {
-      flashAnim.setValue(0);
+      flash.value = 0;
     }
-  }, [isHighlighted, flashAnim]);
+  }, [isHighlighted, flash]);
 
-  const animatedStyle = {
-    backgroundColor: flashAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [theme.colors.background.paper, theme.colors.background.primaryLight,] // Using a semi-transparent primary color
-    })
-  };
+  const animatedStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      flash.value,
+      [0, 1],
+      [theme.colors.background.paper, theme.colors.background.primaryLight]
+    )
+  }));
 
   // 根据 payType 判断颜色：1=支出（绿色），2=收入（红色）
   const amountColor = payType === '1' ? theme.colors.status.success : theme.colors.status.error;
@@ -200,12 +211,17 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, typeId, icon, remark, amo
   };
 
   return (
-    <ReanimatedSwipeable
-      ref={swipeableRef}
-      renderRightActions={renderRightActions}
-      overshootRight={false}
+    <Animated.View
+      layout={LinearTransition.springify().damping(26).stiffness(260)}
+      entering={FadeInDown.duration(220)}
+      exiting={FadeOutDown.duration(180)}
     >
-      <Animated.View style={[styles.item, isLast && styles.lastItem, animatedStyle]}>
+      <ReanimatedSwipeable
+        ref={swipeableRef}
+        renderRightActions={renderRightActions}
+        overshootRight={false}
+      >
+        <Animated.View style={[styles.item, isLast && styles.lastItem, animatedStyle]}>
         <View style={[
           styles.itemIconWrap,
           { backgroundColor: categoryBgColor }
@@ -218,8 +234,9 @@ const BillItem: React.FC<BillItemProps> = ({ id, type, typeId, icon, remark, amo
         </View>
         {renderSyncIndicator()}
         <Text style={[styles.itemAmount, { color: amountColor }]}>{ payType !== '1' && '+' }{amount.toFixed(2)}</Text>
-      </Animated.View>
-    </ReanimatedSwipeable>
+        </Animated.View>
+      </ReanimatedSwipeable>
+    </Animated.View>
   );
 };
 

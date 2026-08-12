@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
+import Animated, { FadeInDown, FadeOut, LinearTransition } from 'react-native-reanimated';
 import BillItem from './BillItem';
 import { theme } from '@/theme';
 
@@ -49,13 +50,18 @@ const BillGroupItem: React.FC<BillGroupItemProps> = ({
   onRetry,
 }) => {
   return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
+    <Animated.View
+      style={styles.section}
+      layout={LinearTransition.springify().damping(26).stiffness(260)}
+      entering={FadeInDown.duration(250)}
+      exiting={FadeOut.duration(200)}
+    >
+      <Animated.View style={styles.sectionHeader}>
         <Text style={styles.sectionDate}>{item.date}</Text>
         <Text style={styles.sectionStat}>
           支出: ￥{item.total.toFixed(2)} 收入: ￥{item.income.toFixed(2)}
         </Text>
-      </View>
+      </Animated.View>
       {item.items.map((subItem: SubItem, index: number) => (
         <BillItem
           key={subItem.localId || subItem.id}
@@ -68,7 +74,7 @@ const BillGroupItem: React.FC<BillGroupItemProps> = ({
           {...subItem}
         />
       ))}
-    </View>
+    </Animated.View>
   );
 };
 
@@ -100,4 +106,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BillGroupItem;
+export default React.memo(BillGroupItem);
