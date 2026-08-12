@@ -1,10 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Category } from '@/types/category';
 import { StatisticsData } from '../types/bill';
 import { RootStackParamList } from '../types/navigation';
 import CategoryIcon from './CategoryIcon';
@@ -19,20 +18,8 @@ interface CompositionProps {
 
 
 
-const getCenterLabelComponent = (currentItem: StatisticsData & { originType: Category | null }, totalAmount: number) => () => {
-  const originType = currentItem.originType;
-  return (
-    <View style={styles.chartCenter}>
-      <View style={[
-        styles.chartCenterLabel,
-        originType?.background_color && { backgroundColor: originType.background_color },
-      ]}>
-        <CategoryIcon icon={originType?.icon || 'question'} size={22} />
-      </View>
-      <Text style={styles.chartCenterValue}>{((currentItem.number / totalAmount) * 100).toFixed(2)}%</Text>
-    </View>
-  )
-};
+// 旋转动画时长
+const ROTATION_DURATION = 450;
 
 const Composition: React.FC<CompositionProps> = ({ data }) => {
   const [type, setType] = useState<'expense' | 'income'>('expense');
@@ -44,7 +31,10 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
   // 1 for expense, 2 for income
   const targetType = type === 'expense' ? '1' : '2';
 
-  const filteredData = data.filter(item => String(item.pay_type) === targetType);
+  const filteredData = useMemo(
+    () => data.filter(item => String(item.pay_type) === targetType),
+    [data, targetType],
+  );
 
   // Calculate total for the current list to show percentage relative to this list
   const totalAmount = filteredData.reduce((sum, item) => sum + Number(item.number), 0);
@@ -53,11 +43,6 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
   const sortedData = useMemo(() => {
     return [...filteredData].sort((a, b) => Number(b.number) - Number(a.number));
   }, [filteredData]);
-
-  // Handle selected index reset when type changes
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [type]);
 
   // 饼图数据
   const pieData = useMemo(() => {
@@ -71,47 +56,56 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
     });
   }, [sortedData, totalAmount, getCategoryItem]);
 
-  // 计算当前旋转角度，使选中的扇形位于顶部中心
-  const rotationAngle = useMemo(() => {
-    if (pieData.length === 0) return 0;
-    
-    // 计算每个扇形的角度
+  // 旋转动画相关状态
+  // rotationAnim: 甜甜圈整体旋转角度（deg）；cumulativeRotation: 累计角度，保证连续切换沿最短路径旋转
+  const rotationAnim = useRef(new Animated.Value(0)).current;
+  const cumulativeRotation = useRef(0);
+  const pendingIndex = useRef(0);
+  // 顶部指示文案与中心标签的过渡动画（淡入淡出 / 位移 / 缩放）
+  const indicatorOpacity = useRef(new Animated.Value(1)).current;
+  const indicatorTranslateY = useRef(new Animated.Value(0)).current;
+  const centerOpacity = useRef(new Animated.Value(1)).current;
+  const centerScale = useRef(new Animated.Value(1)).current;
+
+  // 计算目标旋转角度（deg），使指定索引的扇形中点位于顶部中心
+  // gifted-charts 默认从顶部 (12点钟方向) 开始顺时针绘制，负角度即逆时针旋转
+  const computeTargetAngle = (index: number) => {
     const totalValue = pieData.reduce((sum, item) => sum + item.value, 0);
-    
-    // 如果没有数据，返回0
-    if (totalValue === 0) return 0;
-    
+    if (pieData.length === 0 || totalValue === 0) return 0;
+
+    const safeIndex = ((index % pieData.length) + pieData.length) % pieData.length;
+
     let precedingSum = 0;
-    for (let i = 0; i < selectedIndex; i++) {
+    for (let i = 0; i < safeIndex; i++) {
       precedingSum += pieData[i].value;
     }
-    
-    // 当前选中扇形的一半
-    const halfCurrentValue = pieData[selectedIndex].value / 2;
-    
-    // 目标扇形中点相对于起点的比例 (0-1)
-    const ratio = (precedingSum + halfCurrentValue) / totalValue;
-    
-    // 转换为角度
-    // gifted-charts 默认从顶部 (12点钟方向) 开始顺时针绘制
-    // 我们想要将选中区域的中点对齐到顶部 (12点钟方向)
-    /**
-     * 注意：
-     * 1. transAngle 返回 0 则无旋转
-     * 2. transAngle 返回 -Math.PI / 2 则顺时针旋转 90 度
-     * 3. transAngle 返回 -Math.PI 则顺时针旋转 180 度
-     * 4. transAngle 返回 -Math.PI * 1.5 则顺时针旋转 270 度
-     * 5. transAngle 返回 -Math.PI * 2 则顺时针旋转 360 度
-     */
 
-    const transAngle = -Math.PI * 2 * ratio;
+    // 目标扇形中点相对于绘制起点的比例 (0-1)
+    const ratio = (precedingSum + pieData[safeIndex].value / 2) / totalValue;
 
-    return transAngle;
-  }, [pieData, selectedIndex]);
+    return -360 * ratio;
+  };
+
+  // 切换收支类型 / 数据源变化时，重置选中项与旋转角度（不做动画）
+  useEffect(() => {
+    setSelectedIndex(0);
+    pendingIndex.current = 0;
+    rotationAnim.stopAnimation();
+    rotationAnim.setValue(computeTargetAngle(0));
+    indicatorOpacity.setValue(1);
+    indicatorTranslateY.setValue(0);
+    centerOpacity.setValue(1);
+    centerScale.setValue(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, data]);
+
+  // 整体旋转的插值（rotationAnim 稳定，只需创建一次）
+  const rotation = useMemo(
+    () => rotationAnim.interpolate({ inputRange: [-360, 360], outputRange: ['-360deg', '360deg'] }),
+    [rotationAnim],
+  );
 
   const renderPieChart = () => {
-    const selectedItem = sortedData[selectedIndex];
-    const computedSelType = getCategoryItem(selectedItem.type_id)
     return (
       <PieChart
         data={pieData}
@@ -119,23 +113,96 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
         innerRadius={70}
         radius={90}
         innerCircleColor={theme.colors.background.paper}
-        centerLabelComponent={getCenterLabelComponent({
-          ...selectedItem,
-          originType: computedSelType
-        }, totalAmount)}
-        initialAngle={rotationAngle}
+        initialAngle={0}
         isAnimated={true}
         animationDuration={500}
       />
     )
   }
 
+  // 中心标签：独立覆盖在甜甜圈上方，不随图表旋转，天然保持直立
+  const renderCenterLabel = () => {
+    const selectedItem = sortedData[Math.min(selectedIndex, sortedData.length - 1)];
+    if (!selectedItem) return null;
+    const originType = getCategoryItem(selectedItem.type_id);
+    return (
+      <View style={styles.centerOverlay} pointerEvents="none">
+        <Animated.View
+          style={[
+            styles.chartCenter,
+            { opacity: centerOpacity, transform: [{ scale: centerScale }] },
+          ]}
+        >
+          <View style={[
+            styles.chartCenterLabel,
+            originType?.background_color && { backgroundColor: originType.background_color },
+          ]}>
+            <CategoryIcon icon={originType?.icon || 'question'} size={22} />
+          </View>
+          <Text style={styles.chartCenterValue}>{((Number(selectedItem.number) / totalAmount) * 100).toFixed(2)}%</Text>
+        </Animated.View>
+      </View>
+    );
+  };
+
+  const goToIndex = (getNewIndex: (current: number) => number, direction: 1 | -1) => {
+    const count = pieData.length;
+    if (count <= 1) return;
+
+    // 基于 pendingIndex 计算，保证快速连点时每次都能正确前进/后退一格
+    const newIndex = ((getNewIndex(pendingIndex.current) % count) + count) % count;
+    pendingIndex.current = newIndex;
+
+    // 1. 甜甜圈沿最短路径平滑旋转
+    const target = computeTargetAngle(newIndex);
+    let delta = (((target - cumulativeRotation.current) % 360) + 360) % 360;
+    if (delta > 180) delta -= 360;
+    // 仅两个分类时差值恰为 180°，此时按点击方向旋转
+    if (delta === 180) delta = -180 * direction;
+    if (delta !== 0) {
+      cumulativeRotation.current += delta;
+      Animated.timing(rotationAnim, {
+        toValue: cumulativeRotation.current,
+        duration: ROTATION_DURATION,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
+
+    // 2. 顶部指示文案与中心标签先淡出，切换内容后再过渡回来，避免生硬跳变
+    Animated.parallel([
+      Animated.timing(indicatorOpacity, { toValue: 0, duration: 100, useNativeDriver: true }),
+      Animated.timing(centerOpacity, { toValue: 0, duration: 100, useNativeDriver: true }),
+      Animated.timing(centerScale, { toValue: 0.75, duration: 100, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+    ]).start(({ finished }) => {
+      if (!finished) return; // 被下一次点击打断时，交给最新的动画收尾
+      setSelectedIndex(newIndex);
+      indicatorTranslateY.setValue(6);
+      centerScale.setValue(1.12);
+      Animated.parallel([
+        Animated.timing(indicatorOpacity, { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.timing(indicatorTranslateY, {
+          toValue: 0,
+          duration: 250,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(centerOpacity, { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.spring(centerScale, {
+          toValue: 1,
+          friction: 6,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+  };
+
   const handlePrev = () => {
-    setSelectedIndex((prev) => (prev - 1 + pieData.length) % pieData.length);
+    goToIndex((current) => current - 1, -1);
   };
 
   const handleNext = () => {
-    setSelectedIndex((prev) => (prev + 1) % pieData.length);
+    goToIndex((current) => current + 1, 1);
   };
 
   return (
@@ -167,7 +234,12 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
           
           <View style={styles.chartArea}>
             {/* 指示线 */}
-            <View style={styles.indicatorContainer}>
+            <Animated.View
+              style={[
+                styles.indicatorContainer,
+                { opacity: indicatorOpacity, transform: [{ translateY: indicatorTranslateY }] },
+              ]}
+            >
                <Text style={styles.indicatorCategoryName}>
                  {sortedData[selectedIndex]?.type_name}
                </Text>
@@ -175,11 +247,15 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
                  {Number(sortedData[selectedIndex]?.number).toFixed(2)}
                </Text>
                <View style={styles.indicatorLine} />
-            </View>
+            </Animated.View>
 
             <View style={styles.chartContainer}>
-              {/* 饼图组件，传入数据和旋转角度 */}
-              {renderPieChart()}
+              {/* 饼图整体随选中项平滑旋转 */}
+              <Animated.View style={{ transform: [{ rotate: rotation }] }}>
+                {renderPieChart()}
+              </Animated.View>
+              {/* 中心标签覆盖层：不参与旋转，带淡入淡出 + 缩放过渡 */}
+              {renderCenterLabel()}
             </View>
           </View>
 
@@ -331,6 +407,15 @@ const styles = StyleSheet.create({
   },
   chartContainer: {
     alignItems: 'center',
+  },
+  centerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   chartCenter: {
     alignItems: 'center',
