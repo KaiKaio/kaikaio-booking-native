@@ -87,11 +87,14 @@ const Composition: React.FC<CompositionProps> = ({ data }) => {
   };
 
   // 切换收支类型 / 数据源变化时，重置选中项与旋转角度（不做动画）
+  // 注意：累计角度基准必须与动画值同步重置，否则下次点击算出的旋转增量会错乱
   useEffect(() => {
     setSelectedIndex(0);
     pendingIndex.current = 0;
     rotationAnim.stopAnimation();
-    rotationAnim.setValue(computeTargetAngle(0));
+    const resetAngle = computeTargetAngle(0);
+    cumulativeRotation.current = resetAngle;
+    rotationAnim.setValue(resetAngle);
     indicatorOpacity.setValue(1);
     indicatorTranslateY.setValue(0);
     centerOpacity.setValue(1);
