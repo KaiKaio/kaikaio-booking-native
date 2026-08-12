@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 // 注意：你需要安装 expo-clipboard: npx expo install expo-clipboard
 import * as Clipboard from 'expo-clipboard';
@@ -107,9 +107,9 @@ export function useAutoBookkeeping() {
     }
   };
 
-  const clearDetectedBill = () => {
+  const clearDetectedBill = useCallback(() => {
     setDetectedBill(null);
-  };
+  }, []);
 
   return {
     detectedBill,

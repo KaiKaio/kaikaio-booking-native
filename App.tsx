@@ -21,6 +21,7 @@ import { navigationRef } from './utils/navigationRef';
 import { CategoryProvider } from './context/CategoryContext';
 import { UserProvider } from './context/UserContext';
 import { useReminderScheduler } from './hooks/useReminderScheduler';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -50,6 +51,7 @@ function App() {
   }
 
   return (
+    <ErrorBoundary>
     <GestureHandlerRootView style={styles.container}>
       <SafeAreaProvider>
         <CategoryProvider>
@@ -119,6 +121,7 @@ function App() {
         </CategoryProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
 

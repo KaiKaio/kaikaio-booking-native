@@ -171,6 +171,30 @@ describe('配置同步：合并逻辑（LWW + 软删）', () => {
     expect(result.applied).toEqual([]);
   });
 
+  it('远端与本地完全一致时不产生变更（避免重复 pull 空转）', () => {
+    const local: FakeConfig[] = [{ id: 'a', name: 'A' }];
+    const result = mergeSyncItems<FakeConfig>(
+      'recurring_bill',
+      local,
+      [makeItem('a', 'A', 100)],
+      { [getSyncItemKey('recurring_bill', 'a')]: 100 }
+    );
+    expect(result.changed).toBe(false);
+    expect(result.applied).toEqual([]);
+  });
+
+  it('updatedAt 相同但内容不同时仍以远端为准', () => {
+    const local: FakeConfig[] = [{ id: 'a', name: '旧' }];
+    const result = mergeSyncItems<FakeConfig>(
+      'recurring_bill',
+      local,
+      [makeItem('a', '新', 100)],
+      { [getSyncItemKey('recurring_bill', 'a')]: 100 }
+    );
+    expect(result.changed).toBe(true);
+    expect(result.list[0].name).toBe('新');
+  });
+
   it('软删条目从本地移除', () => {
     const local: FakeConfig[] = [
       { id: 'a', name: 'A' },

@@ -281,6 +281,14 @@ export function mergeSyncItems<T extends { id: string }>(
     } else {
       const payload = item.payload as T;
       if (index >= 0) {
+        // 远端版本与本地完全一致（updatedAt 相同且内容相同）：跳过，
+        // 避免重复 pull 时无意义的整表重写
+        if (
+          localUpdatedAt === item.updatedAt &&
+          JSON.stringify(list[index]) === JSON.stringify(payload)
+        ) {
+          continue;
+        }
         list[index] = payload;
       } else {
         list.unshift(payload);

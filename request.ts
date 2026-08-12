@@ -1,7 +1,7 @@
 // request.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from './config';
-import { navigate } from './utils/navigationRef';
+import { resetToLogin } from './utils/navigationRef';
 import {
   TOKEN_STORAGE_KEY,
   REFRESH_TOKEN_STORAGE_KEY,
@@ -188,8 +188,8 @@ export default async function request(url: string, options: any = {}) {
 
       console.log('401: 已清除认证数据,保留离线账单数据');
 
-      // 跳转到登录页
-      navigate('Login');
+      // 重置导航栈到登录页（不能用 navigate 叠加页面，否则旧 Main 不卸载会持续发请求）
+      resetToLogin();
       throw new Error(msg);
     }
 
