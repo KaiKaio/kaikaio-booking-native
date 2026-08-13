@@ -7,35 +7,35 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		01AA5C66FEB85114139C4324 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B33AA28678E1E488B7A71D9F /* ExpoModulesProvider.swift */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		172D193B85BC2F2F2AEAD65B /* libPods-Kaikaio.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ED57A277E7C62F01CD6A9230 /* libPods-Kaikaio.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		4C822A2DCA4905AA426BC144 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 23683F143ABF7EE3B047941D /* PrivacyInfo.xcprivacy */; };
+		723738935213D980CDF761B7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6D12D1187D381385E518B384 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		D6B2A0514B0FB04E17A9B513 /* libPods-Kaikaio.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23938C63ED6F1CC62AF2BD6C /* libPods-Kaikaio.a */; };
+		C5A3CE487CBD8237DDEF5B4D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBF96B68AB2A5F61B26FF9C0 /* ExpoModulesProvider.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
-		F3C435E87279493DACC6B88E /* iconfont.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F1F657BC00DD44EDAAFAC99E /* iconfont.ttf */; };
-		0FF1E023250D4B68A7F7121F /* iconfont.json in Resources */ = {isa = PBXBuildFile; fileRef = F609891F72B54684AF240EBA /* iconfont.json */; };
-		B95C6B657B3B4A659D8CC020 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = BEC8DF0E4F164B5DA4A1286B /* README.md */; };
+		90FF378DA18E461098A7BE4C /* iconfont.ttf in Resources */ = {isa = PBXBuildFile; fileRef = CAF593E0D5BA498F82ABD471 /* iconfont.ttf */; };
+		9629E20DE5B045A89F82BA18 /* iconfont.json in Resources */ = {isa = PBXBuildFile; fileRef = 5254CC3682754197B43DC813 /* iconfont.json */; };
+		7AA599115E2F433FA0CD0B34 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = DC06AB0C2361402EBCEB1123 /* README.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		13B07F961A680F5B00A75B9A /* Kaikaio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Kaikaio.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Kaikaio/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Kaikaio/Info.plist; sourceTree = "<group>"; };
-		23683F143ABF7EE3B047941D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Kaikaio/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		23938C63ED6F1CC62AF2BD6C /* libPods-Kaikaio.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Kaikaio.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6D12D1187D381385E518B384 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Kaikaio/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Kaikaio/SplashScreen.storyboard; sourceTree = "<group>"; };
-		B33AA28678E1E488B7A71D9F /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Kaikaio/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		C0DCAC1A20717A03C23FF5CC /* Pods-Kaikaio.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Kaikaio.debug.xcconfig"; path = "Target Support Files/Pods-Kaikaio/Pods-Kaikaio.debug.xcconfig"; sourceTree = "<group>"; };
+		CA5DA4BC39C1272306AA4F7D /* Pods-Kaikaio.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Kaikaio.release.xcconfig"; path = "Target Support Files/Pods-Kaikaio/Pods-Kaikaio.release.xcconfig"; sourceTree = "<group>"; };
+		DBDC1DBA0B7D756B56B6F7C3 /* Pods-Kaikaio.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Kaikaio.debug.xcconfig"; path = "Target Support Files/Pods-Kaikaio/Pods-Kaikaio.debug.xcconfig"; sourceTree = "<group>"; };
+		EBF96B68AB2A5F61B26FF9C0 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Kaikaio/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		ED57A277E7C62F01CD6A9230 /* libPods-Kaikaio.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Kaikaio.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Kaikaio/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* Kaikaio-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Kaikaio-Bridging-Header.h"; path = "Kaikaio/Kaikaio-Bridging-Header.h"; sourceTree = "<group>"; };
-		FB89BC44FF2A04BFD7D04B55 /* Pods-Kaikaio.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Kaikaio.release.xcconfig"; path = "Target Support Files/Pods-Kaikaio/Pods-Kaikaio.release.xcconfig"; sourceTree = "<group>"; };
-		F1F657BC00DD44EDAAFAC99E /* iconfont.ttf */ = {isa = PBXFileReference; name = "iconfont.ttf"; path = "../assets/fonts/iconfont.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		F609891F72B54684AF240EBA /* iconfont.json */ = {isa = PBXFileReference; name = "iconfont.json"; path = "../assets/fonts/iconfont.json"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		BEC8DF0E4F164B5DA4A1286B /* README.md */ = {isa = PBXFileReference; name = "README.md"; path = "../assets/fonts/README.md"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		CAF593E0D5BA498F82ABD471 /* iconfont.ttf */ = {isa = PBXFileReference; name = "iconfont.ttf"; path = "../assets/fonts/iconfont.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		5254CC3682754197B43DC813 /* iconfont.json */ = {isa = PBXFileReference; name = "iconfont.json"; path = "../assets/fonts/iconfont.json"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		DC06AB0C2361402EBCEB1123 /* README.md */ = {isa = PBXFileReference; name = "README.md"; path = "../assets/fonts/README.md"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -43,7 +43,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D6B2A0514B0FB04E17A9B513 /* libPods-Kaikaio.a in Frameworks */,
+				172D193B85BC2F2F2AEAD65B /* libPods-Kaikaio.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -59,15 +59,25 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				23683F143ABF7EE3B047941D /* PrivacyInfo.xcprivacy */,
+				6D12D1187D381385E518B384 /* PrivacyInfo.xcprivacy */,
 			);
 			name = Kaikaio;
 			sourceTree = "<group>";
 		};
-		23C1DF4402CA016DAC510D0F /* Kaikaio */ = {
+		15135845DF4FB28EF8DF4C4D /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				B33AA28678E1E488B7A71D9F /* ExpoModulesProvider.swift */,
+				DBDC1DBA0B7D756B56B6F7C3 /* Pods-Kaikaio.debug.xcconfig */,
+				CA5DA4BC39C1272306AA4F7D /* Pods-Kaikaio.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		1A9919EAEE037FA5705D885C /* Kaikaio */ = {
+			isa = PBXGroup;
+			children = (
+				EBF96B68AB2A5F61B26FF9C0 /* ExpoModulesProvider.swift */,
 			);
 			name = Kaikaio;
 			sourceTree = "<group>";
@@ -76,19 +86,9 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				23938C63ED6F1CC62AF2BD6C /* libPods-Kaikaio.a */,
+				ED57A277E7C62F01CD6A9230 /* libPods-Kaikaio.a */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		3B4EF304B67D6798370A7EE9 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				C0DCAC1A20717A03C23FF5CC /* Pods-Kaikaio.debug.xcconfig */,
-				FB89BC44FF2A04BFD7D04B55 /* Pods-Kaikaio.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -105,9 +105,9 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				3B4EF304B67D6798370A7EE9 /* Pods */,
-				C81714A60448B1B4D2378A29 /* ExpoModulesProviders */,
-				93465FC5B3C742508BF5056E /* Resources */,
+				15135845DF4FB28EF8DF4C4D /* Pods */,
+				A6BC2BF32365A3CC23811616 /* ExpoModulesProviders */,
+				8C50C3A1CA4248548811CAA4 /* Resources */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -122,6 +122,14 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		A6BC2BF32365A3CC23811616 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				1A9919EAEE037FA5705D885C /* Kaikaio */,
+			);
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
 			isa = PBXGroup;
 			children = (
@@ -131,20 +139,12 @@
 			path = Kaikaio/Supporting;
 			sourceTree = "<group>";
 		};
-		C81714A60448B1B4D2378A29 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				23C1DF4402CA016DAC510D0F /* Kaikaio */,
-			);
-			name = ExpoModulesProviders;
-			sourceTree = "<group>";
-		};
-		93465FC5B3C742508BF5056E /* Resources */ = {
+		8C50C3A1CA4248548811CAA4 /* Resources */ = {
 			isa = "PBXGroup";
 			children = (
-				F1F657BC00DD44EDAAFAC99E /* iconfont.ttf */,
-				F609891F72B54684AF240EBA /* iconfont.json */,
-				BEC8DF0E4F164B5DA4A1286B /* README.md */,
+				CAF593E0D5BA498F82ABD471 /* iconfont.ttf */,
+				5254CC3682754197B43DC813 /* iconfont.json */,
+				DC06AB0C2361402EBCEB1123 /* README.md */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -158,13 +158,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Kaikaio" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				BC959F11EFEC6A2F8C22E016 /* [Expo] Configure project */,
+				AE67E1E581827F97A7EEBF4E /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				CF01C19045DAB551C18C252D /* [CP] Embed Pods Frameworks */,
+				8AE63DCFB9DE6186E3D03E2F /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -214,10 +214,10 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				4C822A2DCA4905AA426BC144 /* PrivacyInfo.xcprivacy in Resources */,
-				F3C435E87279493DACC6B88E /* iconfont.ttf in Resources */,
-				0FF1E023250D4B68A7F7121F /* iconfont.json in Resources */,
-				B95C6B657B3B4A659D8CC020 /* README.md in Resources */,
+				723738935213D980CDF761B7 /* PrivacyInfo.xcprivacy in Resources */,
+				90FF378DA18E461098A7BE4C /* iconfont.ttf in Resources */,
+				9629E20DE5B045A89F82BA18 /* iconfont.json in Resources */,
+				7AA599115E2F433FA0CD0B34 /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -337,7 +337,29 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Kaikaio/Pods-Kaikaio-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		BC959F11EFEC6A2F8C22E016 /* [Expo] Configure project */ = {
+		8AE63DCFB9DE6186E3D03E2F /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Kaikaio/Pods-Kaikaio-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Kaikaio/Pods-Kaikaio-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		AE67E1E581827F97A7EEBF4E /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -361,28 +383,6 @@
 			shellPath = /bin/sh;
 			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-Kaikaio/expo-configure-project.sh\"\n";
 		};
-		CF01C19045DAB551C18C252D /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-Kaikaio/Pods-Kaikaio-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Kaikaio/Pods-Kaikaio-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -391,7 +391,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				01AA5C66FEB85114139C4324 /* ExpoModulesProvider.swift in Sources */,
+				C5A3CE487CBD8237DDEF5B4D /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -400,7 +400,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C0DCAC1A20717A03C23FF5CC /* Pods-Kaikaio.debug.xcconfig */;
+			baseConfigurationReference = DBDC1DBA0B7D756B56B6F7C3 /* Pods-Kaikaio.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -436,7 +436,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = FB89BC44FF2A04BFD7D04B55 /* Pods-Kaikaio.release.xcconfig */;
+			baseConfigurationReference = CA5DA4BC39C1272306AA4F7D /* Pods-Kaikaio.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
