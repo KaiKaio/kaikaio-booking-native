@@ -135,3 +135,14 @@ jest.mock('react-native-safe-area-context', () => {
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
+
+// Mock @sentry/react-native：测试环境无原生模块，全部降级为 no-op
+jest.mock('@sentry/react-native', () => ({
+  init: jest.fn(),
+  wrap: (app) => app,
+  captureException: jest.fn(),
+  captureMessage: jest.fn(),
+  reactNavigationIntegration: () => ({
+    registerNavigationContainer: jest.fn(),
+  }),
+}));

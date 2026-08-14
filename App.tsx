@@ -22,6 +22,7 @@ import { CategoryProvider } from './context/CategoryContext';
 import { UserProvider } from './context/UserContext';
 import { useReminderScheduler } from './hooks/useReminderScheduler';
 import ErrorBoundary from './components/ErrorBoundary';
+import { sentryNavigationIntegration } from './utils/sentry';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -56,7 +57,10 @@ function App() {
       <SafeAreaProvider>
         <CategoryProvider>
           <UserProvider>
-            <NavigationContainer ref={navigationRef}>
+            <NavigationContainer
+              ref={navigationRef}
+              onReady={() => sentryNavigationIntegration.registerNavigationContainer(navigationRef)}
+            >
             <Stack.Navigator 
               initialRouteName="AuthLoading" 
               screenOptions={{ 

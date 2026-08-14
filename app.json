@@ -21,8 +21,16 @@
       "expo-build-properties",
       {
         "android": {
-          "usesCleartextTraffic": true
+          "usesCleartextTraffic": true,
+          "targetSdkVersion": 35
         }
+      }
+    ],
+    [
+      "@sentry/react-native",
+      {
+        "autoUploadSourceMaps": false,
+        "autoUploadProguardMapping": false
       }
     ]
   ],

@@ -1,10 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as Sentry from '@sentry/react-native';
 import { recordCrash } from '../utils/crashLogger';
 
 // ===== 全局渲染错误边界 =====
 //
-// 捕获组件树渲染期异常：记录到本地崩溃日志后展示降级界面，
+// 捕获组件树渲染期异常：同步上报 Sentry 并记录到本地崩溃日志后展示降级界面，
 // 避免一次渲染错误直接导致 App 闪退且无迹可查。
 
 interface ErrorBoundaryProps {
@@ -23,6 +24,8 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // 上报 Sentry（未初始化时自动降级为 no-op），附带组件栈便于定位渲染异常位置
+    Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
     void recordCrash({
       kind: 'boundary',
       message: `${error.name}: ${error.message}`,
