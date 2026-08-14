@@ -23,6 +23,7 @@ import {
   saveReminderSettings,
 } from '../services/reminderSettings';
 import { triggerReminderResync } from '../hooks/useReminderScheduler';
+import * as Notifications from 'expo-notifications';
 import { isMotivationEnabled, setMotivationEnabled } from '../services/bookkeepingStreak';
 import {
   BudgetListData,
@@ -94,6 +95,28 @@ const Personalization = () => {
     await saveReminderSettings(account, next);
     triggerReminderResync();
   }, []);
+
+  // 提醒总开关：开启的那一刻主动请求一次通知权限（用户明确动作，不会成环；
+  // 后台重调度链路只静默查询权限，绝不重复弹窗）。关闭不请求。
+  const handleToggleReminder = useCallback(
+    async (value: boolean) => {
+      if (value) {
+        try {
+          const permission = await Notifications.requestPermissionsAsync();
+          if (permission.status !== 'granted') {
+            Alert.alert(
+              '未获得通知权限',
+              '提醒开关已开启，但通知权限未授权，提醒可能无法送达。可前往系统设置开启通知权限。'
+            );
+          }
+        } catch (error) {
+          console.error('Failed to request notification permission', error);
+        }
+      }
+      updateReminder({ enabled: value });
+    },
+    [updateReminder]
+  );
 
   // P3：切换习惯激励开关
   const handleToggleMotivation = useCallback(async (value: boolean) => {
@@ -217,7 +240,7 @@ const Personalization = () => {
                 trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
                 thumbColor={theme.colors.background.paper}
                 ios_backgroundColor={theme.colors.border}
-                onValueChange={value => updateReminder({ enabled: value })}
+                onValueChange={handleToggleReminder}
                 value={reminder.enabled}
               />
             </View>
