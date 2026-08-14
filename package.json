@@ -1,7 +1,7 @@
 {
   "name": "kaikaio",
   "main": "index.js",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "scripts": {
     "android": "npm run link-fonts && cross-env CMAKE_VERSION=3.31.6 expo run:android",

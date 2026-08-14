@@ -795,7 +795,6 @@ const List = () => {
         break;
       }
     }
-    console.log(targetItem?.retryParams, '-> targetItem')
     if (!targetItem?.retryParams) return;
 
     // 更新状态为同步中
