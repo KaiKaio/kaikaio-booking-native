@@ -23,6 +23,8 @@ import { UserProvider } from './context/UserContext';
 import { useReminderScheduler } from './hooks/useReminderScheduler';
 import ErrorBoundary from './components/ErrorBoundary';
 import { sentryNavigationIntegration } from './utils/sentry';
+// Sentry 反馈表单的渲染载体：挂载后 showFeedbackWidget() 才能唤起弹窗（SDK 根导出未包含，走包内路径）
+import { FeedbackWidgetProvider } from '@sentry/react-native/dist/js/feedback/FeedbackWidgetProvider';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -53,6 +55,7 @@ function App() {
 
   return (
     <ErrorBoundary>
+    <FeedbackWidgetProvider>
     <GestureHandlerRootView style={styles.container}>
       <SafeAreaProvider>
         <CategoryProvider>
@@ -125,6 +128,7 @@ function App() {
         </CategoryProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+    </FeedbackWidgetProvider>
     </ErrorBoundary>
   );
 }

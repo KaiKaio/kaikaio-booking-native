@@ -25,6 +25,7 @@ import { useUser } from '../context/UserContext';
 import { useCategory } from '../context/CategoryContext';
 import { updateUsername, updatePassword, updateAvatar, uploadAvatar } from '../services/user';
 import { setPublicKey, encryptWithOAEP } from '@/utils/encryption';
+import { isSentryEnabled, showSentryFeedback } from '@/utils/sentry';
 import { theme } from '@/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -475,6 +476,17 @@ const Account = () => {
         <Icon name="info-outline" size={20} color={theme.colors.text.primary} />
         <Text style={styles.aboutText}>关于</Text>
       </TouchableOpacity>
+
+      {/* 意见反馈入口：唤起 Sentry 用户反馈表单（DSN 未配置时隐藏） */}
+      {isSentryEnabled() && (
+        <TouchableOpacity
+          style={styles.aboutButton}
+          onPress={showSentryFeedback}
+        >
+          <Icon name="chat-bubble-outline" size={20} color={theme.colors.text.primary} />
+          <Text style={styles.aboutText}>意见反馈</Text>
+        </TouchableOpacity>
+      )}
 
       {/* 退出登录按钮 */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>

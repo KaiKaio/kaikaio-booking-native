@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Sentry from '@sentry/react-native';
 import { getUserInfo, UserInfo } from '../services/user';
 import { TOKEN_STORAGE_KEY } from '@/utils/storage';
 
@@ -55,6 +56,18 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     initializeUser();
   }, []);
+
+  // 同步用户身份到 Sentry：错误事件与用户反馈自动关联账号，退出后清除
+  useEffect(() => {
+    if (userInfo) {
+      Sentry.setUser({
+        id: String(userInfo.id),
+        username: userInfo.username,
+      });
+    } else {
+      Sentry.setUser(null);
+    }
+  }, [userInfo]);
 
   return (
     <UserContext.Provider value={{ userInfo, loading, refreshUserInfo, updateUserInfo, resetUserInfo }}>
