@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { billParser } from '../services/parser';
 import { ParsedBill } from '../services/parser/types';
 import { getActiveAccount } from '../utils/storage';
+import { traceSync } from '../utils/perfTracing';
 
 // 用户隔离的「已识别账单」哈希 key 前缀（去重：已导入过的账单不再重复弹窗）
 const SEEN_HASHES_PREFIX = 'clipboard_seen_hashes';
@@ -88,7 +89,7 @@ export function useAutoBookkeeping() {
       }
 
       // 解析
-      const result = billParser.parse(content);
+      const result = traceSync('bill.parse', 'clipboard bill parse', () => billParser.parse(content));
       if (!result) return;
 
       // 去重：已识别/导入过的账单内容不再重复弹窗

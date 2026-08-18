@@ -35,6 +35,7 @@ import {
   saveTombstones,
   setSyncDirty,
 } from '../services/configSync';
+import { traceAsync } from '../utils/perfTracing';
 
 // ===== 本地配置云端同步编排 =====
 //
@@ -101,7 +102,9 @@ async function runSyncOnce(): Promise<boolean> {
   let meta = await loadSyncMeta(account);
 
   // 1. 拉取远端增量并落盘
-  const pulled = await pullConfigs(sinceBeforePull || undefined);
+  const pulled = await traceAsync('config.sync.pull', 'pull configs', () =>
+    pullConfigs(sinceBeforePull || undefined)
+  );
   if (pulled) {
     meta = await applyPulledItems(account, pulled.items || [], meta);
     await saveSyncMeta(account, meta);
@@ -159,7 +162,7 @@ async function runSyncOnce(): Promise<boolean> {
     });
   }
 
-  const pushed = await pushConfigs(items);
+  const pushed = await traceAsync('config.sync.push', 'push configs', () => pushConfigs(items));
   if (!pushed) return false; // 推送失败保留脏标记，等待下次触发重试
 
   for (const result of pushed.results || []) {
@@ -207,7 +210,7 @@ export function useConfigSync() {
     runningRef.current = true;
     lastRunAtRef.current = Date.now();
     try {
-      const ok = await runSyncOnce();
+      const ok = await traceAsync('config.sync', 'config sync', () => runSyncOnce());
       failureCountRef.current = ok ? 0 : failureCountRef.current + 1;
     } catch (error) {
       console.error('Config sync error', error);

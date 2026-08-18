@@ -71,8 +71,18 @@ export function initSentry(): void {
 
   Sentry.init({
     dsn,
-    // 性能事务采样率：当前体量先保守采样，额度紧张可继续调低
-    tracesSampleRate: 0.2,
+    // 性能事务采样率：基线积累期临时调高，线上数据稳定后回落至 0.1~0.2
+    tracesSampleRate: 0.5,
+    // Profile 采样率（相对 traces）：0.5 × 0.2 = 10% 的事务携带 profile，用于慢事务函数级定位；
+    // 额度紧张时优先保 tracesSampleRate，将本项下调至 0
+    profilesSampleRate: 0.2,
+    // 以下三项默认即为 true，显式声明以固化性能监控能力，避免后续误改关闭：
+    // App Start span（TTID/TTFD）自动挂到首个路由事务
+    enableAppStartTracking: true,
+    // 慢帧/冻帧 measurements 挂到所有根事务
+    enableNativeFramesTracking: true,
+    // JS 事件循环 stall 检测，stall 时长作为 measurement 上报
+    enableStallTracking: true,
     integrations: [sentryNavigationIntegration, sentryFeedbackIntegration],
   });
 }

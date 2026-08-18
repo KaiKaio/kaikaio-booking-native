@@ -31,6 +31,7 @@ import {
 import { recordBookkeeping } from '../utils/bookkeepingHabit';
 import { runPostBillEffects, PostBillInfo } from '../services/postBillEffects';
 import { billRefreshBus } from '../utils/refreshBus';
+import { traceAsync, startManualSpan, reportFirstScreen } from '../utils/perfTracing';
 
 // 同步状态类型
 type SyncStatus = 'syncing' | 'synced' | 'failed';
@@ -350,6 +351,11 @@ const List = () => {
     if (loadingRef.current) return;
 
     loadingRef.current = true;
+    // P0-2 埋点：bill.load 根 span（缓存/网络子 span 见内部），在下方 finally 结束
+    const loadSpan = startManualSpan('bill.load', 'bill load', {
+      month: currentDate,
+      pullRefresh: isPullRefresh,
+    });
     // 仅下拉刷新时展示原生刷新指示器；切月/排序/筛选等静默刷新不打断节奏
     if (isPullRefresh) setRefreshing(true);
 
@@ -362,8 +368,14 @@ const List = () => {
     let nextSummary: { totalExpense: number; totalIncome: number } | null = null;
 
     try {
-      pendingBills = await loadPendingBillsFromStorage();
-      const cachedMonth = await loadBillMonthCache(currentDate);
+      // 子 span：本地缓存读取（待同步账单 + 月份缓存）
+      const cacheRead = await traceAsync('bill.load.cache', 'read local cache', async () => {
+        const pending = await loadPendingBillsFromStorage();
+        const cached = await loadBillMonthCache(currentDate);
+        return { pending, cached };
+      });
+      pendingBills = cacheRead.pending;
+      const cachedMonth = cacheRead.cached;
 
       if (cachedMonth) {
         hasCache = true;
@@ -380,14 +392,15 @@ const List = () => {
 
       const start = `${currentDate}-01 00:00:00`;
       const end = `${currentDate}-${lastDay} 23:59:59`;
-      const res = await getBillList({
+      // 子 span：网络请求
+      const res = await traceAsync('bill.load.network', 'request bill list', () => getBillList({
         start,
         end,
         page: 1,
         page_size: 1000,
         orderBy,
         ...(selectedTypeId ? { type_id: selectedTypeId } : {})
-      });
+      }));
 
       if (res.code === 200) {
         const transformedData = transformDailyBills(res.data.list);
@@ -438,6 +451,14 @@ const List = () => {
       setSummary(nextSummary);
       setData(nextData);
       setDataState(finalDataState);
+
+      // P0-2 埋点：首屏完成上报（仅首次生效）与 bill.load 根 span 结束
+      reportFirstScreen({ cacheHit: hasCache, items: nextData.length, dataState: finalDataState });
+      loadSpan?.setAttribute('cacheHit', hasCache);
+      loadSpan?.setAttribute('items', nextData.length);
+      loadSpan?.setAttribute('dataState', finalDataState);
+      loadSpan?.end();
+
       loadingRef.current = false;
       setRefreshing(false);
       
@@ -1028,6 +1049,8 @@ const List = () => {
     };
 
     if (editingId) {
+      // P0-2 埋点：修改账单流程
+      const editSpan = startManualSpan('bill.update', 'bill update', { billId: editingId });
       const previousData = data;
       const previousSummary = summary;
       const oldItem = findSubItemById(editingId);
@@ -1059,7 +1082,7 @@ const List = () => {
 
       setIsSubmitting(true);
       try {
-        const res = await updateBill({ ...params, id: editingId });
+        const res = await traceAsync('bill.update.network', 'updateBill', () => updateBill({ ...params, id: editingId }));
         if (res.code !== 200) {
           throw new Error(res.msg || '修改失败');
         }
@@ -1077,6 +1100,7 @@ const List = () => {
         setSummary(previousSummary);
         Alert.alert('错误', error.message || '修改失败');
       } finally {
+        editSpan?.end();
         setIsSubmitting(false);
         setEditingId(null);
       }
@@ -1087,6 +1111,11 @@ const List = () => {
     // 新增模式: 乐观更新
     // 记录记账习惯（用于漏记检测）
     recordBookkeeping();
+    // P0-2 埋点：bill.submit 从点击到本地落库完成（乐观更新 + 待同步落盘），网络同步单独计 span
+    const submitSpan = startManualSpan('bill.submit', 'bookkeeping submit', {
+      typeId: billData.category,
+      payType: billData.type,
+    });
     const localBill = optimisticAddBill(billData);
     const shouldShowInCurrentFilter = !selectedTypeId || selectedTypeId === localBill.typeId;
 
@@ -1109,6 +1138,9 @@ const List = () => {
         await upsertPendingBillToStorage(localBill);
       } catch (error) {
         console.error('Failed to persist local bill', error);
+      } finally {
+        // 本地落库终点：bill.submit span 在此结束
+        submitSpan?.end();
       }
 
       if (jumpToMonth) {
@@ -1120,7 +1152,7 @@ const List = () => {
 
       try {
         const localId = localBill.localId!;
-        const res = await addBill({ ...params, client_local_id: localBill.localId });
+        const res = await traceAsync('bill.submit.network', 'addBill', () => addBill({ ...params, client_local_id: localBill.localId }));
 
         if (res.code === 200) {
           // 已撤销：若服务端已创建成功，需要补偿删除

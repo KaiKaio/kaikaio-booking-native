@@ -145,4 +145,9 @@ jest.mock('@sentry/react-native', () => ({
   reactNavigationIntegration: () => ({
     registerNavigationContainer: jest.fn(),
   }),
+  // 性能埋点（perfTracing）依赖的 span API：透传回调 / 返回空 span
+  startSpan: (_ctx, fn) => fn(),
+  startSpanManual: (_ctx, fn) => fn(),
+  startInactiveSpan: () => ({ end: jest.fn(), setAttribute: jest.fn() }),
+  setMeasurement: jest.fn(),
 }));

@@ -21,6 +21,7 @@ import {
 } from '@/utils/storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '@/theme';
+import { startManualSpan } from '@/utils/perfTracing';
 
 import { RootStackParamList } from '../types/navigation';
 import { BASE_URL } from '@/config';
@@ -175,7 +176,10 @@ const Login = () => {
       console.log('Form is not valid')
       return;
     }
-    
+
+    // P0-2 埋点：登录全流程（公钥就绪 → 请求 → token/本地数据落盘），各退出点均需 end
+    const loginSpan = startManualSpan('auth.login', 'user login');
+
     // 如果公钥未就绪，先获取公钥
     if (!publicKeyReady) {
       setLoading(true);
@@ -183,6 +187,8 @@ const Login = () => {
       setLoading(false);
       
       if (!success) {
+        loginSpan?.setAttribute('exit', 'publicKeyFailed');
+        loginSpan?.end();
         return; // 公钥获取失败，终止登录流程
       }
       
@@ -195,6 +201,8 @@ const Login = () => {
       if (!encryptedPassword) {
         Alert.alert('错误', '密码加密失败');
         setLoading(false);
+        loginSpan?.setAttribute('exit', 'encryptFailed');
+        loginSpan?.end();
         return;
       }
 
@@ -255,14 +263,18 @@ const Login = () => {
 
         await refreshCategories();
         await refreshUserInfo();
+        loginSpan?.setAttribute('success', true);
         navigation.replace('Main', { screen: 'List' });
       } else {
+        loginSpan?.setAttribute('success', false);
         Alert.alert('登录', data.msg || '未获取到Token');
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : '网络错误';
+      loginSpan?.setAttribute('success', false);
       Alert.alert('登录', errorMsg);
     } finally {
+      loginSpan?.end();
       setLoading(false);
     }
   };
