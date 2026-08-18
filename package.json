@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "android": "npm run link-fonts && cross-env CMAKE_VERSION=3.31.6 expo run:android",
-    "build:android": "npm run link-fonts && cd android && ./gradlew assembleRelease",
+    "build:android": "npm run link-fonts && cd android && zsh -c 'set -a; [ -f ../.env ] && . ../.env; set +a; ./gradlew assembleRelease'",
     "prebuild:android": "cross-env NODE_ENV=production expo prebuild --clean && npm run link-fonts",
     "ios": "node scripts/update-ats.js && npm run link-fonts && npx expo run:ios",
     "reset-cache": "expo start --dev-client -c",

@@ -29,8 +29,8 @@
     [
       "@sentry/react-native",
       {
-        "autoUploadSourceMaps": false,
-        "autoUploadProguardMapping": false
+        "organization": "kaikaio-lg",
+        "project": "react-native"
       }
     ]
   ],
