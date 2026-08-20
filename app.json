@@ -32,7 +32,8 @@
         "organization": "kaikaio-lg",
         "project": "react-native"
       }
-    ]
+    ],
+    "./plugins/payment-notification/withPaymentNotification"
   ],
   "ios": {
     "bundleIdentifier": "com.anonymous.kaikaio"

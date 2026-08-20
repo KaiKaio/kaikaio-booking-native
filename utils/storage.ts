@@ -9,6 +9,12 @@ export const CATEGORIES_CACHE_STORAGE_KEY = 'categories_cache';
 export const ACTIVE_ACCOUNT_STORAGE_KEY = 'active_account';
 export const KEEP_LAST_DATE_STORAGE_KEY = 'keepLastDate';
 
+// 支付通知自动记账开关（按用户隔离）
+const AUTO_BILL_NOTIFICATION_PREFIX = 'auto_bill_notification_enabled';
+
+export const getAutoBillNotificationKey = (account: string) =>
+  `${AUTO_BILL_NOTIFICATION_PREFIX}:${account}`;
+
 export const BILL_MONTH_CACHE_PREFIX = 'bills_month_cache_';
 const LEGACY_BILL_CACHE_PREFIX = 'bills_cache_';
 const LEGACY_BILL_META_PREFIX = 'bills_meta_';
@@ -82,6 +88,7 @@ export async function clearUserLocalData() {
       key.startsWith(LEGACY_BILL_META_PREFIX) ||
       key.startsWith('category_usage_lru:') ||
       key.startsWith('clipboard_seen_hashes:') ||
+      key.startsWith('auto_bill_notification_enabled:') ||
       key.startsWith('recurring_bills_user:') ||
       key.startsWith('bill_templates_user:') ||
       key.startsWith('reminder_settings_user:') ||
@@ -121,4 +128,22 @@ export async function getKeepLastDate(): Promise<boolean> {
 
 export async function setKeepLastDate(value: boolean): Promise<void> {
   await AsyncStorage.setItem(KEEP_LAST_DATE_STORAGE_KEY, String(value));
+}
+
+/**
+ * 获取支付通知自动记账开关
+ */
+export async function getAutoBillNotificationEnabled(account: string): Promise<boolean> {
+  const value = await AsyncStorage.getItem(getAutoBillNotificationKey(account));
+  return value === 'true';
+}
+
+/**
+ * 设置支付通知自动记账开关
+ */
+export async function setAutoBillNotificationEnabled(
+  account: string,
+  value: boolean
+): Promise<void> {
+  await AsyncStorage.setItem(getAutoBillNotificationKey(account), String(value));
 }

@@ -5,7 +5,13 @@ import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { billParser } from '../services/parser';
 import { ParsedBill } from '../services/parser/types';
-import { getActiveAccount } from '../utils/storage';
+import {
+  addPaymentNotificationListener,
+  getPendingPaymentNotifications,
+  isPaymentNotificationAvailable,
+  PaymentNotificationEvent
+} from '../services/paymentNotification';
+import { getActiveAccount, getAutoBillNotificationEnabled } from '../utils/storage';
 import { traceSync } from '../utils/perfTracing';
 
 // 用户隔离的「已识别账单」哈希 key 前缀（去重：已导入过的账单不再重复弹窗）
@@ -60,6 +66,8 @@ export function useAutoBookkeeping() {
   const [detectedBill, setDetectedBill] = useState<ParsedBill | null>(null);
   // 防抖：记录上次触发检测的内容与时间
   const lastDetectedRef = useRef<{ content: string; time: number } | null>(null);
+  // 支付通知自动记账开关（用户在个性化页控制，按账号隔离）
+  const notificationEnabledRef = useRef(false);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', checkClipboard);
@@ -107,6 +115,60 @@ export function useAutoBookkeeping() {
       console.log('Clipboard check failed (module might not be installed)', e);
     }
   };
+
+  // 处理支付通知事件（Android 通知监听）：拼接来源前缀后走同一套解析/去重链路
+  const handlePaymentNotification = async (event: PaymentNotificationEvent) => {
+    if (!notificationEnabledRef.current) return;
+
+    const label = event.source === 'Alipay' ? '支付宝' : '微信';
+    const content = `【${label}】${[event.title, event.text].filter(Boolean).join('\n')}`;
+
+    // 防抖：同一内容在窗口期内不重复触发
+    const last = lastDetectedRef.current;
+    if (last && last.content === content && Date.now() - last.time < DEBOUNCE_MS) {
+      return;
+    }
+
+    const result = traceSync('bill.parse', 'notification bill parse', () =>
+      billParser.parse(content)
+    );
+    if (!result) return;
+
+    // 去重：已识别过的通知不再重复弹窗（实时事件与缓冲兜底可能重复送达）
+    const hash = hashText(result.rawText.trim());
+    const account = await getActiveAccount();
+    if (account) {
+      const seen = await getSeenHashes(account);
+      if (seen.includes(hash)) return;
+      await markHashSeen(account, hash);
+    }
+
+    lastDetectedRef.current = { content, time: Date.now() };
+    setDetectedBill(result);
+  };
+
+  useEffect(() => {
+    if (!isPaymentNotificationAvailable) return;
+
+    const subscription = addPaymentNotificationListener(handlePaymentNotification);
+
+    const init = async () => {
+      const account = await getActiveAccount();
+      notificationEnabledRef.current = account
+        ? await getAutoBillNotificationEnabled(account)
+        : false;
+      if (!notificationEnabledRef.current) return;
+
+      // 兜底：拉取 App 在后台/RN 未就绪期间收到的支付通知
+      const pending = await getPendingPaymentNotifications();
+      pending.forEach(handlePaymentNotification);
+    };
+    init();
+
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
 
   const clearDetectedBill = useCallback(() => {
     setDetectedBill(null);

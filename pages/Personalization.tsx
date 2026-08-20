@@ -9,6 +9,7 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  AppState,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,7 +17,12 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { RootStackParamList } from '../types/navigation';
 import { theme } from '@/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getKeepLastDate, setKeepLastDate, getActiveAccount } from '@/utils/storage';
+import { getKeepLastDate, setKeepLastDate, getActiveAccount, getAutoBillNotificationEnabled, setAutoBillNotificationEnabled } from '@/utils/storage';
+import {
+  isPaymentNotificationAvailable,
+  isNotificationListenerGranted,
+  openNotificationListenerSettings,
+} from '../services/paymentNotification';
 import {
   ReminderSettings,
   loadReminderSettings,
@@ -45,6 +51,9 @@ const Personalization = () => {
   const [reminder, setReminder] = useState<ReminderSettings | null>(null);
   // P3：习惯激励开关
   const [motivationEnabled, setMotivationEnabledState] = useState(true);
+  // 支付通知自动记账（仅 Android）
+  const [autoBillNotification, setAutoBillNotificationState] = useState(false);
+  const [notificationListenerGranted, setNotificationListenerGranted] = useState(false);
   // P3：预算配置（云端同步）
   const [budgetList, setBudgetList] = useState<BudgetListData | null>(null);
   // 预算编辑弹窗
@@ -64,6 +73,11 @@ const Personalization = () => {
         const settings = await loadReminderSettings(account);
         setReminder(settings);
         setMotivationEnabledState(await isMotivationEnabled(account));
+        setAutoBillNotificationState(await getAutoBillNotificationEnabled(account));
+      }
+
+      if (isPaymentNotificationAvailable) {
+        setNotificationListenerGranted(await isNotificationListenerGranted());
       }
 
       // 预算配置（接口失败时不影响其他设置展示）
@@ -125,6 +139,39 @@ const Personalization = () => {
     if (account) {
       await setMotivationEnabled(account, value);
     }
+  }, []);
+
+  // 支付通知自动记账开关：开启时引导用户授予系统「通知使用权」（用户明确动作，不成环）
+  const handleToggleAutoBillNotification = useCallback(async (value: boolean) => {
+    setAutoBillNotificationState(value);
+    const account = await getActiveAccount();
+    if (account) {
+      await setAutoBillNotificationEnabled(account, value);
+    }
+    if (value) {
+      const granted = await isNotificationListenerGranted();
+      setNotificationListenerGranted(granted);
+      if (!granted) {
+        Alert.alert(
+          '需要通知使用权',
+          '自动记账需要系统「通知使用权」才能读取支付宝/微信的支付通知。\n请在接下来的设置页中找到 Kaikaio 并开启，返回 App 后自动生效。\n\n另请确认：支付宝/微信已允许系统通知，且其 App 内的支付通知推送开关已开启。',
+          [
+            { text: '取消', style: 'cancel' },
+            { text: '去设置', onPress: () => openNotificationListenerSettings() },
+          ]
+        );
+      }
+    }
+  }, []);
+
+  // 从系统设置页返回后刷新通知使用权状态
+  useEffect(() => {
+    if (!isPaymentNotificationAvailable) return;
+    const subscription = AppState.addEventListener('change', async state => {
+      if (state !== 'active') return;
+      setNotificationListenerGranted(await isNotificationListenerGranted());
+    });
+    return () => subscription.remove();
   }, []);
 
   // P3：打开预算编辑弹窗
@@ -321,6 +368,29 @@ const Personalization = () => {
             />
           </View>
         </View>
+
+        {/* 支付通知自动记账（仅 Android） */}
+        {isPaymentNotificationAvailable && (
+          <View style={styles.card}>
+            <View style={styles.settingItem}>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>支付通知自动记账</Text>
+                <Text style={styles.settingDescription}>
+                  {autoBillNotification && !notificationListenerGranted
+                    ? '未授予通知使用权，请前往系统设置开启 Kaikaio 的通知使用权'
+                    : '识别支付宝/微信的支付通知，弹窗确认后一键记账'}
+                </Text>
+              </View>
+              <Switch
+                trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                thumbColor={theme.colors.background.paper}
+                ios_backgroundColor={theme.colors.border}
+                onValueChange={handleToggleAutoBillNotification}
+                value={autoBillNotification}
+              />
+            </View>
+          </View>
+        )}
 
         {/* P3：预算辅助（配置随账号云端同步） */}
         <View style={styles.card}>
