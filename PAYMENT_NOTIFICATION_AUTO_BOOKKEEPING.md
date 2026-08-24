@@ -86,8 +86,8 @@ Main.tsx 弹窗「发现新账单」→ navigate List 携带 autoBill → BillFo
 ### 4.3 权限请求时机
 遵循项目既有规范（权限只在用户明确操作处请求，避免 AppState 回调成环）：开关打开的那一刻检查授权，未授权则弹窗引导跳系统设置页；从设置页返回后通过 `AppState` active 刷新授权状态并更新开关描述文案。后台链路绝不主动弹任何权限引导。
 
-### 4.4 开关按账号隔离
-开关值存于 `auto_bill_notification_enabled:{account}`，与项目其他用户级配置保持一致，退出登录时随 `clearUserLocalData` 清理。`useAutoBookkeeping` 在挂载时读取一次存入 ref，作为事件处理的门控。
+### 4.4 开关按账号隔离且实时生效
+开关值存于 `auto_bill_notification_enabled:{account}`，与项目其他用户级配置保持一致，退出登录时随 `clearUserLocalData` 清理。每个通知事件处理时实时读取开关（AsyncStorage），因此同一会话内切换开关立即生效，无需重启 App。
 
 ### 4.5 噪音过滤两道防线
 - 原生层：只转发支付宝/微信两个包名 + 含支付语义关键词（支付/付款/收款/转账/消费/到账/入账/扣款）的通知
@@ -107,11 +107,10 @@ Main.tsx 弹窗「发现新账单」→ navigate List 携带 autoBill → BillFo
 
 ### 已知限制
 1. **支付宝通知通常不带商户名**，仅能记金额，商户需用户在记账表单补填
-2. **开关状态在挂载时读取一次**：用户在个性化页切换开关后，需等下次 `useAutoBookkeeping` 挂载（重新进入 Main）才完全生效；当前 Main 常驻，实际影响为"本次会话内切换开关可能延迟生效"。迭代建议：改为 storage 变更事件或 ref 提升
-3. **缓冲仅内存队列**：进程被系统杀死后缓冲丢失（此窗口内通知无法找回）。迭代建议：改用 SharedPreferences 持久化缓冲
-4. **通知使用权可能被系统回收**：部分 ROM 更新/优化后需重新授权，开关描述已给出引导文案
-5. 转账、红包等特殊场景文案差异较大，可能解析失败（设计上允许漏识别，不允许误记账）
-6. Google Play 对 `NotificationListenerService` 审核严格，上架需准备权限用途说明；国内商店相对宽松
+2. **缓冲仅内存队列**：进程被系统杀死后缓冲丢失（此窗口内通知无法找回）。迭代建议：改用 SharedPreferences 持久化缓冲
+3. **通知使用权可能被系统回收**：部分 ROM 更新/优化后需重新授权，开关描述已给出引导文案；**重装 App 后授权一定失效，必须重新授予**
+4. 转账、红包等特殊场景文案差异较大，可能解析失败（设计上允许漏识别，不允许误记账）
+5. Google Play 对 `NotificationListenerService` 审核严格，上架需准备权限用途说明；国内商店相对宽松
 
 ### 迭代方向
 - **金额/商户提取增强**：收集真实通知样本补充正则（可先在 DebugTools 页加通知原文采集）
@@ -122,6 +121,25 @@ Main.tsx 弹窗「发现新账单」→ navigate List 携带 autoBill → BillFo
 ## 7. 问题排查指南
 
 > 前置：本功能依赖三个开关同时生效——① Kaikaio 的通知使用权（我们引导）；② 支付宝/微信在系统设置中允许通知；③ 支付宝/微信 App 内的支付通知推送开关（支付宝：设置→消息设置；微信：「微信支付」服务号消息）。②③任一关闭都不会有通知进入系统通知栏，监听无感知。另注意：若用户开启了锁屏通知内容隐藏，正文可能被系统脱敏导致解析不到金额，属于预期内的漏识别。
+
+**全链路日志排查法**：原生层统一使用 tag `PaymentNotif`，JS 层使用 `[AutoBookkeeping]` 前缀。真机连接后执行：
+
+```bash
+adb logcat -s PaymentNotif:* ReactNativeJS:*
+```
+
+按日志断点定位问题层级：
+
+| 日志表现 | 结论 |
+|---|---|
+| 无任何 `PaymentNotif` 输出 | 服务未运行：通知使用权未授予（重装后必失效）、或 ROM 杀后台/未自启动 |
+| 有 `listener connected`，支付时无任何 posted 日志 | 支付宝/微信未发通知：检查②③开关 |
+| `skipped (no payment keyword)` | 通知文本未命中支付关键词，需根据实际文案扩展关键词列表 |
+| `forwarded` + `event emitted to JS` 但无 `[AutoBookkeeping]` | 事件桥断：确认 JS 监听已注册（Main 已挂载） |
+| `[AutoBookkeeping] payment event received` 后 `skipped: disabled` | 开关未开或账号未登录 |
+| `skipped: parse failed` | 通知文案不匹配正则，日志中已打印原文，据此补 NotificationStrategy 正则 |
+| `skipped: already seen` | 该笔已识别过（正常去重） |
+| `bill detected, showing dialog` 但无弹窗 | Main 页 Alert 链路问题（如导航栈上已有弹窗） |
 
 | 现象 | 排查点 |
 |---|---|

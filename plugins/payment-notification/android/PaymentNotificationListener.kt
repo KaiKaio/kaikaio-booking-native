@@ -3,6 +3,7 @@ package com.anonymous.kaikaio
 import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.util.Log
 
 /**
  * 监听支付宝/微信的支付通知，转发给 RN 层用于自动记账。
@@ -12,6 +13,11 @@ import android.service.notification.StatusBarNotification
  * 拷贝进 android/ 目录。修改请改这里，然后重新执行 npm run prebuild:android。
  */
 class PaymentNotificationListener : NotificationListenerService() {
+
+  override fun onListenerConnected() {
+    super.onListenerConnected()
+    Log.i(TAG, "listener connected")
+  }
 
   override fun onNotificationPosted(sbn: StatusBarNotification?) {
     super.onNotificationPosted(sbn)
@@ -31,12 +37,18 @@ class PaymentNotificationListener : NotificationListenerService() {
 
     val content = listOf(title, text).filter { it.isNotBlank() }.joinToString("\n")
     // 只关注包含支付语义的通知，过滤聊天/推广等噪音（最终是否记账由 JS 侧解析决定）
-    if (!PAYMENT_KEYWORDS.any { content.contains(it) }) return
+    if (!PAYMENT_KEYWORDS.any { content.contains(it) }) {
+      Log.d(TAG, "notification from $source skipped (no payment keyword): $content")
+      return
+    }
 
+    Log.i(TAG, "payment notification from $source forwarded: $content")
     PaymentNotificationModule.handlePaymentNotification(source, title, text, sbn.postTime)
   }
 
   companion object {
+    private const val TAG = "PaymentNotif"
+
     const val PKG_ALIPAY = "com.eg.android.AlipayGphone"
     const val PKG_WECHAT = "com.tencent.mm"
 

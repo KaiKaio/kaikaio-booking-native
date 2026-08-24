@@ -3,6 +3,7 @@ package com.anonymous.kaikaio
 import android.content.ComponentName
 import android.content.Intent
 import android.provider.Settings
+import android.util.Log
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -110,16 +111,26 @@ class PaymentNotificationModule(reactContext: ReactApplicationContext) :
         }
       }
 
-      val module = instance ?: return
+      val module = instance ?: run {
+        Log.d(TAG, "event buffered only (RN module not mounted)")
+        return
+      }
       val context = module.reactApplicationContext ?: return
-      if (!context.hasActiveReactInstance()) return
+      if (!context.hasActiveReactInstance()) {
+        Log.d(TAG, "event buffered only (react instance not active)")
+        return
+      }
       try {
         context
           .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
           .emit(EVENT_NAME, event)
+        Log.i(TAG, "event emitted to JS: $source")
       } catch (e: Exception) {
         // RN 未就绪时忽略，事件已缓冲，等待 getPendingEvents 拉取
+        Log.w(TAG, "emit failed, event buffered: ${e.message}")
       }
     }
+
+    private const val TAG = "PaymentNotif"
   }
 }

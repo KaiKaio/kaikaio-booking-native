@@ -66,8 +66,6 @@ export function useAutoBookkeeping() {
   const [detectedBill, setDetectedBill] = useState<ParsedBill | null>(null);
   // 防抖：记录上次触发检测的内容与时间
   const lastDetectedRef = useRef<{ content: string; time: number } | null>(null);
-  // 支付通知自动记账开关（用户在个性化页控制，按账号隔离）
-  const notificationEnabledRef = useRef(false);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', checkClipboard);
@@ -118,7 +116,15 @@ export function useAutoBookkeeping() {
 
   // 处理支付通知事件（Android 通知监听）：拼接来源前缀后走同一套解析/去重链路
   const handlePaymentNotification = async (event: PaymentNotificationEvent) => {
-    if (!notificationEnabledRef.current) return;
+    console.log('[AutoBookkeeping] payment event received', event.source, event.title, event.text);
+
+    // 开关实时读取：支持同一会话内切换开关立即生效
+    const account = await getActiveAccount();
+    const enabled = account ? await getAutoBillNotificationEnabled(account) : false;
+    if (!enabled) {
+      console.log('[AutoBookkeeping] skipped: auto bill notification disabled');
+      return;
+    }
 
     const label = event.source === 'Alipay' ? '支付宝' : '微信';
     const content = `【${label}】${[event.title, event.text].filter(Boolean).join('\n')}`;
@@ -126,23 +132,30 @@ export function useAutoBookkeeping() {
     // 防抖：同一内容在窗口期内不重复触发
     const last = lastDetectedRef.current;
     if (last && last.content === content && Date.now() - last.time < DEBOUNCE_MS) {
+      console.log('[AutoBookkeeping] skipped: debounced');
       return;
     }
 
     const result = traceSync('bill.parse', 'notification bill parse', () =>
       billParser.parse(content)
     );
-    if (!result) return;
+    if (!result) {
+      console.log('[AutoBookkeeping] skipped: parse failed', content);
+      return;
+    }
 
     // 去重：已识别过的通知不再重复弹窗（实时事件与缓冲兜底可能重复送达）
     const hash = hashText(result.rawText.trim());
-    const account = await getActiveAccount();
     if (account) {
       const seen = await getSeenHashes(account);
-      if (seen.includes(hash)) return;
+      if (seen.includes(hash)) {
+        console.log('[AutoBookkeeping] skipped: already seen', hash);
+        return;
+      }
       await markHashSeen(account, hash);
     }
 
+    console.log('[AutoBookkeeping] bill detected, showing dialog', result.amount, result.source);
     lastDetectedRef.current = { content, time: Date.now() };
     setDetectedBill(result);
   };
@@ -154,12 +167,10 @@ export function useAutoBookkeeping() {
 
     const init = async () => {
       const account = await getActiveAccount();
-      notificationEnabledRef.current = account
-        ? await getAutoBillNotificationEnabled(account)
-        : false;
-      if (!notificationEnabledRef.current) return;
+      const enabled = account ? await getAutoBillNotificationEnabled(account) : false;
+      if (!enabled) return;
 
-      // 兜底：拉取 App 在后台/RN 未就绪期间收到的支付通知
+      // 兜底：拉取 App 在后台/RN 未就绪期间收到的支付通知（单条事件内部仍会实时校验开关）
       const pending = await getPendingPaymentNotifications();
       pending.forEach(handlePaymentNotification);
     };
