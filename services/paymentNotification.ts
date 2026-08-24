@@ -64,3 +64,12 @@ export function addPaymentNotificationListener(
   if (!emitter) return null;
   return emitter.addListener('PaymentNotificationDetected', callback);
 }
+
+/**
+ * 【开发调试用】模拟一条支付通知事件，走真实监听链路（解析/去重/弹窗）。
+ * 仅用于模拟器/无真实通知来源的调试环境，正式功能请勿调用。
+ */
+export function emitMockPaymentNotification(event: PaymentNotificationEvent): void {
+  if (!emitter) return;
+  emitter.emit('PaymentNotificationDetected', event);
+}

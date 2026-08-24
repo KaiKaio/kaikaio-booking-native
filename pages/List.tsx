@@ -473,16 +473,27 @@ const List = () => {
     fetchBills();
   }, [fetchBills]);
 
-  // 处理自动记账参数（剪贴板识别导入）
+  // 处理自动记账参数（剪贴板识别导入 / 支付通知一键记账）
+  // 注意：不能在此 effect 里 return clearTimeout(timer)——setParams 会触发本 effect 立即重跑，
+  // 重跑前执行的 cleanup 会取消下方要打开表单的定时器，导致表单永远弹不出来。
+  // 因此改用 autoBillHandledRef 做幂等防重，且不清理定时器（组件卸载后 billFormRef 为 null，open 是安全空操作）。
+  const autoBillHandledRef = useRef(false);
   useEffect(() => {
     const autoBill = route.params?.autoBill;
-    if (!autoBill) return;
+    console.log('[List] autoBill effect, param =', JSON.stringify(autoBill));
+    if (!autoBill) {
+      // 参数被清除，允许下一次自动记账
+      autoBillHandledRef.current = false;
+      return;
+    }
+    if (autoBillHandledRef.current) return;
+    autoBillHandledRef.current = true;
 
     // 立即清除参数，防止重复触发
     navigation.setParams({ autoBill: undefined });
 
     // 延迟一点以确保组件已渲染
-    const timer = setTimeout(() => {
+    setTimeout(() => {
       const billType: '1' | '2' = autoBill.type === 'expense' ? '1' : '2';
       // 根据猜测分类名在用户分类库中按名称匹配，匹配不到则回退该类型首个分类
       const list = categoriesRef.current;
@@ -504,8 +515,6 @@ const List = () => {
         type: billType
       }, { prefill: true });
     }, 500);
-
-    return () => clearTimeout(timer);
   }, [route.params, navigation]);
 
   // 处理「漏记提示等场景」跳转过来直接打开记账表单

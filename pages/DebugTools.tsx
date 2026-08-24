@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  ToastAndroid,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -17,6 +18,8 @@ import { RootStackParamList } from '../types/navigation';
 import { theme } from '@/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CrashLogEntry, clearCrashLogs, loadCrashLogs } from '../utils/crashLogger';
+import { getActiveAccount, setAutoBillNotificationEnabled } from '../utils/storage';
+import { emitMockPaymentNotification } from '../services/paymentNotification';
 
 const DebugTools = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -112,6 +115,22 @@ const DebugTools = () => {
     Alert.alert('成功', '崩溃日志已清空');
   };
 
+  // 模拟一条微信支付通知，走真实自动记账链路（需在模拟器上验证弹窗/记账流程时使用）
+  const mockPaymentNotification = async () => {
+    const account = await getActiveAccount();
+    if (account) {
+      // 确保自动记账开关打开，否则真实链路会跳过
+      await setAutoBillNotificationEnabled(account, true);
+    }
+    emitMockPaymentNotification({
+      source: 'WeChat',
+      title: '微信支付',
+      text: '已扣费¥32.95',
+      time: Date.now(),
+    });
+    ToastAndroid.show('已模拟微信支付通知，弹窗即将出现', ToastAndroid.SHORT);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <View style={styles.header}>
@@ -157,6 +176,14 @@ const DebugTools = () => {
             <View style={styles.menuItemLeft}>
               <Icon name="bug-report" size={24} color={theme.colors.active} />
               <Text style={styles.menuItemText}>崩溃日志</Text>
+            </View>
+            <Icon name="chevron-right" size={24} color={theme.colors.text.placeholder} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={mockPaymentNotification}>
+            <View style={styles.menuItemLeft}>
+              <Icon name="notifications" size={24} color={theme.colors.active} />
+              <Text style={styles.menuItemText}>模拟微信支付通知（自动记账）</Text>
             </View>
             <Icon name="chevron-right" size={24} color={theme.colors.text.placeholder} />
           </TouchableOpacity>

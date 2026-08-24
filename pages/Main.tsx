@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Alert, Platform, ToastAndroid } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, AppState, Platform, ToastAndroid } from 'react-native';
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import TabBar from './TabBar';
 import List from './List';
@@ -12,6 +12,7 @@ import { useMissedRecordReminder } from '../hooks/useMissedRecordReminder';
 import { useConfigSync } from '../hooks/useConfigSync';
 import { CYCLE_LABELS } from '../services/recurringBills';
 import { navigate } from '../utils/navigationRef';
+import ConfirmDialog, { ConfirmDialogConfig } from '../components/ConfirmDialog';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -38,30 +39,59 @@ const Main = () => {
   } = useRecurringBillRunner();
   const { missedHintVisible, dismissMissedHint } = useMissedRecordReminder();
 
+  // 自动记账弹窗：支付通知常在 App 后台时到达，Android 在后台不显示对话框，
+  // 故这里用 Modal 自绘（不依赖原生 Alert），并做「回前台才弹窗」的门控。
+  const [billDialog, setBillDialog] = useState<ConfirmDialogConfig | null>(null);
+  const pendingBillDialogRef = useRef<ConfirmDialogConfig | null>(null);
+  const isAppActiveRef = useRef(AppState.currentState === 'active');
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', state => {
+      isAppActiveRef.current = state === 'active';
+      // 回到前台时，补弹在后台期间检测到的账单
+      if (state === 'active' && pendingBillDialogRef.current) {
+        const config = pendingBillDialogRef.current;
+        pendingBillDialogRef.current = null;
+        setBillDialog(config);
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   useEffect(() => {
     if (!detectedBill) return;
 
     const categoryLine = detectedBill.category ? `\n分类：${detectedBill.category}` : '';
-    Alert.alert(
-      '发现新账单',
-      `检测到 ${detectedBill.source} ${detectedBill.type === 'income' ? '收入' : '消费'} ${detectedBill.amount} 元\n商户：${detectedBill.merchant || '未知'}${categoryLine}\n是否立即记账？`,
-      [
-        { text: '忽略', style: 'cancel', onPress: clearDetectedBill },
-        {
-          text: '记一笔',
-          onPress: () => {
-            // 导航到 List 页面并带上参数
-            navigate('Main', {
-              screen: 'List',
-              params: {
-                autoBill: detectedBill
-              }
-            });
-            clearDetectedBill();
-          }
-        }
-      ]
-    );
+    const config: ConfirmDialogConfig = {
+      title: '发现新账单',
+      message: `检测到 ${detectedBill.source} ${detectedBill.type === 'income' ? '收入' : '消费'} ${detectedBill.amount} 元\n商户：${detectedBill.merchant || '未知'}${categoryLine}\n是否立即记账？`,
+      cancelText: '忽略',
+      confirmText: '记一笔',
+      onCancel: () => {
+        setBillDialog(null);
+        clearDetectedBill();
+      },
+      onConfirm: () => {
+        console.log('[Main] 记一笔 clicked, navigate to List, autoBill =', detectedBill.amount);
+        setBillDialog(null);
+        // 序列化后导航，避免把 Date 等不可序列化对象塞进导航参数（会触发 non-serializable 警告）
+        const autoBill = {
+          ...detectedBill,
+          date: detectedBill.date ? detectedBill.date.toISOString() : undefined,
+        };
+        navigate('Main', {
+          screen: 'List',
+          params: { autoBill }
+        });
+        clearDetectedBill();
+      }
+    };
+
+    if (isAppActiveRef.current) {
+      setBillDialog(config);
+    } else {
+      pendingBillDialogRef.current = config;
+    }
   }, [detectedBill, clearDetectedBill]);
 
   // 周期账单（确认模式）：到期账单询问用户是否记账
@@ -121,15 +151,24 @@ const Main = () => {
   }, [missedHintVisible, dismissMissedHint]);
 
   return (
-    <Tab.Navigator
-      tabBar={renderTabBar}
-      screenOptions={{ headerShown: false }}
-      initialRouteName="List"
-    >
-      <Tab.Screen name="List" component={List} />
-      <Tab.Screen name="Statistics" component={Statistics} />
-      <Tab.Screen name="Account" component={Account} />
-    </Tab.Navigator>
+    <>
+      <Tab.Navigator
+        tabBar={renderTabBar}
+        screenOptions={{ headerShown: false }}
+        initialRouteName="List"
+      >
+        <Tab.Screen name="List" component={List} />
+        <Tab.Screen name="Statistics" component={Statistics} />
+        <Tab.Screen name="Account" component={Account} />
+      </Tab.Navigator>
+      {billDialog && (
+        <ConfirmDialog
+          visible
+          {...billDialog}
+          onRequestClose={() => setBillDialog(null)}
+        />
+      )}
+    </>
   );
 };
 
