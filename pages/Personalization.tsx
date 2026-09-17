@@ -54,6 +54,9 @@ const Personalization = () => {
   // 支付通知自动记账（仅 Android）
   const [autoBillNotification, setAutoBillNotificationState] = useState(false);
   const [notificationListenerGranted, setNotificationListenerGranted] = useState(false);
+  // 开关已开启但通知使用权丢失：此时拨动开关只会把它关掉，无法再次触发授权引导，
+  // 故描述区额外做成可点击入口，直达系统「通知使用权」设置页。
+  const needNotificationPermission = autoBillNotification && !notificationListenerGranted;
   // P3：预算配置（云端同步）
   const [budgetList, setBudgetList] = useState<BudgetListData | null>(null);
   // 预算编辑弹窗
@@ -373,14 +376,23 @@ const Personalization = () => {
         {isPaymentNotificationAvailable && (
           <View style={styles.card}>
             <View style={styles.settingItem}>
-              <View style={styles.settingInfo}>
+              <TouchableOpacity
+                style={styles.settingInfo}
+                disabled={!needNotificationPermission}
+                onPress={() => openNotificationListenerSettings()}
+              >
                 <Text style={styles.settingTitle}>支付通知自动记账</Text>
-                <Text style={styles.settingDescription}>
-                  {autoBillNotification && !notificationListenerGranted
-                    ? '未授予通知使用权，请前往系统设置开启 Kaikaio 的通知使用权'
+                <Text
+                  style={[
+                    styles.settingDescription,
+                    needNotificationPermission && styles.settingDescriptionWarning,
+                  ]}
+                >
+                  {needNotificationPermission
+                    ? '未授予通知使用权，点此前往系统设置开启 Kaikaio 的通知使用权'
                     : '识别支付宝/微信的支付通知，弹窗确认后一键记账'}
                 </Text>
-              </View>
+              </TouchableOpacity>
               <Switch
                 trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
                 thumbColor={theme.colors.background.paper}
@@ -606,6 +618,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.text.placeholder,
     lineHeight: 18,
+  },
+  settingDescriptionWarning: {
+    color: theme.colors.status.warning,
   },
   hourRow: {
     flexDirection: 'row',

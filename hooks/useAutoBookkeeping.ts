@@ -9,9 +9,11 @@ import {
   addPaymentNotificationListener,
   getPendingPaymentNotifications,
   isPaymentNotificationAvailable,
+  isNotificationListenerGranted,
   PaymentNotificationEvent
 } from '../services/paymentNotification';
 import { getActiveAccount, getAutoBillNotificationEnabled } from '../utils/storage';
+import { todayStr } from '../services/recurringBills';
 import { traceSync } from '../utils/perfTracing';
 
 // 用户隔离的「已识别账单」哈希 key 前缀（去重：已导入过的账单不再重复弹窗）
@@ -20,8 +22,34 @@ const SEEN_HASHES_PREFIX = 'clipboard_seen_hashes';
 const MAX_SEEN_HASHES = 200;
 // 防抖窗口：同一内容短时间内不重复触发
 const DEBOUNCE_MS = 60 * 1000;
+// 通知使用权失效提示每天只提醒一次，记录已提示日期（与漏记轻提示同一模式）
+const NOTIF_PERM_HINT_DATE_PREFIX = 'notif_perm_hint_date';
 
 export const getSeenHashesKey = (account: string) => `${SEEN_HASHES_PREFIX}:${account}`;
+
+export const getNotifPermHintDateKey = (account: string) =>
+  `${NOTIF_PERM_HINT_DATE_PREFIX}:${account}`;
+
+/**
+ * 通知使用权失效提示今天是否已展示过（读取失败时不打扰用户）
+ */
+async function hasNotifPermHintShownToday(account: string, today: string): Promise<boolean> {
+  try {
+    const shown = await AsyncStorage.getItem(getNotifPermHintDateKey(account));
+    return shown === today;
+  } catch (error) {
+    console.error('Failed to read notification permission hint date', error);
+    return true;
+  }
+}
+
+async function markNotifPermHintShown(account: string, today: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(getNotifPermHintDateKey(account), today);
+  } catch (error) {
+    console.error('Failed to mark notification permission hint shown', error);
+  }
+}
 
 /**
  * 轻量字符串哈希（djb2），用于账单原文去重
@@ -66,6 +94,8 @@ export function useAutoBookkeeping() {
   const [detectedBill, setDetectedBill] = useState<ParsedBill | null>(null);
   // 防抖：记录上次触发检测的内容与时间
   const lastDetectedRef = useRef<{ content: string; time: number } | null>(null);
+  // 通知使用权丢失告警（开关开启但权限被系统回收时提醒用户）
+  const [notificationPermissionWarning, setNotificationPermissionWarning] = useState(false);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', checkClipboard);
@@ -76,6 +106,39 @@ export function useAutoBookkeeping() {
     return () => {
       subscription.remove();
     };
+  }, []);
+
+  // 通知权限看门狗：App 回前台时检测开关开启但授权丢失的情况
+  useEffect(() => {
+    if (!isPaymentNotificationAvailable) return;
+
+    const checkPermission = async () => {
+      const account = await getActiveAccount();
+      if (!account) {
+        setNotificationPermissionWarning(false);
+        return;
+      }
+      const enabled = await getAutoBillNotificationEnabled(account);
+      if (!enabled) {
+        setNotificationPermissionWarning(false);
+        return;
+      }
+      const granted = await isNotificationListenerGranted();
+      if (granted) {
+        setNotificationPermissionWarning(false);
+        return;
+      }
+      // 失效提示每天最多一次，避免每次回前台都打扰（授权恢复后不受影响）
+      if (await hasNotifPermHintShownToday(account, todayStr())) return;
+      setNotificationPermissionWarning(true);
+    };
+
+    checkPermission();
+
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') checkPermission();
+    });
+    return () => subscription.remove();
   }, []);
 
   const checkClipboard = async (state: AppStateStatus) => {
@@ -185,8 +248,16 @@ export function useAutoBookkeeping() {
     setDetectedBill(null);
   }, []);
 
+  const dismissNotificationPermissionWarning = useCallback(async () => {
+    setNotificationPermissionWarning(false);
+    const account = await getActiveAccount();
+    if (account) await markNotifPermHintShown(account, todayStr());
+  }, []);
+
   return {
     detectedBill,
-    clearDetectedBill
+    clearDetectedBill,
+    notificationPermissionWarning,
+    dismissNotificationPermissionWarning
   };
 }

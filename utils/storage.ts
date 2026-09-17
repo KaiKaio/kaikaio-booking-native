@@ -89,6 +89,7 @@ export async function clearUserLocalData() {
       key.startsWith('category_usage_lru:') ||
       key.startsWith('clipboard_seen_hashes:') ||
       key.startsWith('auto_bill_notification_enabled:') ||
+      key.startsWith('notif_perm_hint_date:') ||
       key.startsWith('recurring_bills_user:') ||
       key.startsWith('bill_templates_user:') ||
       key.startsWith('reminder_settings_user:') ||

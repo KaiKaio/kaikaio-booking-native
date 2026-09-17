@@ -68,9 +68,10 @@ Main.tsx 弹窗「发现新账单」→ navigate List 携带 autoBill → BillFo
 | `android/app/src/main/AndroidManifest.xml` | Service 声明由插件自动注入（prebuild 生成，勿手动改） |
 | `android/app/src/main/java/com/anonymous/kaikaio/MainApplication.kt` | `add(PaymentNotificationPackage())` 由插件自动注入（prebuild 生成，勿手动改） |
 | `services/parser/BillParser.ts` | 策略注册表首位加入 `NotificationStrategy`（前缀标记需最先匹配） |
-| `hooks/useAutoBookkeeping.ts` | 新增通知事件处理链路：订阅事件 + 挂载后拉取缓冲 + 开关门控 |
-| `utils/storage.ts` | 新增 `getAutoBillNotificationEnabled/setAutoBillNotificationEnabled`（key：`auto_bill_notification_enabled:{account}`），并纳入账号数据清理 |
-| `pages/Personalization.tsx` | 新增「支付通知自动记账」开关卡片（仅 Android 显示），开启时引导授权，回前台刷新授权状态 |
+| `hooks/useAutoBookkeeping.ts` | 新增通知事件处理链路：订阅事件 + 挂载后拉取缓冲 + 开关门控；新增通知使用权看门狗（回前台巡检，失效时每天轻提示一次） |
+| `utils/storage.ts` | 新增 `getAutoBillNotificationEnabled/setAutoBillNotificationEnabled`（key：`auto_bill_notification_enabled:{account}`）与 `notif_perm_hint_date:{account}` 清理，并纳入账号数据清理 |
+| `pages/Personalization.tsx` | 新增「支付通知自动记账」开关卡片（仅 Android 显示），开启时引导授权，回前台刷新授权状态；授权丢失时描述区变黄并可点击直达系统设置页 |
+| `pages/Main.tsx` | 通知使用权失效时展示轻提示（每天最多一次） |
 
 ## 4. 关键设计决策
 
@@ -92,6 +93,12 @@ Main.tsx 弹窗「发现新账单」→ navigate List 携带 autoBill → BillFo
 ### 4.5 噪音过滤两道防线
 - 原生层：只转发支付宝/微信两个包名 + 含支付语义关键词（支付/付款/收款/转账/消费/到账/入账/扣款）的通知
 - JS 层：`NotificationStrategy` 解析不到有效金额时返回 null，不弹窗（如活动推广通知）
+
+### 4.6 授权丢失巡检（每天最多提醒一次）
+通知使用权可能被 ROM 优化或系统更新回收，且**重装 App 后必然失效**，而开关本身仍显示为「开启」，用户无从察觉。为此在 App 回前台时巡检一次：**开关已开 + 授权已丢**才提示。
+
+- 提示频率对齐漏记轻提示（`useMissedRecordReminder`）的模式：命中当天在 `notif_perm_hint_date:{account}` 落一条日期，同一天不再重复打扰；授权恢复正常则不落日期、不提示。
+- 因为开关此时已是「开」状态，**拨动开关只会把它关掉，无法再次触发授权引导**。所以「个性化」页在授权丢失时会把描述文案变黄并做成可点击入口，直达系统「通知使用权」设置页，避免用户卡死在这一步。
 
 ## 5. 当前支持的通知格式
 
@@ -116,7 +123,6 @@ Main.tsx 弹窗「发现新账单」→ navigate List 携带 autoBill → BillFo
 - **金额/商户提取增强**：收集真实通知样本补充正则（可先在 DebugTools 页加通知原文采集）
 - **自动入账模式**：开关下增加「免确认直接记账」子选项（高风险，需配合金额上限/分类置信度）
 - **iOS Share Extension**：iOS 侧的替代方案，从支付宝/微信账单页分享到 Kaikaio，复用同一 BillParser
-- **通知使用权状态巡检**：开关开启但授权丢失时在 Main 页轻提示一次（复用漏记检测的轻提示模式）
 
 ## 7. 问题排查指南
 

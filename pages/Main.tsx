@@ -29,7 +29,7 @@ const showToast = (message: string) => {
 const Main = () => {
   // P3 本地配置云端同步：周期账单/模板/提醒设置（启动/回前台/变更时同步）
   useConfigSync();
-  const { detectedBill, clearDetectedBill } = useAutoBookkeeping();
+  const { detectedBill, clearDetectedBill, notificationPermissionWarning, dismissNotificationPermissionWarning } = useAutoBookkeeping();
   const {
     pendingConfirms,
     confirmAll,
@@ -57,6 +57,13 @@ const Main = () => {
     });
     return () => sub.remove();
   }, []);
+
+  // 通知使用权丢失告警：每天轻提示一次（授权被系统回收后开关会一直显示为开启）
+  useEffect(() => {
+    if (!notificationPermissionWarning) return;
+    showToast('通知使用权已失效，支付通知自动记账暂不可用。请到系统设置 → 通知使用权中重新开启 Kaikaio。');
+    dismissNotificationPermissionWarning();
+  }, [notificationPermissionWarning, dismissNotificationPermissionWarning]);
 
   useEffect(() => {
     if (!detectedBill) return;
