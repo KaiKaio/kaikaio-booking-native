@@ -7,6 +7,7 @@ import { billParser } from '../services/parser';
 import { ParsedBill } from '../services/parser/types';
 import {
   addPaymentNotificationListener,
+  ackPaymentNotification,
   getPendingPaymentNotifications,
   isPaymentNotificationAvailable,
   isNotificationListenerGranted,
@@ -24,6 +25,62 @@ const MAX_SEEN_HASHES = 200;
 const DEBOUNCE_MS = 60 * 1000;
 // 通知使用权失效提示每天只提醒一次，记录已提示日期（与漏记轻提示同一模式）
 const NOTIF_PERM_HINT_DATE_PREFIX = 'notif_perm_hint_date';
+
+// —— 支付通知去重 ——
+// 关键：去重必须只针对「同一条通知的重复送达」，不能针对「内容相同的不同笔支付」。
+// 微信/支付宝的扣费通知经常只有金额（如「已扣费¥9.29」），不含商户与时间，
+// 若按文案做长期去重，同额的第二笔及之后的支付会被永久静默丢弃。
+// 因此：
+//   1) 事件级 ID = 来源 + 标题 + 正文 + 通知 postTime：实时 emit 与缓冲兜底重复送达同一
+//      条时 ID 完全一致，可靠去重；
+//   2) 文案级短窗口（60s）：兜底防住系统分组通知产生的同文案重复。
+const NOTIF_CONTENT_DEDUP_WINDOW_MS = 60 * 1000;
+const NOTIF_SEEN_ID_LIMIT = 500;
+
+/** 会话内已处理的通知事件 ID（原生 postTime 参与，进程重启后自然清空） */
+const notifSeenIds = new Set<string>();
+/** 会话内文案 → 最近处理时间（60s 窗口内视为同一条） */
+const notifContentSeenAt = new Map<string, number>();
+
+function trimNotifSeenIds() {
+  if (notifSeenIds.size <= NOTIF_SEEN_ID_LIMIT) return;
+  for (const id of notifSeenIds) {
+    notifSeenIds.delete(id);
+    if (notifSeenIds.size <= NOTIF_SEEN_ID_LIMIT / 2) break;
+  }
+}
+
+function trimNotifContentSeen(now: number) {
+  if (notifContentSeenAt.size <= NOTIF_SEEN_ID_LIMIT) return;
+  for (const [key, time] of notifContentSeenAt) {
+    if (now - time > NOTIF_CONTENT_DEDUP_WINDOW_MS) notifContentSeenAt.delete(key);
+  }
+}
+
+/**
+ * 判断该通知是否已处理过；未处理过则记录为已处理。
+ * @param eventId 事件级唯一 ID
+ * @param content 拼好来源前缀的完整文案
+ */
+export function markNotificationHandled(eventId: string, content: string): boolean {
+  const now = Date.now();
+  if (notifSeenIds.has(eventId)) return true;
+  const contentKey = hashText(content);
+  const last = notifContentSeenAt.get(contentKey);
+  if (last !== undefined && now - last < NOTIF_CONTENT_DEDUP_WINDOW_MS) return true;
+
+  notifSeenIds.add(eventId);
+  notifContentSeenAt.set(contentKey, now);
+  trimNotifSeenIds();
+  trimNotifContentSeen(now);
+  return false;
+}
+
+/** 【测试用】重置会话内通知去重状态 */
+export function resetNotificationDedupState(): void {
+  notifSeenIds.clear();
+  notifContentSeenAt.clear();
+}
 
 export const getSeenHashesKey = (account: string) => `${SEEN_HASHES_PREFIX}:${account}`;
 
@@ -181,46 +238,59 @@ export function useAutoBookkeeping() {
   const handlePaymentNotification = async (event: PaymentNotificationEvent) => {
     console.log('[AutoBookkeeping] payment event received', event.source, event.title, event.text);
 
-    // 开关实时读取：支持同一会话内切换开关立即生效
-    const account = await getActiveAccount();
-    const enabled = account ? await getAutoBillNotificationEnabled(account) : false;
-    if (!enabled) {
-      console.log('[AutoBookkeeping] skipped: auto bill notification disabled');
-      return;
-    }
-
-    const label = event.source === 'Alipay' ? '支付宝' : '微信';
-    const content = `【${label}】${[event.title, event.text].filter(Boolean).join('\n')}`;
-
-    // 防抖：同一内容在窗口期内不重复触发
-    const last = lastDetectedRef.current;
-    if (last && last.content === content && Date.now() - last.time < DEBOUNCE_MS) {
-      console.log('[AutoBookkeeping] skipped: debounced');
-      return;
-    }
-
-    const result = traceSync('bill.parse', 'notification bill parse', () =>
-      billParser.parse(content)
-    );
-    if (!result) {
-      console.log('[AutoBookkeeping] skipped: parse failed', content);
-      return;
-    }
-
-    // 去重：已识别过的通知不再重复弹窗（实时事件与缓冲兜底可能重复送达）
-    const hash = hashText(result.rawText.trim());
-    if (account) {
-      const seen = await getSeenHashes(account);
-      if (seen.includes(hash)) {
-        console.log('[AutoBookkeeping] skipped: already seen', hash);
+    // 是否真正进入了处理链路：只有处理过才回执给原生，未开启开关的事件留在缓冲里等下次补
+    let delivered = false;
+    try {
+      // 开关实时读取：支持同一会话内切换开关立即生效
+      const account = await getActiveAccount();
+      const enabled = account ? await getAutoBillNotificationEnabled(account) : false;
+      if (!enabled) {
+        console.log('[AutoBookkeeping] skipped: auto bill notification disabled');
         return;
       }
-      await markHashSeen(account, hash);
-    }
+      delivered = true;
 
-    console.log('[AutoBookkeeping] bill detected, showing dialog', result.amount, result.source);
-    lastDetectedRef.current = { content, time: Date.now() };
-    setDetectedBill(result);
+      const label = event.source === 'Alipay' ? '支付宝' : '微信';
+      const content = `【${label}】${[event.title, event.text].filter(Boolean).join('\n')}`;
+
+      // 去重：只针对同一条通知的重复送达（实时事件 + 缓冲兜底），不针对同额的不同笔支付
+      const eventId = hashText(
+        `${event.source}|${event.title ?? ''}|${event.text ?? ''}|${event.time}`
+      );
+      if (markNotificationHandled(eventId, content)) {
+        console.log('[AutoBookkeeping] skipped: duplicate notification', eventId);
+        return;
+      }
+
+      const result = traceSync('bill.parse', 'notification bill parse', () =>
+        billParser.parse(content)
+      );
+      if (!result) {
+        console.log('[AutoBookkeeping] skipped: parse failed', content);
+        return;
+      }
+
+      // 账单日期取通知时间：App 被杀后延迟补记时，日期仍与真实支付时间一致
+      if (event.time && Number.isFinite(event.time)) {
+        const notifiedAt = new Date(event.time);
+        if (!Number.isNaN(notifiedAt.getTime())) {
+          result.date = notifiedAt;
+        }
+      }
+
+      console.log(
+        '[AutoBookkeeping] bill detected, showing dialog',
+        result.amount,
+        result.source,
+        result.date?.toISOString()
+      );
+      setDetectedBill(result);
+    } catch (e) {
+      console.error('[AutoBookkeeping] notification handling failed', e);
+    } finally {
+      // 已交付 JS 的事件从原生持久化缓冲移除，防止进程重启后重复补记
+      if (delivered) ackPaymentNotification(event);
+    }
   };
 
   useEffect(() => {
@@ -228,19 +298,43 @@ export function useAutoBookkeeping() {
 
     const subscription = addPaymentNotificationListener(handlePaymentNotification);
 
-    const init = async () => {
-      const account = await getActiveAccount();
-      const enabled = account ? await getAutoBillNotificationEnabled(account) : false;
-      if (!enabled) return;
+    let draining = false;
+    // 兜底：拉取原生持久化缓冲（App 在后台 / RN 未就绪 / 进程被系统回收期间收到的通知）。
+    // 原生层保证「先落盘再 emit」，所以这里能补回实时事件没送达的账单。
+    const drainPending = async () => {
+      if (draining) return;
+      draining = true;
+      try {
+        const account = await getActiveAccount();
+        const enabled = account ? await getAutoBillNotificationEnabled(account) : false;
+        // 开关关闭时不去消费缓冲，避免用户关开关期间的通知被读空丢弃
+        if (!enabled) return;
 
-      // 兜底：拉取 App 在后台/RN 未就绪期间收到的支付通知（单条事件内部仍会实时校验开关）
-      const pending = await getPendingPaymentNotifications();
-      pending.forEach(handlePaymentNotification);
+        const pending = await getPendingPaymentNotifications();
+        if (pending.length > 0) {
+          console.log('[AutoBookkeeping] draining pending notifications', pending.length);
+        }
+        // 顺序处理：并发处理会让去重记录的读改写互相覆盖
+        for (const event of pending) {
+          await handlePaymentNotification(event);
+        }
+      } catch (e) {
+        console.error('Failed to drain pending payment notifications', e);
+      } finally {
+        draining = false;
+      }
     };
-    init();
+
+    drainPending();
+
+    // 每次回前台补拉一次：后台期间的通知可能只落在原生缓冲里，实时 emit 未必能送达 JS
+    const appStateSub = AppState.addEventListener('change', state => {
+      if (state === 'active') drainPending();
+    });
 
     return () => {
       subscription?.remove();
+      appStateSub.remove();
     };
   }, []);
 

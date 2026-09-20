@@ -66,6 +66,25 @@ export function addPaymentNotificationListener(
 }
 
 /**
+ * 通知 JS 已处理完成某条事件，原生侧会把它从持久化缓冲中移除，
+ * 避免「前台实时处理 + 进程随后被杀」导致下次启动重复补记。
+ * 事件不在缓冲中时为空操作，可安全重复调用。
+ */
+export function ackPaymentNotification(event: PaymentNotificationEvent): void {
+  if (!isPaymentNotificationAvailable) return;
+  try {
+    PaymentNotificationModule.ackEvent(
+      event.source,
+      event.title ?? '',
+      event.text ?? '',
+      event.time ?? 0
+    );
+  } catch (e) {
+    console.error('Failed to ack payment notification', e);
+  }
+}
+
+/**
  * 【开发调试用】模拟一条支付通知事件，走真实监听链路（解析/去重/弹窗）。
  * 仅用于模拟器/无真实通知来源的调试环境，正式功能请勿调用。
  */
